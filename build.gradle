@@ -1,0 +1,156 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.2'
+    id 'io.spring.dependency-management' version '1.1.6'
+}
+
+group = 'com.mcp'
+version = '1.0.0-SNAPSHOT'
+description = 'Spring Boot MCP Protocol Server'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring Boot Starters
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'  // Para WebClient
+    
+    // JSON Processing (ya incluido en spring-boot-starter-web, pero explícito por claridad)
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.core:jackson-core'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
+    
+    // Utilities
+    implementation 'org.apache.commons:commons-lang3'
+    
+    // Logging (ya incluido en Spring Boot, pero explícito por claridad)
+    implementation 'org.springframework.boot:spring-boot-starter-logging'
+    
+    // Test Dependencies
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    
+    // Annotation Processing
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// Configuración adicional para el JAR ejecutable
+jar {
+    enabled = false
+    archiveClassifier = ''
+}
+
+bootJar {
+    enabled = true
+    archiveClassifier = ''
+    archiveFileName = "${project.name}-${project.version}.jar"
+}
+
+// Configuración de compilación
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += [
+        '-parameters',
+        '--enable-preview'
+    ]
+}
+
+compileTestJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += [
+        '-parameters'
+    ]
+}
+
+// Task personalizada para mostrar información del proyecto
+task projectInfo {
+    doLast {
+        println "==================================="
+        println "Proyecto: ${project.name}"
+        println "Versión: ${project.version}"
+        println "Descripción: ${project.description}"
+        println "Java: ${java.toolchain.languageVersion.get()}"
+        println "==================================="
+    }
+}
+
+// Task para ejecutar el servidor en desarrollo
+task runDev(type: JavaExec) {
+    group = 'application'
+    description = 'Ejecuta el servidor MCP en modo desarrollo'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.mcpserver.McpServerApplication'
+    jvmArgs = [
+        '-Dspring.profiles.active=dev',
+        '-Dspring.devtools.restart.enabled=true',
+        '-Xmx512m'
+    ]
+}
+
+// Task para validar la configuración
+task validateConfig {
+    group = 'verification'
+    description = 'Valida la configuración del proyecto'
+    doLast {
+        println "Validando configuración..."
+        
+        // Verificar Java
+        def javaVersion = System.getProperty("java.version")
+        println "✅ Java version: ${javaVersion}"
+        
+        // Verificar estructura del proyecto
+        def srcDir = file('src/main/java')
+        if (srcDir.exists()) {
+            println "✅ Directorio src/main/java existe"
+        } else {
+            println "❌ Directorio src/main/java no encontrado"
+        }
+        
+        def resourcesDir = file('src/main/resources')
+        if (resourcesDir.exists()) {
+            println "✅ Directorio src/main/resources existe"
+        } else {
+            println "❌ Directorio src/main/resources no encontrado"
+        }
+        
+        println "Validación completada."
+    }
+}
+
+// Configuración para Spring Boot DevTools
+bootRun {
+    jvmArgs = ['-Dspring.profiles.active=dev']
+    if (project.hasProperty('debug')) {
+        jvmArgs += [
+            '-Xdebug',
+            '-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005'
+        ]
+    }
+}
+
+// Clean personalizado
+clean {
+    delete 'logs'
+    delete '.gradle'
+}
