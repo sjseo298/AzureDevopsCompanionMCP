@@ -289,7 +289,7 @@ PROYECTO (400+ activos)
 - **Prefijo "mod-"**: Modificaciones operativas
 - **Sufijo "inactivo-"**: Equipos deshabilitados
 
-## 🏢 Jerarquía de Proyectos en Sura
+## 🏢 Jerarquía de Proyectos en Sura (ACTUALIZADA 2025)
 
 ### Estructura de Proyectos (3 niveles principales):
 
@@ -297,6 +297,7 @@ PROYECTO (400+ activos)
 - **ID**: 985807ad-7ff9-438d-849c-794c9bbc50f4
 - **Descripción**: Agrupa todos los proyectos de desarrollo
 - **Equipos**: 100+ equipos activos
+- **Work Items Activos**: 400+ proyectos de alto nivel
 - **Dominios incluidos**:
   - `do-asegur-*`: Aseguramiento y pólizas
   - `do-prestacion_distribucion-*`: Prestación y distribución
@@ -326,6 +327,87 @@ PROYECTO (400+ activos)
   - `dllo-*`: Desarrollo de nuevos productos
   - `alianza-ecosistemas_*`: Alianzas estratégicas
   - `relev-pers-empr_*`: Relevancia personal empresarial
+
+### 🎯 JERARQUÍA DE WORK ITEMS EN SURA (ACTUALIZADA)
+
+#### Nivel 1: **PROYECTO** (Más alto - Iniciativas estratégicas)
+- **Ejemplo**: "Remediación GW - 2025" (ID: 695480)
+- **Área**: `Gerencia_Tecnologia\\do-asegur-plan_de_remediacion`
+- **Propósito**: Agrupa iniciativas completas de gran envergadura
+- **Estados**: New, En progreso, Cerrado, Planeado
+- **Duración**: Típicamente anuales o multi-anuales
+
+#### Nivel 2: **ÉPICA/FEATURE** (Capacidades de negocio)
+- Agrupa funcionalidades relacionadas
+- Duración: Trimestral o semestral
+
+#### Nivel 3: **HISTORIA / HISTORIA TÉCNICA** (Requerimientos funcionales)
+- **Historia**: Funcionalidades de usuario final
+- **Historia técnica**: Trabajo técnico, infraestructura, desarrollo
+- Duración: Sprint (1-4 semanas)
+
+#### Nivel 4: **TAREA** (Actividades específicas)
+- Trabajo granular dentro de historias
+- Duración: Días o una semana
+
+#### Nivel 5: **SUBTAREA** (Más granular)
+- Subdivisiones de tareas específicas
+- Duración: Horas o días
+
+### 📁 ESTRUCTURA DE ÁREAS ORGANIZACIONALES
+
+#### Patrón de Nomenclatura de Áreas:
+```
+Gerencia_Tecnologia\\{dominio}-{función}-{iniciativa}
+```
+
+**Ejemplo Real**: 
+- Área: `Gerencia_Tecnologia\\do-asegur-plan_de_remediacion`
+- Interpretación: dominio_aseguramiento - función_aseguramiento - iniciativa_plan_de_remediacion
+
+#### Prefijos de Dominio:
+- **do-**: Dominios operativos (desarrollo operativo)
+- **egv-**: Evolución y gobierno
+- **t-**: Transversales
+- **mod-**: Modificaciones operativas
+- **dllo-**: Desarrollo de nuevos productos
+
+#### Sufijos de Función:
+- **-asegur-**: Aseguramiento (pólizas, siniestros, suscripción)
+- **-salud-**: Salud (PAC, consultas médicas)
+- **-prestacion_distribucion-**: Prestación y distribución
+- **-acceso_clientes-**: Portales y canales
+- **-infraestructura-**: Infraestructura tecnológica
+- **-ciencia_analitica-**: Analítica de datos e IA
+
+### 🏷️ PATRONES DE NOMENCLATURA DE PROYECTOS
+
+#### Clasificación por Tipo de Demanda:
+1. **[PETID] + año**: Proyectos con identificador formal en sistema PETID
+   - Ejemplo: "[PETID] 2025", "[PETID] H_1_2025"
+   - Representan demandas oficiales registradas
+
+2. **[NO PETID] + año**: Proyectos sin identificador específico
+   - Ejemplo: "[NO PETID] 2025"
+   - Proyectos internos o de mantenimiento
+
+3. **Archivar-**: Proyectos en proceso de cierre o archivados
+   - Ejemplo: "Archivar-[PETID] 2025"
+   - Estado transitorio antes del cierre definitivo
+
+#### Indicadores Temporales:
+- **H_1_2025**: Hito 1 del año 2025
+- **T2 2025, T3 2025, T4 2025**: Trimestre específico
+- **Q1 2025, Q2 2025**: Quarter específico
+- **Sprint X**: Iteraciones específicas de desarrollo
+
+#### Proyectos Temáticos (Ejemplos Reales):
+- **"Remediación GW - 2025"**: Plan de remediación de Guidewire
+- **"Sostenibilidad de dominio"**: Iniciativas de sostenibilidad
+- **"Demandas cruzadas 2025"**: Demandas entre múltiples dominios
+- **"PILAR DE GESTIÓN DEL CONOCIMIENTO"**: Gestión del conocimiento organizacional
+- **"Transformación Plan Vive"**: Transformación digital del Plan Vive
+- **"IFRS17 - FeniX"**: Implementación de normativas contables
 
 ### 🔍 Cómo Determinar a Qué Proyectos Pertenezco
 
