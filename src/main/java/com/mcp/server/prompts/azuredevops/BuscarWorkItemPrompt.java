@@ -72,23 +72,37 @@ public class BuscarWorkItemPrompt extends BasePrompt {
             
             Tu tarea es ayudar a buscar y localizar work items específicos en Azure DevOps.
             
-            ESTRUCTURA DE PROYECTOS SURA:
-            1. **Gerencia_Tecnologia** - Proyecto principal de tecnología
-            2. **Gerencia_Tecnologia_Egv_Aseguramiento** - Proyecto de aseguramiento
-            3. **Portafolios** - Proyecto de gestión de portafolios
+            ESTRUCTURA ORGANIZACIONAL DE SURA:
             
-            TIPOS DE WORK ITEMS EN SURA:
-            - Historia: Funcionalidades del usuario
-            - Historia técnica: Tareas técnicas de desarrollo
-            - Tarea: Tareas generales
-            - Subtarea: Tareas específicas dentro de una historia
-            - Bug: Defectos y errores
-            - Riesgo: Gestión de riesgos
+            YOUR_ORGANIZATION maneja tres proyectos principales en Azure DevOps:
+            1. **Gerencia_Tecnologia** - Proyecto principal de tecnología y desarrollo
+            2. **Gerencia_Tecnologia_Egv_Aseguramiento** - Proyecto de aseguramiento y calidad
+            3. **Portafolios** - Proyecto de gestión de portafolios e iniciativas estratégicas
+            
+            JERARQUÍA DE WORK ITEMS EN SURA:
+            - **Proyecto**: Nivel más alto, agrupa iniciativas grandes (ej: "Remediación GW - 2025")
+            - **Historia**: Funcionalidades del usuario y requerimientos de negocio
+            - **Historia técnica**: Tareas técnicas de desarrollo e implementación
+            - **Tarea**: Tareas generales y actividades específicas
+            - **Subtarea**: Tareas granulares dentro de historias o tareas
+            - **Bug**: Defectos y errores identificados
+            - **Riesgo**: Gestión y seguimiento de riesgos
+            
+            ESTRUCTURA DE ÁREAS ORGANIZACIONALES:
+            - Areas como "do-asegur-plan_de_remediacion" indican: dominio-función-iniciativa
+            - Prefijos comunes: do- (dominio), plan_de_ (planes específicos)
+            - Estructura jerárquica: Gerencia_Tecnologia\\{dominio}\\{función}\\{iniciativa}
+            
+            PATRONES DE NOMENCLATURA:
+            - [PETID] y [NO PETID]: Clasificación de proyectos por tipo de demanda
+            - Años en títulos (2024, 2025): Indican el período de ejecución
+            - Estados comunes: New, En progreso, Cerrado, Planeado
             
             ESTRATEGIAS DE BÚSQUEDA:
             1. **Búsqueda por ID**: Si el criterio es numérico, usa get_workitem directamente
             2. **Búsqueda por título**: Usa query_workitems con WIQL para buscar en campos Title
             3. **Búsqueda textual**: Busca en múltiples campos usando consultas WIQL
+            4. **Búsqueda jerárquica**: Considera la relación padre-hijo entre work items
             
             HERRAMIENTAS DISPONIBLES:
             - get_workitem: Obtiene un work item específico por ID
