@@ -1,0 +1,436 @@
+specificación de la API REST de Azure DevOps para Work Items y Consultas
+Azure DevOps proporciona una API REST completa para interactuar con sus servicios. En este documento se detallan todas las operaciones principales para interactuar con Azure DevOps en el contexto de seguimiento de trabajo (Work Item Tracking), incluyendo cómo ejecutar consultas personalizadas (WIQL) y ejemplos de payloads de petición y respuestas. Con esta referencia, se puede implementar un cliente o servicio (por ejemplo, un agente en Visual Studio Code) capaz de consultar tareas asignadas, proponer planes de trabajo diarios, crear jerarquías de trabajos (historias y tareas) y actualizar el estado del trabajo al final del día, entre otras acciones.
+Autenticación y Acceso a la API
+Para usar la API de Azure DevOps es necesario autenticarse. Lo más habitual es utilizar un Personal Access Token (PAT) asociado a tu usuario, con los permisos adecuados. Por ejemplo, para leer y escribir work items y consultas se requiere el alcance vso.work_write
+learn.microsoft.com
+learn.microsoft.com
+. El PAT se envía en la cabecera de autenticación (Basic Auth) o como bearer token. También es posible usar OAuth2; en ambos casos, la URL base para Azure DevOps Services es:
+arduino
+Copiar
+Editar
+https://dev.azure.com/{organization}/
+Donde {organization} es el nombre de tu organización en Azure DevOps. Todas las URLs de la API seguirán este patrón base, incluyendo el nombre del proyecto y a veces el equipo según corresponda. Además, todas las peticiones deben incluir la versión de API como query string, por ejemplo ?api-version=7.1 (u otra versión disponible)
+learn.microsoft.com
+learn.microsoft.com
+.
+Nota: En adelante usaremos api-version=7.1 en los ejemplos, que corresponde a la versión estable más reciente. Asegúrate de usar una versión soportada por tu servicio (Azure DevOps Services o Server).
+Operaciones sobre Proyectos y Equipos
+Antes de interactuar con work items, conviene identificar el proyecto y equipo de trabajo. Las APIs relevantes incluyen:
+Listar proyectos: GET https://dev.azure.com/{organization}/_apis/projects?api-version=7.1. Esto devuelve los proyectos a los que el usuario autenticado tiene acceso
+learn.microsoft.com
+. Por ejemplo, una petición GET puede responder con un JSON que incluye un conteo y un array de proyectos con sus id, name y estado:
+http
+Copiar
+Editar
+GET https://dev.azure.com/fabrikam/_apis/projects?api-version=7.1
+Respuesta (fragmento):
+json
+Copiar
+Editar
+{
+  "count": 3,
+  "value": [
+    {
+      "id": "eb6e4656-77fc-42a1-9181-4c6d8e9da5d1",
+      "name": "Fabrikam-Fiber-TFVC",
+      "description": "Team Foundation Version Control projects.",
+      "state": "wellFormed"
+    },
+    {
+      "id": "6ce954b1-ce1f-45d1-b94d-e6bf2464ba2c",
+      "name": "Fabrikam-Fiber-Git",
+      "description": "Git projects",
+      "state": "wellFormed"
+    }
+    // ... otros proyectos ...
+  ]
+}
+Ejemplo tomado de la documentación de Azure DevOps
+learn.microsoft.com
+learn.microsoft.com
+.
+Listar equipos en un proyecto: GET https://dev.azure.com/{organization}/_apis/projects/{project}/teams?api-version=7.1. Esto devuelve los equipos dentro de un proyecto específico
+learn.microsoft.com
+. Por ejemplo:
+http
+Copiar
+Editar
+GET https://dev.azure.com/fabrikam/_apis/projects/6ce954b1-ce1f-45d1-b94d-e6bf2464ba2c/teams?api-version=7.1
+Respuesta (fragmento):
+json
+Copiar
+Editar
+{
+  "value": [
+    {
+      "id": "564e8204-a90b-4432-883b-d4363c6125ca",
+      "name": "Quality assurance",
+      "description": "Testing staff"
+    },
+    {
+      "id": "66df9be7-3586-467b-9c5f-425b29afedfd",
+      "name": "Fabrikam-Fiber-TFVC Team",
+      "description": "The default project team."
+    }
+  ],
+  "count": 2
+}
+Este ejemplo muestra dos equipos en el proyecto especificado
+learn.microsoft.com
+learn.microsoft.com
+.
+Con el project (nombre o ID) y opcionalmente el team (nombre o ID) identificados, podremos usarlos en las rutas de las siguientes operaciones.
+Consultar Elementos de Trabajo (Work Items) por ID
+Una de las operaciones más básicas es obtener un Work Item específico por su ID. Por ejemplo, para obtener el Work Item con ID 12 en un proyecto:
+http
+Copiar
+Editar
+GET https://dev.azure.com/{organization}/{project}/_apis/wit/workitems/12?api-version=7.1
+Este GET retornará un objeto JSON con los campos (fields) del elemento de trabajo, sus relaciones si se solicitan, etc. Por defecto incluye todos los campos. A continuación se muestra un fragmento de la respuesta para un Work Item de ejemplo:
+json
+Copiar
+Editar
+{
+  "id": 12,
+  "rev": 3,
+  "fields": {
+    "System.AreaPath": "MyProject",
+    "System.TeamProject": "MyProject",
+    "System.IterationPath": "MyProject\\Iteration 1",
+    "System.WorkItemType": "User Story",
+    "System.State": "Active",
+    "System.Reason": "Implementation started",
+    "System.AssignedTo": {
+      "displayName": "Jamal Hartnett",
+      "uniqueName": "fabrikamfiber4@hotmail.com"
+    },
+    "System.CreatedDate": "2017-09-04T06:11:59.05Z",
+    "System.Title": "Título de la historia de usuario",
+    "...": "..."
+  },
+  "_links": { ... },
+  "url": "https://dev.azure.com/fabrikam/_apis/wit/workItems/12"
+}
+Ejemplo adaptado de la documentación
+learn.microsoft.com
+learn.microsoft.com
+. Se han omitido algunos campos por brevedad.
+Notas:
+Puedes especificar campos particulares con ?fields=Campo1,Campo2,... si no necesitas todos los datos
+learn.microsoft.com
+.
+Para incluir relaciones (links a elementos relacionados, adjuntos, padres/hijos) añade $expand=Relations en la URL
+learn.microsoft.com
+. Por ejemplo: ...?api-version=7.1&$expand=Relations.
+Los campos del sistema (como System.Title, System.State, etc.) son sensibles a las reglas del proceso: algunos no pueden cambiarse en ciertas transiciones (ver sección de Actualización).
+Consultas de Work Items con WIQL (Work Item Query Language)
+Para una interacción más flexible, Azure DevOps permite ejecutar consultas arbitrarias mediante el lenguaje WIQL. Esto es útil para preguntas del estilo "¿Qué tareas tengo asignadas pendientes?" o "En el proyecto X, ¿cuántos elementos cumplen cierta condición?" e incluso consultas más complejas. La API para consultas WIQL es:
+http
+Copiar
+Editar
+POST https://dev.azure.com/{organization}/{project}/{team}/_apis/wit/wiql?api-version=7.1
+En el cuerpo de la petición POST se envía un JSON con la consulta en texto, por ejemplo:
+json
+Copiar
+Editar
+{
+  "query": "SELECT [System.Id], [System.Title], [System.State] 
+            FROM WorkItems 
+            WHERE [System.AssignedTo] = @Me 
+              AND [System.State] <> 'Closed'"
+}
+(Esta WIQL selecciona el ID, Título y Estado de todos los Work Items asignados al usuario actual (@Me) que no estén cerrados.) La respuesta de esta llamada incluirá la estructura de la consulta (tipo de consulta, columnas solicitadas, etc.) y la lista de Work Items que cumplen la condición, identificados por ID
+learn.microsoft.com
+learn.microsoft.com
+. Por ejemplo:
+json
+Copiar
+Editar
+{
+  "queryType": "flat",
+  "columns": [
+    {"referenceName": "System.Id", "name": "ID"},
+    {"referenceName": "System.Title", "name": "Title"},
+    {"referenceName": "System.State", "name": "State"}
+  ],
+  "workItems": [
+    { "id": 300, "url": "https://dev.azure.com/ORG/_apis/wit/workItems/300" },
+    { "id": 299, "url": "https://dev.azure.com/ORG/_apis/wit/workItems/299" },
+    // ...otros resultados...
+  ]
+}
+Como se observa, la consulta WIQL devuelve solo los IDs (y URLs) de los items encontrados, independientemente de los campos seleccionados
+learn.microsoft.com
+. Importante: actualmente no es posible obtener directamente todos los campos deseados en la misma llamada de consulta
+learn.microsoft.com
+. Por ello, suele aplicarse un patrón de dos pasos:
+Ejecutar la consulta WIQL (vía POST /wiql) para obtener la lista de IDs de Work Items que cumplen la condición.
+Recuperar los detalles de esos Work Items en una segunda llamada, usando la API de lista por IDs.
+Obtener lista de Work Items por IDs (Batch)
+Para el paso 2 anterior, Azure DevOps ofrece un método para obtener múltiples Work Items en una sola llamada (hasta 200 por petición). La URL es:
+http
+Copiar
+Editar
+GET https://dev.azure.com/{organization}/{project}/_apis/wit/workitems?ids={id1},{id2},...&api-version=7.1
+Opcionalmente se pueden limitar los campos retornados (&fields=Campo1,Campo2,...). Ejemplo de petición construida tras obtener IDs de una consulta:
+http
+Copiar
+Editar
+GET https://dev.azure.com/fabrikam/MyProject/_apis/wit/workitems?ids=300,299&fields=System.Id,System.Title,System.State&api-version=7.1
+Respuesta (fragmento):
+json
+Copiar
+Editar
+{
+  "count": 2,
+  "value": [
+    {
+      "id": 300,
+      "rev": 1,
+      "fields": {
+        "System.Id": 300,
+        "System.Title": "Tarea de ejemplo",
+        "System.State": "Active",
+        "...": "..."
+      },
+      "url": "https://dev.azure.com/ORG/_apis/wit/workItems/300"
+    },
+    {
+      "id": 299,
+      "rev": 3,
+      "fields": {
+        "System.Id": 299,
+        "System.Title": "Otra tarea",
+        "System.State": "Active",
+        "...": "..."
+      },
+      "url": "https://dev.azure.com/ORG/_apis/wit/workItems/299"
+    }
+  ]
+}
+Este ejemplo muestra dos Work Items obtenidos en lote, con solo algunos campos básicos incluidos
+learn.microsoft.com
+learn.microsoft.com
+. De esta forma, un agente podría construir dinámicamente consultas WIQL para obtener datos variados (por ejemplo: tareas asignadas al usuario, elementos en cierto estado, velocidad de entrega del equipo calculando elementos cerrados por sprint, etc.), y luego obtener los detalles necesarios de esos elementos para responder preguntas específicas.
+Tip: Azure DevOps soporta macros útiles en WIQL como @Me (el usuario actual), @Today (fecha actual), @Project (proyecto actual), @CurrentIteration (iteración actual del equipo) y otras, que permiten escribir consultas relativas al contexto sin tener que codificar valores específicos
+learn.microsoft.com
+learn.microsoft.com
+.
+Además de consultas ad-hoc, la API también permite trabajar con consultas guardadas (saved queries) que existen en Azure Boards. Por ejemplo, se pueden listar las consultas de un proyecto o ejecutar una consulta guardada por su ID. Sin embargo, en escenarios dinámicos un agente probablemente generará WIQL sobre la marcha en lugar de depender de consultas predefinidas.
+Creación de Work Items (Crear tareas o historias)
+La API permite crear un Work Item nuevo mediante una llamada POST. La ruta incluye el tipo de Work Item a crear (por ejemplo, Task, Product Backlog Item, Bug, etc.):
+http
+Copiar
+Editar
+POST https://dev.azure.com/{organization}/{project}/_apis/wit/workitems/$Task?api-version=7.1
+(En la URL anterior, $Task indica que se creará un Work Item de tipo "Task". Puedes reemplazarlo por $User Story, $Bug, $Feature, etc., según los tipos definidos en tu proyecto.) La petición debe incluir un cuerpo en formato JSON Patch (application/json-patch+json) con las operaciones para establecer los campos iniciales. Cada operación es un objeto con al menos op, path y value. Para crear, se usan típicamente operaciones "op": "add" para definir los campos requeridos. Ejemplo mínimo:
+json
+Copiar
+Editar
+[
+  {
+    "op": "add",
+    "path": "/fields/System.Title",
+    "value": "Nueva tarea de ejemplo"
+  }
+]
+Lo anterior crearía una nueva tarea con el título especificado. Si la operación es exitosa, la respuesta será el objeto completo del Work Item creado (con su id asignado, etc.)
+learn.microsoft.com
+learn.microsoft.com
+. Por ejemplo, parte de la respuesta podría ser:
+json
+Copiar
+Editar
+{
+  "id": 131489,
+  "rev": 1,
+  "fields": {
+    "System.AreaPath": "MyProject",
+    "System.TeamProject": "MyProject",
+    "System.IterationPath": "MyProject",
+    "System.WorkItemType": "Task",
+    "System.State": "New",
+    "System.Reason": "New",
+    "System.CreatedDate": "2025-07-28T18:00:00Z",
+    "System.CreatedBy": { ... },
+    "System.Title": "Nueva tarea de ejemplo",
+    "...": "..."
+  },
+  "url": "https://dev.azure.com/ORG/_apis/wit/workItems/131489"
+}
+Respuesta basada en la documentación
+learn.microsoft.com
+learn.microsoft.com
+. Campos adicionales: En el JSON de creación puedes añadir cualquier campo necesario (respetando las reglas de ese tipo de Work Item). Por ejemplo, es común especificar:
+Asignación: Añadir "path": "/fields/System.AssignedTo", "value": "Nombre o email del usuario" para asignar el elemento a alguien.
+Descripción: Añadir "path": "/fields/System.Description", "value": "Texto descriptivo...".
+Iteración y Área: Para situar el item en una iteración (sprint) o área particular, usar "path": "/fields/System.IterationPath" y "path": "/fields/System.AreaPath" respectivamente, con los valores apropiados (e.g. "Project\\Sprint 5" como IterationPath)
+merkle.com
+merkle.com
+.
+Por ejemplo, un JSON completo para crear una tarea asignada al usuario, en la iteración actual, con descripción podría ser:
+json
+Copiar
+Editar
+[
+  { "op": "add", "path": "/fields/System.Title", "value": "Implementar funcionalidad X" },
+  { "op": "add", "path": "/fields/System.Description", "value": "Detalles de la tarea..." },
+  { "op": "add", "path": "/fields/System.AssignedTo", "value": "juan.perez@empresa.com" },
+  { "op": "add", "path": "/fields/System.IterationPath", "value": "MyProject\\Sprint 5" }
+]
+(Asumiendo que "Sprint 5" es una iteración existente en el proyecto "MyProject".)
+Creación de subtareas y relaciones jerárquicas
+En Azure DevOps, los Work Items pueden tener una jerarquía (por ejemplo, una Historia de Usuario con subtareas de tipo Task). Esta jerarquía se establece mediante relaciones que se agregan al documento de parche JSON en el momento de crear o actualizar un item
+merkle.com
+. Para indicar que un nuevo Work Item es hijo de otro existente (p.ej., crear una tarea dentro de una historia), se agrega una relación de tipo Parent apuntando al elemento padre. La relación de parent se representa con rel = "System.LinkTypes.Hierarchy-Reverse" (que indica vínculo jerárquico inverso, es decir, este nuevo item es hijo de otro)
+merkle.com
+. Por ejemplo, supongamos que tenemos el ID 100 correspondiente a una Historia de Usuario existente y queremos crearle una tarea hija:
+json
+Copiar
+Editar
+[
+  { "op": "add", "path": "/fields/System.Title", "value": "Tarea hija de la historia 100" },
+  { "op": "add", "path": "/fields/System.IterationPath", "value": "MyProject\\Sprint 5" },
+  { "op": "add", "path": "/relations/-", "value": {
+      "rel": "System.LinkTypes.Hierarchy-Reverse",
+      "url": "https://dev.azure.com/ORG/_apis/wit/workItems/100",
+      "attributes": { "comment": "Vinculando como tarea hija" }
+    }
+  }
+]
+Al hacer el POST con este cuerpo a la URL $Task, la nueva tarea se creará vinculada bajo la Historia 100 (el Work Item 100 tendrá esta tarea como hijo, y la tarea tendrá a 100 como su padre en los campos de relaciones). Internamente, Azure Boards mostrará la jerarquía apropiadamente.
+El campo "attributes" en la relación es opcional; aquí usamos un comentario descriptivo. Azure DevOps también reconoce un atributo "name": "Parent" en algunos contextos, pero no es estrictamente necesario para vincular la jerarquía.
+Como confirma la documentación, los Work Items forman una jerarquía mediante relaciones y un Work Item puede tener múltiples sub-elementos
+merkle.com
+. Tras la creación, podemos verificar las relaciones: el elemento padre tendrá una relación System.LinkTypes.Hierarchy-Forward apuntando al hijo, y el hijo una Hierarchy-Reverse apuntando al padre
+learn.microsoft.com
+learn.microsoft.com
+.
+Actualización de Work Items (Editar campos y estado)
+Para actualizar un Work Item existente (por ejemplo, marcar una tarea como completada, agregar comentarios de progreso, cambiar campos), se utiliza el método PATCH sobre la URL del Work Item:
+http
+Copiar
+Editar
+PATCH https://dev.azure.com/{organization}/{project}/_apis/wit/workitems/{id}?api-version=7.1
+El cuerpo de la petición, igual que en creación, es un documento JSON Patch con las operaciones a realizar. Algunas consideraciones importantes:
+Es recomendable incluir una operación de prueba de versión ("op": "test", "path": "/rev", "value": X) para asegurar que estás editando la última revisión del Work Item
+learn.microsoft.com
+. Azure DevOps incrementa rev (número de revisión) en cada cambio, y al usar "op": "test" validas que el rev actual coincide con X (evitando sobrescribir cambios recientes de otro usuario).
+Para cambiar un campo existente, puedes usar "op": "add" indicando el campo en /fields/... (la API trata un "add" a un campo ya existente como actualización)
+learn.microsoft.com
+. Alternativamente, "op": "replace" también funciona para campos ya existentes.
+Para borrar un valor de campo, se podría usar "op": "remove" en la ruta del campo.
+Ejemplo: Supongamos que el Work Item 299 está en estado "To Do" y queremos marcarlo como Done (hecho) al final del día, agregando además un comentario al historial. El JSON Patch podría ser:
+json
+Copiar
+Editar
+[
+  { "op": "test", "path": "/rev", "value": 3 },
+  { "op": "add", "path": "/fields/System.State", "value": "Done" },
+  { "op": "add", "path": "/fields/System.History", "value": "Trabajo completado hoy." }
+]
+En este ejemplo:
+Verificamos que la revisión actual del item sea 3.
+Cambiamos el campo State a "Done" (asumiendo que es un estado válido siguiente, según el flujo definido en el proceso).
+Agregamos una entrada en History con un comentario de lo realizado.
+Si la petición es exitosa, la respuesta incluirá el Work Item actualizado con sus nuevos valores. Por ejemplo, parte de la respuesta podría mostrar:
+json
+Copiar
+Editar
+{
+  "id": 299,
+  "rev": 4,
+  "fields": {
+    "System.WorkItemType": "Task",
+    "System.State": "Done",
+    "System.ChangedDate": "2025-07-28T23:50:00Z",
+    "System.ChangedBy": "Juan Perez <juan.perez@empresa.com>",
+    "System.History": "Trabajo completado hoy.",
+    "System.Title": "Título de la tarea",
+    "...": "..."
+  },
+  "relations": [ ... ],
+  "url": "https://dev.azure.com/ORG/_apis/wit/workItems/299"
+}
+La API soporta actualizaciones parciales múltiples en una sola llamada, incluyendo cambios de campo, agregar/quitar relaciones, adjuntar archivos, etc. Por ejemplo, para agregar un tag (etiqueta) a un Work Item se haría:
+json
+Copiar
+Editar
+[
+  { "op": "test", "path": "/rev", "value": 6 },
+  { "op": "add", "path": "/fields/System.Tags", "value": "Tag1; Tag2" }
+]
+(Esto reemplaza la lista de tags por "Tag1; Tag2")
+learn.microsoft.com
+learn.microsoft.com
+. De modo similar, puedes agregar links usando "path": "/relations/-" (como vimos en el caso de jerarquías), quitar relaciones identificando su índice en el array de relaciones, etc.
+Reglas de negocio: Ten en cuenta que algunos campos en Azure DevOps tienen reglas. Por ejemplo, no puedes establecer System.State a un valor arbitrario en el momento de creación de un Work Item – suele tomar el estado por defecto inicial
+stackoverflow.com
+. Para cambiar el estado inmediatamente después de crear, puedes hacer un PATCH adicional como se describió. Del mismo modo, campos como System.AssignedTo pueden requerir valores reconocidos (usuarios del proyecto), etc. Si alguna regla impide la actualización, la API retornará error (400 Bad Request normalmente). En caso necesario, se puede usar el parámetro bypassRules=true en la URL de PATCH para saltarse ciertas validaciones, aunque esto debe usarse con precaución y permisos especiales
+learn.microsoft.com
+learn.microsoft.com
+.
+Iteraciones (Sprints) y Cadencia de Entregas
+En el contexto de la planificación ágil, es común consultar información sobre iteraciones (sprints) de un equipo, por ejemplo para determinar la cadencia de entregas (duración de los sprints, fechas de inicio/fin, etc.). Azure DevOps expone API para manejar iteraciones:
+Listar iteraciones de un equipo: GET https://dev.azure.com/{organization}/{project}/{team}/_apis/work/teamsettings/iterations?api-version=7.1. Esta llamada devuelve las iteraciones configuradas para el equipo dado
+learn.microsoft.com
+. Se puede filtrar con ?$timeframe=current para obtener solo la iteración actual, aunque actualmente solo soporta ese filtro
+learn.microsoft.com
+. Si se omite $timeframe, se obtienen todas las iteraciones del equipo (pasadas, actuales y futuras) en un arreglo values. Ejemplo: Obtener la iteración actual de un equipo:
+http
+Copiar
+Editar
+GET https://dev.azure.com/fabrikam/ProyectoDemo/EquipoDemo/_apis/work/teamsettings/iterations?$timeframe=current&api-version=7.1
+Respuesta (ejemplo):
+json
+Copiar
+Editar
+{
+  "values": [
+    {
+      "id": "a589a806-bf11-4d4f-a031-c19813331553",
+      "name": "Sprint 5",
+      "attributes": {
+        "startDate": "2025-07-01T00:00:00Z",
+        "finishDate": "2025-07-14T23:59:59Z"
+      },
+      "url": "https://dev.azure.com/...",
+      "timeFrame": "current"
+    }
+  ]
+}
+En este ejemplo ficticio, el Sprint 5 tiene fecha de inicio y fin, con una duración de 2 semanas. Un agente podría calcular la cadencia del equipo analizando la diferencia entre startDate y finishDate (por ejemplo, 14 días indica sprints quincenales). Si se listan varias iteraciones, también se podría inferir la periodicidad viendo intervalos entre inicios de sprints sucesivos.
+Obtener configuración del equipo: GET https://dev.azure.com/{organization}/{project}/{team}/_apis/work/teamsettings?api-version=7.1. Esto devuelve detalles de configuración del equipo, como los días laborables, la iteración por defecto, y la macro de iteración actual (defaultIterationMacro)
+learn.microsoft.com
+learn.microsoft.com
+. En la respuesta, por ejemplo, podemos ver algo como "defaultIterationMacro": "@currentIteration", indicando que el equipo usa siempre la iteración actual asignada en su configuración. También muestra el backlogIteration (raíz de dónde se planifican los sprints) y otras preferencias.
+Usando estas APIs, un agente podría responder preguntas como "¿Cuál es la cadencia de los equipos para entregar?" diciendo: "El equipo EquipoDemo trabaja en iteraciones de 2 semanas (próximo sprint del 1 al 14 de julio)", por ejemplo, calculado a partir de los datos de iteraciones
+learn.microsoft.com
+learn.microsoft.com
+.
+Escenarios de Uso para un Agente MCP (Resumen)
+Con las operaciones descritas, se puede construir un servidor o agente automatizado que interactúe con Azure DevOps para asistir a un desarrollador en su día a día. Algunos escenarios y cómo se implementan con la API:
+Consultar trabajo asignado: El agente puede ejecutar una WIQL con Assigned To = @Me AND State != Closed para obtener IDs de items asignados al usuario
+learn.microsoft.com
+. Luego usar GET workitems?ids=... para obtener títulos, estados y detalles
+learn.microsoft.com
+learn.microsoft.com
+. Así informará al usuario qué tareas/historias tiene pendientes al inicio del día.
+Proponer plan diario: Con la lista de Work Items asignados, el agente podría filtrar por prioridad o fecha de vencimiento (si usan campos de prioridad o due date) mediante WIQL, y sugerir en qué orden abordarlos. También puede ver cuántas tareas están "En curso" vs "Por hacer" (System.State) para distribuir la carga.
+Analizar historias y desglosar tareas: El agente puede revisar si las Historias de Usuario asignadas tienen tareas hijas. Para ello, obtiene las historias (por WIQL: WorkItemType = User Story AND AssignedTo = @Me) y expande sus relaciones ($expand=Relations) para ver si hay Hierarchy-Forward (hijos)
+learn.microsoft.com
+. Si una historia no tiene tareas hijas, el agente podría sugerir crearlas automáticamente (utilizando POST .../$Task con relaciones Hierarchy-Reverse hacia la historia
+merkle.com
+). De esta manera, crea la jerarquía apropiada: por ejemplo, dividir la historia en 2–3 tareas técnicas.
+Actualizar progreso al final del día: El agente puede tomar todas las tareas en las que el usuario trabajó (quizá aquellas cuyo estado cambió o que el usuario indique) y realizar un PATCH para actualizar su System.State (por ej., a "Done" o "In Progress" según corresponda) y agregar una nota en System.History con los detalles del avance
+learn.microsoft.com
+learn.microsoft.com
+. Incluso podría registrar el tiempo restante en campos de esfuerzo (RemainingWork, etc., si se usan). Estos PATCH se envían uno por cada Work Item modificado.
+Consultas adicionales flexibles: El agente podría responder preguntas como "¿Cuántos bugs se cerraron esta semana?" ejecutando una WIQL con condiciones de fecha ([System.WorkItemType] = 'Bug' AND [State] = 'Closed' AND [Closed Date] >= @StartOfWeek) y contando los resultados. O "¿Cuál es la velocidad del equipo en la última iteración?", obteniendo la iteración actual y sumando story points de historias cerradas, etc., todo mediante combinaciones de consultas y procesamiento de los datos obtenidos vía API.
+Cada operación mencionada se apoya en las APIs explicadas anteriormente. Gracias a la flexibilidad de WIQL, un agente puede construir consultas para casi cualquier información de Work Items, y con las operaciones de creación/actualización, puede también automatizar cambios en Azure DevOps en nombre del usuario. Conclusión: Con esta especificación de la API de Azure DevOps y los ejemplos de payloads y respuestas provistos, es posible implementar un cliente o servicio completo (por ejemplo, un "MCP server") que permita a un desarrollador interactuar de forma natural con Azure DevOps: consultando su trabajo, organizándolo y registrando progreso, todo a través de llamadas REST seguras y estructuradas. Fuentes: La información y ejemplos mostrados se basan en la documentación oficial de Azure DevOps REST API y referencias adicionales para WIQL y casos de uso
+learn.microsoft.com
+learn.microsoft.com
+merkle.com
+learn.microsoft.com
+learn.microsoft.com
+, asegurando que las operaciones presentadas reflejen las capacidades reales de la API a la fecha. Cada ejemplo de request/response fue tomado o adaptado de fuentes oficiales para servir como guía práctica.
