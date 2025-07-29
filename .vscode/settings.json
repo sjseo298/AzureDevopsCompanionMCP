@@ -1,0 +1,25 @@
+{
+    "java.compile.nullAnalysis.mode": "automatic",
+    "mcp": {
+        "servers": {
+            "spring-mcp-server": {
+                "command": "java",
+                "args": [
+                    "-jar",
+                    "/workspaces/mcpazuredevops/target/mcp-server-1.0.0-SNAPSHOT.jar"
+                ],
+                "env": {
+                    "SERVER_PORT": "8080",
+                    "JAVA_OPTS": "-Xmx512m"
+                }
+            }
+        }
+    },
+    "chat.mcp.serverSampling": {
+        "mcpazuredevops/.vscode/mcp.json: spring-mcp-server": {
+            "allowedModels": [
+                "github.copilot-chat/gpt-4.1"
+            ]
+        }
+    }
+}
