@@ -48,7 +48,6 @@ gradle-app.setting
 *.iws
 *.iml
 *.ipr
-.vscode/
 *.swp
 *.swo
 *~
