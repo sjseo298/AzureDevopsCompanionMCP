@@ -1,6 +1,6 @@
 package com.mcp.server.tools.azuredevops;
 
-import com.mcp.server.tools.azuredevops.client.AzureDevOpsClient;
+import com.mcp.server.config.OrganizationContextService;
 import com.mcp.server.tools.azuredevops.client.AzureDevOpsClient;
 import com.mcp.server.tools.azuredevops.client.AzureDevOpsException;
 import com.mcp.server.tools.azuredevops.model.WiqlQueryResult;
@@ -23,10 +23,12 @@ import java.util.Map;
 public class GetAssignedWorkTool implements McpTool {
     
     private final AzureDevOpsClient azureDevOpsClient;
+    private final OrganizationContextService organizationContextService;
     
     @Autowired
-    public GetAssignedWorkTool(AzureDevOpsClient azureDevOpsClient) {
+    public GetAssignedWorkTool(AzureDevOpsClient azureDevOpsClient, OrganizationContextService organizationContextService) {
         this.azureDevOpsClient = azureDevOpsClient;
+        this.organizationContextService = organizationContextService;
     }
     
     @Override
@@ -107,11 +109,19 @@ public class GetAssignedWorkTool implements McpTool {
                 );
             }
             
-            // Construir consulta WIQL
+            // Construir consulta WIQL con contexto organizacional
             StringBuilder wiqlQuery = new StringBuilder();
-            wiqlQuery.append("SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType], ");
-            wiqlQuery.append("[System.IterationPath], [Microsoft.VSTS.Scheduling.RemainingWork] ");
-            wiqlQuery.append("FROM WorkItems WHERE [System.AssignedTo] = @Me ");
+            
+            // Usar el servicio de contexto para construir la cláusula SELECT
+            String selectClause = organizationContextService.buildWiqlSelectClause(
+                null, // workItemType - null para incluir todos los tipos
+                true, // includeDates - incluir campos de fecha
+                true, // includeMetrics - incluir métricas
+                false // includeCustomFields - no incluir por ahora para mantener compatibilidad
+            );
+            
+            wiqlQuery.append(selectClause);
+            wiqlQuery.append(" FROM WorkItems WHERE [System.AssignedTo] = @Me ");
             
             // Filtro de estado
             if (!includeCompleted) {

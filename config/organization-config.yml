@@ -1,0 +1,335 @@
+# Configuración Organizacional - Sura Colombia
+# Este archivo contiene la configuración personalizada para la organización
+# Generado automáticamente desde discovered-organization.yml
+
+organization:
+  name: "Sura Colombia"
+  displayName: "Sura - Seguros y Servicios Financieros"
+  description: "Organización líder en seguros y servicios financieros en América Latina"
+  
+  azure:
+    organization: "sura"
+    baseUrl: "https://dev.azure.com/sura"
+    defaultProject: "Gerencia_Tecnologia"
+  
+  # Estructura de proyectos organizacionales
+  projects:
+    - id: "gerencia-tecnologia"
+      name: "Gerencia_Tecnologia"
+      displayName: "Gerencia de Tecnología"
+      description: "Proyecto principal de desarrollo tecnológico"
+      isDefault: true
+      
+      teams:
+        prefixes:
+          - prefix: "do-"
+            description: "Equipos de dominio operativo y aseguramiento"
+            pattern: "do-{domain}-{function}"
+            examples: ["do-asegur-arl", "do-asegur-plan_de_remediacion"]
+          
+          - prefix: "tech-"
+            description: "Equipos de desarrollo tecnológico"
+            pattern: "tech-{domain}-{function}"
+            examples: ["tech-backend-apis", "tech-frontend-web"]
+          
+          - prefix: "egv-"
+            description: "Equipos de aseguramiento EGV (Entidad Gubernamental de Validación)"
+            pattern: "egv-{domain}-{function}"
+            examples: ["egv-qa-automation", "egv-security-testing"]
+      
+      # Estructura de áreas personalizada
+      areaStructure:
+        separator: "\\"
+        pattern: "{project}\\{team_prefix}{domain}-{function}"
+        rootArea: "Gerencia_Tecnologia"
+        
+        domains:
+          - name: "asegur"
+            description: "Dominio de aseguramiento y calidad"
+            functions: ["arl", "plan_de_remediacion", "auditoria"]
+          
+          - name: "desarrollo"
+            description: "Dominio de desarrollo de software"
+            functions: ["backend", "frontend", "mobile", "apis"]
+          
+          - name: "infraestructura"
+            description: "Dominio de infraestructura tecnológica"
+            functions: ["cloud", "devops", "networking", "security"]
+    
+    - id: "gerencia-tecnologia-egv"
+      name: "Gerencia_Tecnologia_Egv_Aseguramiento"
+      displayName: "Aseguramiento EGV"
+      description: "Proyecto especializado en aseguramiento y validación gubernamental"
+      isDefault: false
+      
+      teams:
+        prefixes:
+          - prefix: "egv-"
+            description: "Equipos especializados en aseguramiento EGV"
+            pattern: "egv-{domain}-{function}"
+    
+    - id: "portafolios"
+      name: "Portafolios"
+      displayName: "Gestión de Portafolios"
+      description: "Gestión estratégica de portafolio de proyectos"
+      isDefault: false
+      
+      teams:
+        prefixes:
+          - prefix: "port-"
+            description: "Equipos de gestión de portafolio"
+            pattern: "port-{function}-{area}"
+
+# Tipos de work items específicos de Sura
+workItemTypes:
+  custom:
+    - name: "Historia"
+      baseType: "User Story"
+      description: "Historia de usuario con campos específicos de Sura"
+      category: "functional"
+      
+      requiredFields:
+        - name: "acceptanceCriteria"
+          displayName: "Criterios de Aceptación"
+          fieldName: "Microsoft.VSTS.Common.AcceptanceCriteria"
+          type: "html"
+          helpText: "Definir claramente los criterios de aceptación de la historia"
+        
+        - name: "tipoHistoria"
+          displayName: "Tipo de Historia"
+          fieldName: "Custom.TipoDeHistoria"
+          type: "picklist"
+          values: ["Historia Funcional", "Historia de Infraestructura", "Historia de Configuración", "Historia de Seguridad", "Historia de Performance"]
+          helpText: "Categorización del tipo de historia según su naturaleza"
+        
+        - name: "idSolucionAPM"
+          displayName: "ID Solución APM"
+          fieldName: "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"
+          type: "string"
+          helpText: "Identificador único de la solución en el Application Portfolio Management"
+        
+        - name: "migracionDatos"
+          displayName: "¿Migración de Datos?"
+          fieldName: "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3"
+          type: "picklist"
+          values: ["Si", "No"]
+          defaultValue: "No"
+          helpText: "Indica si la historia involucra migración de datos"
+        
+        - name: "cumplimientoRegulatorio"
+          displayName: "¿Cumplimiento Regulatorio?"
+          fieldName: "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
+          type: "picklist"
+          values: ["Si", "No"]
+          defaultValue: "No"
+          helpText: "Indica si la historia está relacionada con cumplimiento regulatorio"
+        
+        - name: "controlAutomatico"
+          displayName: "¿Control Automático?"
+          fieldName: "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1"
+          type: "picklist"
+          values: ["Si", "No"]
+          defaultValue: "No"
+          helpText: "Indica si requiere implementación de controles automáticos"
+      
+      businessRules:
+        - condition: "tipoHistoria == 'Historia de Seguridad'"
+          then: "cumplimientoRegulatorio = 'Si'"
+        - condition: "migracionDatos == 'Si'"
+          then: "controlAutomatico = 'Si'"
+    
+    - name: "Historia técnica"
+      baseType: "User Story"
+      description: "Historia técnica para mejoras de arquitectura y deuda técnica"
+      category: "technical"
+      
+      requiredFields:
+        - name: "tipoHistoriaTecnica"
+          displayName: "Tipo de Historia Técnica"
+          fieldName: "Custom.14858558-3edb-485a-9a52-a38c03c65c62"
+          type: "picklist"
+          values: ["Refactoring", "Optimización", "Deuda Técnica", "Actualización Tecnológica", "Mejora de Arquitectura"]
+          helpText: "Categorización específica para historias técnicas"
+        
+        # Hereda campos obligatorios de Historia estándar
+        - name: "idSolucionAPM"
+          fieldName: "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"
+        - name: "migracionDatos"
+          fieldName: "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3"
+        - name: "cumplimientoRegulatorio"
+          fieldName: "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
+        - name: "controlAutomatico"
+          fieldName: "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1"
+    
+    - name: "Tarea"
+      baseType: "Task"
+      description: "Tarea de implementación o desarrollo"
+      category: "implementation"
+      
+      requiredFields:
+        - name: "tipoTarea"
+          displayName: "Tipo de Tarea"
+          fieldName: "Custom.TipoDeTarea"
+          type: "picklist"
+          values: ["Desarrollo", "Testing", "Documentación", "Configuración", "Despliegue", "Análisis"]
+          helpText: "Categorización del tipo de trabajo a realizar"
+    
+    - name: "Subtarea"
+      baseType: "Task"
+      description: "Subtarea de una tarea principal"
+      category: "implementation"
+      
+      requiredFields:
+        - name: "tipoSubtarea"
+          displayName: "Tipo de Subtarea"
+          fieldName: "Custom.TipoDeSubtarea"
+          type: "picklist"
+          values: ["Implementación", "Pruebas Unitarias", "Pruebas Integración", "Code Review", "Documentación Técnica"]
+          helpText: "Tipo específico de subtarea"
+    
+    - name: "Bug"
+      baseType: "Bug"
+      description: "Defecto o error del sistema"
+      category: "defect"
+      
+      requiredFields:
+        - name: "reproSteps"
+          displayName: "Pasos para Reproducir"
+          fieldName: "Microsoft.VSTS.TCM.ReproSteps"
+          type: "html"
+          helpText: "Descripción detallada de los pasos para reproducir el defecto"
+        
+        - name: "datosPrueba"
+          displayName: "Datos de Prueba"
+          fieldName: "Custom.DatosDePrueba"
+          type: "string"
+          helpText: "Datos específicos utilizados durante las pruebas"
+        
+        - name: "bloqueante"
+          displayName: "¿Es Bloqueante?"
+          fieldName: "Custom.Bloqueante"
+          type: "boolean"
+          defaultValue: false
+          helpText: "Indica si el bug bloquea la funcionalidad crítica"
+        
+        - name: "nivelPrueba"
+          displayName: "Nivel de Prueba"
+          fieldName: "Custom.NivelPrueba"
+          type: "picklist"
+          values: ["Unitaria", "Integración", "Sistema", "Aceptación", "Regresión", "Performance"]
+          helpText: "Nivel de pruebas donde se detectó el defecto"
+        
+        - name: "origen"
+          displayName: "Origen del Bug"
+          fieldName: "Custom.Origen"
+          type: "picklist"
+          values: ["Desarrollo", "Testing", "Producción", "Cliente", "Monitoreo"]
+          helpText: "Origen o fase donde se detectó el defecto"
+        
+        - name: "etapaDescubrimiento"
+          displayName: "Etapa de Descubrimiento"
+          fieldName: "Custom.EtapaDescubrimiento"
+          type: "picklist"
+          values: ["Análisis", "Desarrollo", "Testing", "UAT", "Producción"]
+          helpText: "Etapa del ciclo de vida donde se descubrió el defecto"
+        
+        - name: "idSolucionAPM"
+          fieldName: "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"
+
+# Configuración de nomenclatura y estándares
+naming:
+  conventions:
+    workItems:
+      historia:
+        pattern: "[{idSolucionAPM}] {titulo}"
+        example: "[SOL-001] Como usuario quiero realizar login"
+      
+      tarea:
+        pattern: "{tipoTarea}: {titulo}"
+        example: "Desarrollo: Implementar API de autenticación"
+      
+      bug:
+        pattern: "[{severity}] {titulo} - {origen}"
+        example: "[Critical] Error en login - Producción"
+    
+    branches:
+      feature: "feature/{idSolucionAPM}-{titulo-slug}"
+      bugfix: "bugfix/{id}-{titulo-slug}"
+      hotfix: "hotfix/{id}-{titulo-slug}"
+    
+    areas:
+      separator: "\\"
+      pattern: "{proyecto}\\{prefijo}{dominio}-{funcion}"
+      examples:
+        - "Gerencia_Tecnologia\\do-asegur-arl"
+        - "Gerencia_Tecnologia\\tech-backend-apis"
+
+# Reglas de negocio específicas
+businessRules:
+  validation:
+    # Reglas para Historias
+    historia:
+      - rule: "Si tipoHistoria es 'Historia de Seguridad', cumplimientoRegulatorio debe ser 'Si'"
+      - rule: "Si migracionDatos es 'Si', se requiere justificación en descripción"
+      - rule: "idSolucionAPM debe seguir el formato SOL-XXX"
+    
+    # Reglas para Bugs
+    bug:
+      - rule: "Si bloqueante es true, priority debe ser 1 o 2"
+      - rule: "Si origen es 'Producción', etapaDescubrimiento debe ser 'Producción'"
+      - rule: "Bugs críticos requieren reproSteps detallados (min 100 caracteres)"
+  
+  workflows:
+    historia:
+      states: ["New", "Active", "Resolved", "Closed"]
+      transitions:
+        - from: "New"
+          to: "Active"
+          condition: "Todos los campos obligatorios completados"
+        - from: "Active"
+          to: "Resolved"
+          condition: "Criterios de aceptación validados"
+    
+    bug:
+      states: ["New", "Active", "Resolved", "Closed"]
+      escalation:
+        - condition: "bloqueante == true"
+          action: "Asignar a tech lead automáticamente"
+        - condition: "origen == 'Producción'"
+          action: "Notificar a equipo de soporte"
+
+# Configuración de integración y automatización
+integration:
+  apm:
+    baseUrl: "https://apm.sura.com"
+    apiVersion: "v2"
+    fieldMapping:
+      "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14": "solution_id"
+  
+  notifications:
+    teams:
+      webhook: "https://outlook.office.com/webhook/..."
+      channels:
+        critical: "critical-alerts"
+        general: "development-updates"
+  
+  automation:
+    enableAutoFieldPopulation: true
+    enableBusinessRuleValidation: true
+    enableWorkflowEnforcement: true
+
+# Configuración específica del entorno Sura
+environment:
+  region: "Colombia"
+  timezone: "America/Bogota"
+  language: "es-CO"
+  currency: "COP"
+  
+  compliance:
+    regulations: ["SOX", "IFRS", "Superintendencia Financiera"]
+    auditingEnabled: true
+    dataRetentionPeriod: "7 years"
+  
+  security:
+    classificationLevels: ["Public", "Internal", "Confidential", "Restricted"]
+    defaultClassification: "Internal"

@@ -42,6 +42,14 @@ public class GetWorkItemTypesTool implements McpTool {
             "type", "string",
             "description", "Nombre o ID del proyecto"
         ));
+        properties.put("includeExtendedInfo", Map.of(
+            "type", "boolean",
+            "description", "Si incluir información extendida como estados, transiciones y todos los campos (por defecto: false)"
+        ));
+        properties.put("includeFieldDetails", Map.of(
+            "type", "boolean", 
+            "description", "Si incluir detalles completos de campos como tipos de datos y valores permitidos (por defecto: false)"
+        ));
         
         return Map.of(
             "type", "object",
@@ -54,6 +62,8 @@ public class GetWorkItemTypesTool implements McpTool {
     public Map<String, Object> execute(Map<String, Object> arguments) {
         try {
             String project = (String) arguments.get("project");
+            Boolean includeExtendedInfo = (Boolean) arguments.getOrDefault("includeExtendedInfo", false);
+            Boolean includeFieldDetails = (Boolean) arguments.getOrDefault("includeFieldDetails", false);
             
             if (project == null || project.trim().isEmpty()) {
                 throw new IllegalArgumentException("El parámetro 'project' es requerido");
@@ -70,29 +80,80 @@ public class GetWorkItemTypesTool implements McpTool {
                 
                 for (Map<String, Object> workItem : workItemTypesRaw) {
                     Map<String, Object> typeInfo = new HashMap<>();
+                    
+                    // Información básica
                     typeInfo.put("name", workItem.get("name"));
                     typeInfo.put("description", workItem.getOrDefault("description", ""));
                     typeInfo.put("color", workItem.getOrDefault("color", ""));
                     typeInfo.put("isDisabled", workItem.getOrDefault("isDisabled", false));
                     
-                    // Obtener campos requeridos
+                    // Información extendida que se estaba perdiendo (solo si se solicita)
+                    if (includeExtendedInfo) {
+                        typeInfo.put("referenceName", workItem.get("referenceName"));
+                        typeInfo.put("url", workItem.get("url"));
+                        
+                        // Información del icono
+                        if (workItem.containsKey("icon")) {
+                            typeInfo.put("icon", workItem.get("icon"));
+                        }
+                        
+                        // Estados disponibles
+                        if (workItem.containsKey("states")) {
+                            typeInfo.put("states", workItem.get("states"));
+                        }
+                        
+                        // Transiciones
+                        if (workItem.containsKey("transitions")) {
+                            typeInfo.put("transitions", workItem.get("transitions"));
+                        }
+                    }
+                    
+                    // Obtener campos (todos, no solo los obligatorios)
                     if (workItem.containsKey("fieldInstances")) {
                         @SuppressWarnings("unchecked")
                         List<Map<String, Object>> fieldInstances = (List<Map<String, Object>>) workItem.get("fieldInstances");
                         List<Map<String, Object>> requiredFields = new ArrayList<>();
+                        List<Map<String, Object>> allFields = new ArrayList<>();
                         
                         for (Map<String, Object> field : fieldInstances) {
+                            Map<String, Object> fieldInfo = new HashMap<>();
+                            fieldInfo.put("name", field.get("name"));
+                            fieldInfo.put("referenceName", field.get("referenceName"));
+                            fieldInfo.put("alwaysRequired", field.get("alwaysRequired"));
+                            
+                            // Información básica siempre incluida
+                            if (field.containsKey("helpText")) {
+                                fieldInfo.put("helpText", field.get("helpText"));
+                            }
+                            
+                            // Información detallada solo si se solicita
+                            if (includeFieldDetails) {
+                                fieldInfo.put("defaultValue", field.get("defaultValue"));
+                                fieldInfo.put("allowedValues", field.get("allowedValues"));
+                                fieldInfo.put("fieldType", field.get("fieldType"));
+                                fieldInfo.put("isEditable", field.get("isEditable"));
+                                fieldInfo.put("isIdentity", field.get("isIdentity"));
+                                fieldInfo.put("picklistId", field.get("picklistId"));
+                                fieldInfo.put("url", field.get("url"));
+                            }
+                            
+                            allFields.add(fieldInfo);
+                            
+                            // Separar campos obligatorios para mantener compatibilidad
                             if (field.containsKey("alwaysRequired") && Boolean.TRUE.equals(field.get("alwaysRequired"))) {
-                                Map<String, Object> fieldInfo = new HashMap<>();
-                                fieldInfo.put("name", field.get("name"));
-                                fieldInfo.put("referenceName", field.get("referenceName"));
-                                if (field.containsKey("helpText")) {
-                                    fieldInfo.put("helpText", field.get("helpText"));
-                                }
                                 requiredFields.add(fieldInfo);
                             }
                         }
+                        
                         typeInfo.put("requiredFields", requiredFields);
+                        if (includeFieldDetails) {
+                            typeInfo.put("allFields", allFields); // Nueva información completa
+                        }
+                    }
+                    
+                    // Información completa de campos disponibles
+                    if (includeExtendedInfo && workItem.containsKey("fields")) {
+                        typeInfo.put("fieldDefinitions", workItem.get("fields"));
                     }
                     
                     workItemTypes.add(typeInfo);
@@ -100,7 +161,7 @@ public class GetWorkItemTypesTool implements McpTool {
                 
                 return Map.of("content", List.of(Map.of(
                     "type", "text",
-                    "text", formatWorkItemTypes(workItemTypes, project)
+                    "text", formatWorkItemTypes(workItemTypes, project, includeExtendedInfo, includeFieldDetails)
                 )));
                 
             } else {
@@ -123,7 +184,8 @@ public class GetWorkItemTypesTool implements McpTool {
         }
     }
     
-    private String formatWorkItemTypes(List<Map<String, Object>> workItemTypes, String project) {
+    private String formatWorkItemTypes(List<Map<String, Object>> workItemTypes, String project, 
+                                      Boolean includeExtendedInfo, Boolean includeFieldDetails) {
         StringBuilder sb = new StringBuilder();
         sb.append("📊 **Tipos de Work Items en el proyecto: ").append(project).append("**\n\n");
         sb.append("Total de tipos encontrados: **").append(workItemTypes.size()).append("**\n\n");
@@ -131,6 +193,7 @@ public class GetWorkItemTypesTool implements McpTool {
         for (Map<String, Object> type : workItemTypes) {
             String name = (String) type.get("name");
             String description = (String) type.get("description");
+            String referenceName = (String) type.get("referenceName");
             Boolean isDisabled = (Boolean) type.get("isDisabled");
             
             sb.append("🔹 **").append(name).append("**");
@@ -139,8 +202,26 @@ public class GetWorkItemTypesTool implements McpTool {
             }
             sb.append("\n");
             
+            if (includeExtendedInfo && referenceName != null && !referenceName.isEmpty()) {
+                sb.append("   🔗 Nombre de referencia: `").append(referenceName).append("`\n");
+            }
+            
             if (description != null && !description.isEmpty()) {
                 sb.append("   📝 ").append(description).append("\n");
+            }
+            
+            // Estados disponibles (solo si se incluye información extendida)
+            if (includeExtendedInfo) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> states = (List<Map<String, Object>>) type.get("states");
+                if (states != null && !states.isEmpty()) {
+                    sb.append("   🎯 **Estados disponibles:** ");
+                    for (int i = 0; i < states.size(); i++) {
+                        if (i > 0) sb.append(", ");
+                        sb.append(states.get(i).get("name"));
+                    }
+                    sb.append("\n");
+                }
             }
             
             @SuppressWarnings("unchecked")
@@ -152,15 +233,52 @@ public class GetWorkItemTypesTool implements McpTool {
                     if (field.containsKey("helpText") && !((String) field.get("helpText")).isEmpty()) {
                         sb.append(" - ").append(field.get("helpText"));
                     }
+                    if (includeFieldDetails && field.containsKey("fieldType")) {
+                        sb.append(" (").append(field.get("fieldType")).append(")");
+                    }
                     sb.append("\n");
                 }
             }
+            
+            // Mostrar total de campos disponibles (solo si se incluyen detalles de campos)
+            if (includeFieldDetails) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> allFields = (List<Map<String, Object>>) type.get("allFields");
+                if (allFields != null && !allFields.isEmpty()) {
+                    sb.append("   📋 **Total de campos disponibles:** ").append(allFields.size()).append("\n");
+                    
+                    // Mostrar campos con valores permitidos
+                    long fieldsWithValues = allFields.stream()
+                        .mapToLong(field -> field.containsKey("allowedValues") && field.get("allowedValues") != null ? 1 : 0)
+                        .sum();
+                    if (fieldsWithValues > 0) {
+                        sb.append("   🎯 **Campos con valores predefinidos:** ").append(fieldsWithValues).append("\n");
+                    }
+                }
+            }
+            
             sb.append("\n");
         }
         
         sb.append("💡 **Uso sugerido:**\n");
         sb.append("Para crear work items, usa los nombres exactos mostrados arriba.\n");
-        sb.append("Ejemplo: `type: \"Task\"` o `type: \"User Story\"`");
+        sb.append("Ejemplo: `type: \"Task\"` o `type: \"User Story\"`\n\n");
+        
+        if (includeExtendedInfo || includeFieldDetails) {
+            sb.append("ℹ️ **Información extendida capturada:**\n");
+            if (includeExtendedInfo) {
+                sb.append("• Referencias de nombre completas\n");
+                sb.append("• Estados y transiciones disponibles\n");
+            }
+            if (includeFieldDetails) {
+                sb.append("• Información completa de todos los campos (no solo obligatorios)\n");
+                sb.append("• Metadatos de tipos de datos y validaciones\n");
+                sb.append("• Valores permitidos y configuraciones de picklists\n");
+            }
+        } else {
+            sb.append("💡 **Tip:** Usa `includeExtendedInfo: true` para ver estados y referencias.\n");
+            sb.append("💡 **Tip:** Usa `includeFieldDetails: true` para ver detalles completos de campos.\n");
+        }
         
         return sb.toString();
     }

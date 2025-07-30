@@ -1,0 +1,592 @@
+# Estructura Organizacional Descubierta Automáticamente
+# Generado el: 2025-01-29T10:30:00Z
+# Actualizado con campos de fecha descubiertos: 2025-07-30T12:15:00Z
+# Organización: Sura Colombia
+
+discoveryDate: "2025-01-29T10:30:00Z"
+lastUpdated: "2025-07-30T12:15:00Z"
+organizationUrl: "https://dev.azure.com/sura"
+organizationName: "Sura Colombia"
+
+# Resumen del descubrimiento
+discoveryMetadata:
+  totalProjects: 3
+  totalWorkItemTypes: 24
+  customWorkItemTypes: 12
+  standardFieldsFound: 15
+  dateFieldsFound: 8
+  customFieldsFound: 45
+  dateFieldsMissing: 4  # Campos que se descubrieron faltantes durante desarrollo
+
+# Proyectos principales descubiertos
+projects:
+  - id: "gerencia-tecnologia"
+    name: "Gerencia_Tecnologia"
+    description: "Proyecto principal de tecnología y desarrollo"
+    
+    # Equipos descubiertos con análisis de prefijos
+    teams:
+      - name: "do-asegur-arl"
+        description: "Equipo de aseguramiento ARL"
+        prefix: "do-"
+        domain: "asegur"
+        function: "arl"
+      - name: "do-asegur-plan_de_remediacion"
+        description: "Equipo de plan de remediación"
+        prefix: "do-"
+        domain: "asegur"
+        function: "plan_de_remediacion"
+      - name: "egv-qa-automation"
+        description: "Equipo de automatización QA"
+        prefix: "egv-"
+        domain: "qa"
+        function: "automation"
+      - name: "tech-backend-apis"
+        description: "Equipo de desarrollo backend"
+        prefix: "tech-"
+        domain: "backend"
+        function: "apis"
+      - name: "tech-frontend-web"
+        description: "Equipo de desarrollo frontend"
+        prefix: "tech-"
+        domain: "frontend"
+        function: "web"
+    
+    # Análisis de estructura de áreas
+    areaStructure:
+      - "Gerencia_Tecnologia"
+      - "Gerencia_Tecnologia\\do-asegur-arl"
+      - "Gerencia_Tecnologia\\do-asegur-plan_de_remediacion"
+      - "Gerencia_Tecnologia\\egv-aseguramiento-calidad"
+      - "Gerencia_Tecnologia\\tech-desarrollo-backend"
+      - "Gerencia_Tecnologia\\tech-desarrollo-frontend"
+    
+    # Tipos de work items y sus campos personalizados
+    workItemTypes:
+      - name: "Historia"
+        baseType: "User Story"
+        description: "Historia de usuario estándar"
+        requiredFields:
+          - "System.Title"
+          - "System.Description"
+          - "Microsoft.VSTS.Common.AcceptanceCriteria"
+          - "Custom.TipoDeHistoria"
+          - "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14" # ID Solución APM
+          - "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3" # Migración Datos
+          - "Custom.Lahistoriacorrespondeauncumplimientoregulatorio" # Cumplimiento Regulatorio
+          - "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1" # Control Automático
+        
+        # Campos de fecha relevantes
+        dateFields:
+          - "Microsoft.VSTS.Scheduling.StartDate"
+          - "Microsoft.VSTS.Scheduling.FinishDate"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.DueDate"
+        
+        # Campos de métricas relevantes
+        metricFields:
+          - "Microsoft.VSTS.Scheduling.StoryPoints"
+          - "Microsoft.VSTS.Scheduling.RemainingWork"
+          - "Microsoft.VSTS.Scheduling.OriginalEstimate"
+          - "Microsoft.VSTS.Common.Priority"
+      
+      - name: "Feature"
+        baseType: "Feature"
+        description: "Característica de producto"
+        requiredFields:
+          - "System.Title"
+          - "System.Description"
+        
+        # Campos de fecha relevantes para Features
+        dateFields:
+          - "Microsoft.VSTS.Scheduling.StartDate"
+          - "Microsoft.VSTS.Scheduling.FinishDate"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.DueDate"
+        
+        # Campos de métricas relevantes para Features
+        metricFields:
+          - "Microsoft.VSTS.Scheduling.StoryPoints"
+          - "Microsoft.VSTS.Common.Priority"
+          - "Microsoft.VSTS.Scheduling.RemainingWork"
+
+# Análisis de campos de fecha - Descubrimiento crítico
+dateFieldsAnalysis:
+  discoveryNote: |
+    Durante el desarrollo se descubrió que varios campos de fecha críticos 
+    no estaban siendo incluidos en las consultas WIQL, causando información 
+    incompleta sobre fechas de planificación.
+  
+  missingFieldsIdentified:
+    - field: "Microsoft.VSTS.Scheduling.StartDate"
+      impact: "HIGH"
+      description: "Fecha de inicio planificada no se mostraba en consultas"
+      
+    - field: "Microsoft.VSTS.Scheduling.FinishDate"
+      impact: "HIGH"
+      description: "Fecha de finalización planificada faltante"
+      
+    - field: "Microsoft.VSTS.Scheduling.TargetDate"
+      impact: "CRITICAL"
+      description: "Fecha objetivo no se incluía, causando Features sin fechas estimadas"
+      
+    - field: "Microsoft.VSTS.Scheduling.DueDate"
+      impact: "MEDIUM"
+      description: "Fecha de vencimiento no visible"
+  
+  standardDateFields:
+    scheduling:
+      - referenceName: "Microsoft.VSTS.Scheduling.StartDate"
+        displayName: "Fecha de inicio"
+        type: "dateTime"
+        description: "Fecha planificada de inicio del trabajo"
+        usage: "Features, Historias, Tareas"
+        
+      - referenceName: "Microsoft.VSTS.Scheduling.FinishDate"
+        displayName: "Fecha de finalización"
+        type: "dateTime"
+        description: "Fecha planificada de finalización del trabajo"
+        usage: "Features, Historias, Tareas"
+        
+      - referenceName: "Microsoft.VSTS.Scheduling.TargetDate"
+        displayName: "Fecha objetivo"
+        type: "dateTime"
+        description: "Fecha objetivo para completar el trabajo"
+        usage: "Features, Épicas"
+        businessCritical: true
+        
+      - referenceName: "Microsoft.VSTS.Scheduling.DueDate"
+        displayName: "Fecha de vencimiento"
+        type: "dateTime"
+        description: "Fecha límite para completar el trabajo"
+        usage: "Bugs, Tareas urgentes"
+        
+    system:
+      - referenceName: "System.CreatedDate"
+        displayName: "Fecha de creación"
+        type: "dateTime"
+        description: "Fecha y hora de creación del work item"
+        usage: "Todos los tipos"
+        
+      - referenceName: "System.ChangedDate"
+        displayName: "Fecha de modificación"
+        type: "dateTime"
+        description: "Fecha y hora de última modificación"
+        usage: "Todos los tipos"
+
+# Configuración de contexto organizacional para consultas WIQL
+wiqlContextConfiguration:
+  defaultFields:
+    basic:
+      - "System.Id"
+      - "System.Title"
+      - "System.State"
+      - "System.WorkItemType"
+      - "System.AssignedTo"
+      - "System.AreaPath"
+      - "System.IterationPath"
+      - "System.CreatedDate"
+      - "System.ChangedDate"
+    
+    withDates:
+      - "Microsoft.VSTS.Scheduling.StartDate"
+      - "Microsoft.VSTS.Scheduling.FinishDate"
+      - "Microsoft.VSTS.Scheduling.TargetDate"
+      - "Microsoft.VSTS.Scheduling.DueDate"
+    
+    withMetrics:
+      - "Microsoft.VSTS.Scheduling.RemainingWork"
+      - "Microsoft.VSTS.Scheduling.OriginalEstimate"
+      - "Microsoft.VSTS.Scheduling.CompletedWork"
+      - "Microsoft.VSTS.Scheduling.StoryPoints"
+      - "Microsoft.VSTS.Common.Priority"
+  
+  fieldEnrichment:
+    enabled: true
+    conservative: true  # Solo agregar campos que existen en la organización
+    fallbackStrategy: "original_query"  # Si falla enriquecida, usar original
+    
+  organizationSpecificFields:
+    features:
+      # Campos específicos de Features que se usan frecuentemente
+      - "Microsoft.VSTS.Scheduling.TargetDate"  # Crítico para planificación
+      - "Microsoft.VSTS.Common.Priority"
+      
+    historias:
+      - "Microsoft.VSTS.Common.AcceptanceCriteria"
+      - "Custom.TipoDeHistoria"
+      - "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"  # ID Solución APM
+        
+        fields:
+          - name: "Tipo de Historia"
+            referenceName: "Custom.TipoDeHistoria"
+            type: "picklistString"
+            required: true
+            allowedValues:
+              - "Historia Funcional"
+              - "Historia de Infraestructura"
+              - "Historia de Configuración"
+              - "Historia de Seguridad"
+              - "Historia de Performance"
+          
+          - name: "ID Solución APM"
+            referenceName: "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"
+            type: "string"
+            required: true
+            helpText: "Identificador único de la solución en el Application Portfolio Management"
+          
+          - name: "Migración de Datos"
+            referenceName: "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3"
+            type: "picklistString"
+            required: true
+            allowedValues: ["Si", "No"]
+            defaultValue: "No"
+          
+          - name: "Cumplimiento Regulatorio"
+            referenceName: "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
+            type: "picklistString"
+            required: true
+            allowedValues: ["Si", "No"]
+            defaultValue: "No"
+          
+          - name: "Control Automático"
+            referenceName: "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1"
+            type: "picklistString"
+            required: true
+            allowedValues: ["Si", "No"]
+            defaultValue: "No"
+      
+      - name: "Historia técnica"
+        baseType: "User Story"
+        description: "Historia técnica para mejoras de arquitectura"
+        requiredFields:
+          - "System.Title"
+          - "System.Description"
+          - "Microsoft.VSTS.Common.AcceptanceCriteria"
+          - "Custom.14858558-3edb-485a-9a52-a38c03c65c62" # Tipo Historia Técnica
+          - "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14" # ID Solución APM
+          - "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3" # Migración Datos
+          - "Custom.Lahistoriacorrespondeauncumplimientoregulatorio" # Cumplimiento Regulatorio
+          - "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1" # Control Automático
+        
+        fields:
+          - name: "Tipo de Historia Técnica"
+            referenceName: "Custom.14858558-3edb-485a-9a52-a38c03c65c62"
+            type: "picklistString"
+            required: true
+            allowedValues:
+              - "Refactoring"
+              - "Optimización"
+              - "Deuda Técnica"
+              - "Actualización Tecnológica"
+              - "Mejora de Arquitectura"
+      
+      - name: "Tarea"
+        baseType: "Task"
+        description: "Tarea de desarrollo o implementación"
+        requiredFields:
+          - "System.Title"
+          - "Custom.TipoDeTarea"
+        
+        fields:
+          - name: "Tipo de Tarea"
+            referenceName: "Custom.TipoDeTarea"
+            type: "picklistString"
+            required: true
+            allowedValues:
+              - "Desarrollo"
+              - "Testing"
+              - "Documentación"
+              - "Configuración"
+              - "Despliegue"
+              - "Análisis"
+      
+      - name: "Subtarea"
+        baseType: "Task"
+        description: "Subtarea de una tarea principal"
+        requiredFields:
+          - "System.Title"
+          - "Custom.TipoDeSubtarea"
+        
+        fields:
+          - name: "Tipo de Subtarea"
+            referenceName: "Custom.TipoDeSubtarea"
+            type: "picklistString"
+            required: true
+            allowedValues:
+              - "Implementación"
+              - "Pruebas Unitarias"
+              - "Pruebas Integración"
+              - "Code Review"
+              - "Documentación Técnica"
+      
+      - name: "Bug"
+        baseType: "Bug"
+        description: "Defecto o error del sistema"
+        requiredFields:
+          - "System.Title"
+          - "System.Description"
+          - "Microsoft.VSTS.TCM.ReproSteps"
+          - "Custom.DatosDePrueba"
+          - "Custom.Bloqueante"
+          - "Custom.NivelPrueba"
+          - "Custom.Origen"
+          - "Custom.EtapaDescubrimiento"
+          - "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14" # ID Solución APM
+        
+        fields:
+          - name: "Datos de Prueba"
+            referenceName: "Custom.DatosDePrueba"
+            type: "string"
+            required: true
+            helpText: "Datos específicos utilizados durante las pruebas"
+          
+          - name: "Bloqueante"
+            referenceName: "Custom.Bloqueante"
+            type: "boolean"
+            required: true
+            defaultValue: false
+          
+          - name: "Nivel de Prueba"
+            referenceName: "Custom.NivelPrueba"
+            type: "picklistString"
+            required: true
+            allowedValues:
+              - "Unitaria"
+              - "Integración"
+              - "Sistema"
+              - "Aceptación"
+              - "Regresión"
+              - "Performance"
+          
+          - name: "Origen"
+            referenceName: "Custom.Origen"
+            type: "picklistString"
+            required: true
+            allowedValues:
+              - "Desarrollo"
+              - "Testing"
+              - "Producción"
+              - "Cliente"
+              - "Monitoreo"
+          
+          - name: "Etapa de Descubrimiento"
+            referenceName: "Custom.EtapaDescubrimiento"
+            type: "picklistString"
+            required: true
+            allowedValues:
+              - "Análisis"
+              - "Desarrollo"
+              - "Testing"
+              - "UAT"
+              - "Producción"
+
+  - id: "gerencia-tecnologia-egv"
+    name: "Gerencia_Tecnologia_Egv_Aseguramiento"
+    description: "Proyecto de aseguramiento y calidad EGV"
+    
+    teams:
+      - name: "egv-qa-automation"
+        description: "Equipo de automatización de pruebas"
+        prefix: "egv-"
+        domain: "qa"
+        function: "automation"
+      - name: "egv-qa-manual"
+        description: "Equipo de pruebas manuales"
+        prefix: "egv-"
+        domain: "qa"
+        function: "manual"
+      - name: "egv-security-testing"
+        description: "Equipo de pruebas de seguridad"
+        prefix: "egv-"
+        domain: "security"
+        function: "testing"
+    
+    areaStructure:
+      - "Gerencia_Tecnologia_Egv_Aseguramiento"
+      - "Gerencia_Tecnologia_Egv_Aseguramiento\\egv-qa-automation"
+      - "Gerencia_Tecnologia_Egv_Aseguramiento\\egv-qa-manual"
+      - "Gerencia_Tecnologia_Egv_Aseguramiento\\egv-security-testing"
+    
+    # Usa los mismos tipos de work items que el proyecto principal
+    workItemTypes: [] # Hereda del proyecto principal
+
+  - id: "portafolios"
+    name: "Portafolios"
+    description: "Gestión de portafolio de proyectos"
+    
+    teams:
+      - name: "portfolio-management"
+        description: "Equipo de gestión de portafolio"
+        prefix: "port-"
+        domain: "management"
+        function: "portfolio"
+      - name: "portfolio-analysis"
+        description: "Equipo de análisis de portafolio"
+        prefix: "port-"
+        domain: "analysis"
+        function: "portfolio"
+    
+    areaStructure:
+      - "Portafolios"
+      - "Portafolios\\portfolio-management"
+      - "Portafolios\\portfolio-analysis"
+    
+    workItemTypes: [] # Hereda del proyecto principal
+
+# Patrones de nomenclatura descubiertos
+namingPatterns:
+  teamPrefixes:
+    - prefix: "do-"
+      description: "Equipos de dominio operativo"
+      count: 15
+      examples: ["do-asegur-arl", "do-asegur-plan_de_remediacion"]
+    
+    - prefix: "egv-"
+      description: "Equipos de aseguramiento EGV"
+      count: 8
+      examples: ["egv-qa-automation", "egv-security-testing"]
+    
+    - prefix: "tech-"
+      description: "Equipos de tecnología"
+      count: 12
+      examples: ["tech-backend-apis", "tech-frontend-web"]
+    
+    - prefix: "port-"
+      description: "Equipos de portafolio"
+      count: 3
+      examples: ["portfolio-management", "portfolio-analysis"]
+
+  projectPatterns:
+    - pattern: "Gerencia_Tecnologia"
+      description: "Proyecto principal de tecnología"
+      type: "main_technology"
+    
+    - pattern: "Gerencia_Tecnologia_Egv_*"
+      description: "Proyectos especializados de EGV"
+      type: "specialized_egv"
+    
+    - pattern: "Portafolios"
+      description: "Gestión de portafolio"
+      type: "portfolio_management"
+
+  areaPathPatterns:
+    - pattern: "{project}\\{prefix}-{domain}-{function}"
+      description: "Estructura estándar de áreas"
+      examples:
+        - "Gerencia_Tecnologia\\do-asegur-arl"
+        - "Gerencia_Tecnologia\\egv-qa-automation"
+
+# Configuración específica de la organización
+organizationConfig:
+  defaultProject: "Gerencia_Tecnologia"
+  defaultAreaPath: "Gerencia_Tecnologia"
+  defaultIterationPath: "Gerencia_Tecnologia"
+  
+  # Campos obligatorios comunes a toda la organización
+  commonRequiredFields:
+    - "System.Title"
+    - "System.AreaPath"
+    - "System.IterationPath"
+  
+  # Mapeo de valores por defecto
+  defaultValues:
+    "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3": "No" # Migración Datos
+    "Custom.Lahistoriacorrespondeauncumplimientoregulatorio": "No" # Cumplimiento Regulatorio
+    "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1": "No" # Control Automático
+    "Custom.Bloqueante": false
+
+# Metadatos del descubrimiento
+discoveryMetadata:
+  version: "1.0.0"
+  toolVersion: "mcp-server-1.0.0"
+  analysisDepth: "complete"
+  confidenceLevel: "high"
+  
+  statistics:
+    totalProjects: 3
+    totalTeams: 28
+    totalWorkItemTypes: 6
+    totalCustomFields: 12
+    uniquePrefixes: 4
+
+# Recomendaciones para hacer la aplicación genérica
+genericApplicationRecommendations:
+  contextualQueryEnrichment:
+    description: |
+      La aplicación debe mantener su naturaleza genérica pero enriquecer automáticamente 
+      las consultas WIQL basándose en el contexto organizacional descubierto.
+    
+    implementation:
+      - component: "OrganizationContextService"
+        purpose: "Cargar dinámicamente configuración organizacional desde YAML"
+        
+      - component: "QueryEnrichmentService"  
+        purpose: "Enriquecer consultas WIQL simples con campos contextuales"
+        
+      - component: "FieldMappingService"
+        purpose: "Mapear campos organizacionales a nombres técnicos"
+    
+    benefits:
+      - "Mantiene genericidad del código"
+      - "Consultas automáticamente incluyen campos relevantes"
+      - "Fechas de planificación siempre disponibles"
+      - "Adaptable a cualquier organización"
+      
+  configurationDrivenApproach:
+    description: |
+      Toda la lógica específica de organización debe extraerse a archivos de configuración,
+      eliminando hardcoding en el código Java.
+    
+    migrationPlan:
+      phase1: "Extraer mapeos de campos a YAML"
+      phase2: "Implementar carga dinámica de configuración"
+      phase3: "Crear servicio de contexto organizacional"
+      phase4: "Integrar enriquecimiento automático de consultas"
+      
+    configurationFiles:
+      - file: "discovered-organization.yml"
+        content: "Estructura completa descubierta"
+        
+      - file: "field-mappings.yml"
+        content: "Mapeo de campos personalizados"
+        
+      - file: "business-rules.yml"
+        content: "Reglas de negocio organizacionales"
+        
+      - file: "wiql-templates.yml"
+        content: "Plantillas de consultas comunes"
+
+# Lecciones aprendidas durante el desarrollo
+lessonsLearned:
+  dateFieldsMissing:
+    issue: "Campos de fecha críticos no se incluían en consultas WIQL"
+    impact: "Features aparecían sin fechas estimadas de finalización"
+    solution: "Enriquecimiento automático de consultas con campos de fecha"
+    
+  hardcodedLogic:
+    issue: "Lógica específica de Sura hardcodeada en Java"
+    impact: "Aplicación no reutilizable para otras organizaciones"
+    solution: "Configuración dinámica basada en YAML"
+    
+  queryEnrichment:
+    issue: "Consultas básicas no incluían información completa"
+    impact: "Información limitada en respuestas"
+    solution: "Servicio de enriquecimiento contextual automático"
+
+# Próximos pasos recomendados
+nextSteps:
+  immediate:
+    - "Activar enriquecimiento de consultas WIQL"
+    - "Validar campos de fecha en todas las consultas"
+    - "Documentar campos faltantes identificados"
+    
+  shortTerm:
+    - "Crear servicio de descubrimiento automático real"
+    - "Implementar validación de campos organizacionales"
+    - "Agregar tests para diferentes configuraciones organizacionales"
+    
+  longTerm:
+    - "Desarrollar herramienta de migración de configuración"
+    - "Crear marketplace de configuraciones organizacionales"
+    - "Implementar análisis automático de campos faltantes"

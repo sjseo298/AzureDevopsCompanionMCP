@@ -123,6 +123,46 @@ public record WorkItem(
     }
     
     /**
+     * Obtiene la fecha de vencimiento (Due Date) del work item.
+     * 
+     * @return fecha de vencimiento o null si no está definida
+     */
+    public OffsetDateTime getDueDate() {
+        String dateStr = (String) fields.get("Microsoft.VSTS.Scheduling.DueDate");
+        return dateStr != null ? OffsetDateTime.parse(dateStr) : null;
+    }
+    
+    /**
+     * Obtiene la fecha objetivo (Target Date) del work item.
+     * 
+     * @return fecha objetivo o null si no está definida
+     */
+    public OffsetDateTime getTargetDate() {
+        String dateStr = (String) fields.get("Microsoft.VSTS.Scheduling.TargetDate");
+        return dateStr != null ? OffsetDateTime.parse(dateStr) : null;
+    }
+    
+    /**
+     * Obtiene la fecha de inicio (Start Date) del work item.
+     * 
+     * @return fecha de inicio o null si no está definida
+     */
+    public OffsetDateTime getStartDate() {
+        String dateStr = (String) fields.get("Microsoft.VSTS.Scheduling.StartDate");
+        return dateStr != null ? OffsetDateTime.parse(dateStr) : null;
+    }
+    
+    /**
+     * Obtiene la fecha de finalización (Finish Date) del work item.
+     * 
+     * @return fecha de finalización o null si no está definida
+     */
+    public OffsetDateTime getFinishDate() {
+        String dateStr = (String) fields.get("Microsoft.VSTS.Scheduling.FinishDate");
+        return dateStr != null ? OffsetDateTime.parse(dateStr) : null;
+    }
+    
+    /**
      * Obtiene las etiquetas del work item.
      * 
      * @return etiquetas separadas por punto y coma o null si no hay etiquetas
@@ -265,6 +305,23 @@ public record WorkItem(
         
         if (getDescription() != null && !getDescription().trim().isEmpty()) {
             sb.append(String.format("Descripción: %s%n", getDescription()));
+        }
+        
+        // Fechas de planificación
+        if (getStartDate() != null) {
+            sb.append(String.format("Fecha de inicio: %s%n", getStartDate().toLocalDate()));
+        }
+        
+        if (getDueDate() != null) {
+            sb.append(String.format("Fecha de vencimiento: %s%n", getDueDate().toLocalDate()));
+        }
+        
+        if (getTargetDate() != null) {
+            sb.append(String.format("Fecha objetivo: %s%n", getTargetDate().toLocalDate()));
+        }
+        
+        if (getFinishDate() != null) {
+            sb.append(String.format("Fecha de finalización: %s%n", getFinishDate().toLocalDate()));
         }
         
         if (getRemainingWork() != null) {

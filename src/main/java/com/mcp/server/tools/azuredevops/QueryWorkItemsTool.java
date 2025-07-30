@@ -1,5 +1,6 @@
 package com.mcp.server.tools.azuredevops;
 
+import com.mcp.server.config.OrganizationContextService;
 import com.mcp.server.tools.azuredevops.client.AzureDevOpsClient;
 import com.mcp.server.tools.azuredevops.client.AzureDevOpsException;
 import com.mcp.server.tools.azuredevops.model.WiqlQueryResult;
@@ -10,6 +11,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Herramienta MCP para ejecutar consultas WIQL en Azure DevOps.
@@ -22,10 +25,12 @@ import java.util.Map;
 public class QueryWorkItemsTool implements McpTool {
     
     private final AzureDevOpsClient azureDevOpsClient;
+    private final OrganizationContextService organizationContextService;
     
     @Autowired
-    public QueryWorkItemsTool(AzureDevOpsClient azureDevOpsClient) {
+    public QueryWorkItemsTool(AzureDevOpsClient azureDevOpsClient, OrganizationContextService organizationContextService) {
         this.azureDevOpsClient = azureDevOpsClient;
+        this.organizationContextService = organizationContextService;
     }
     
     @Override
@@ -74,7 +79,10 @@ public class QueryWorkItemsTool implements McpTool {
         try {
             if (!azureDevOpsClient.isConfigured()) {
                 return Map.of(
-                    "error", "Azure DevOps no está configurado. Necesita configurar AZURE_DEVOPS_ORGANIZATION y AZURE_DEVOPS_PAT."
+                    "content", List.of(Map.of(
+                        "type", "text",
+                        "text", "Azure DevOps no está configurado. Necesita configurar AZURE_DEVOPS_ORGANIZATION y AZURE_DEVOPS_PAT."
+                    ))
                 );
             }
             
@@ -86,23 +94,41 @@ public class QueryWorkItemsTool implements McpTool {
             int maxResults = maxResultsNum.intValue();
             
             if (project == null || project.trim().isEmpty()) {
-                return Map.of("error", "El parámetro 'project' es requerido");
+                return Map.of(
+                    "content", List.of(Map.of(
+                        "type", "text",
+                        "text", "El parámetro 'project' es requerido"
+                    ))
+                );
             }
             
             if (query == null || query.trim().isEmpty()) {
-                return Map.of("error", "El parámetro 'query' es requerido");
+                return Map.of(
+                    "content", List.of(Map.of(
+                        "type", "text",
+                        "text", "El parámetro 'query' es requerido"
+                    ))
+                );
             }
             
-            // Ejecutar la consulta WIQL
+            // Para debugging: log de la consulta original
+            System.out.println("Consulta original: " + query);
+            
+            // TEMPORALMENTE DESACTIVAR ENRIQUECIMIENTO PARA DEBUGGING
+            // Enriquecer la consulta con campos contextuales si es necesario
+            // String enrichedQuery = enrichWiqlQuery(query);
+            // System.out.println("Consulta enriquecida: " + enrichedQuery);
+            
+            // Ejecutar la consulta WIQL directamente
             WiqlQueryResult queryResult = azureDevOpsClient.executeWiqlQuery(project, team, query);
             
             if (!queryResult.hasResults()) {
-                return(Map.of(
+                return Map.of(
                     "content", List.of(Map.of(
                         "type", "text",
                         "text", "La consulta WIQL no retornó resultados."
                     ))
-                ));
+                );
             }
             
             // Limitar resultados
@@ -159,17 +185,162 @@ public class QueryWorkItemsTool implements McpTool {
                 result.append("%n");
             }
             
-            return(Map.of(
+            return Map.of(
                 "content", List.of(Map.of(
                     "type", "text",
                     "text", result.toString()
                 ))
-            ));
+            );
             
         } catch (AzureDevOpsException e) {
-            return Map.of("error", "Error de Azure DevOps: " + e.getMessage());
+            return Map.of(
+                "content", List.of(Map.of(
+                    "type", "text",
+                    "text", "Error de Azure DevOps: " + e.getMessage()
+                ))
+            );
         } catch (Exception e) {
-            return Map.of("error", "Error inesperado: " + e.getMessage());
+            return Map.of(
+                "content", List.of(Map.of(
+                    "type", "text", 
+                    "text", "Error inesperado: " + e.getMessage()
+                ))
+            );
         }
+    }
+    
+    /**
+     * Enriquece consultas WIQL simples con campos contextuales de la organización.
+     * Si la consulta ya incluye campos específicos, no se modifica.
+     */
+    private String enrichWiqlQuery(String originalQuery) {
+        if (originalQuery == null || originalQuery.trim().isEmpty()) {
+            return originalQuery;
+        }
+        
+        String query = originalQuery.trim();
+        
+        // Detectar si es una consulta SELECT simple que podría beneficiarse del enriquecimiento
+        Pattern simpleSelectPattern = Pattern.compile(
+            "SELECT\\s+\\[System\\.Id\\]\\s*,?\\s*\\[System\\.Title\\]\\s*(?:,\\s*\\[System\\.State\\])?\\s*(?:,\\s*\\[System\\.WorkItemType\\])?\\s+FROM\\s+WorkItems",
+            Pattern.CASE_INSENSITIVE
+        );
+        
+        Matcher matcher = simpleSelectPattern.matcher(query);
+        if (matcher.find()) {
+            // Es una consulta simple, enriquecerla
+            String whereClause = query.substring(matcher.end()).trim();
+            
+            // Intentar determinar el tipo de work item de la cláusula WHERE
+            String workItemType = extractWorkItemTypeFromWhere(whereClause);
+            
+            // Construir consulta enriquecida con enfoque conservador
+            String enrichedSelect = organizationContextService.buildWiqlSelectClauseWithDates();
+            
+            String enrichedQuery = enrichedSelect + " FROM WorkItems";
+            if (!whereClause.isEmpty()) {
+                enrichedQuery += " " + whereClause;
+            }
+            
+            return enrichedQuery;
+        }
+        
+        // Si no es una consulta simple, devolver sin modificar
+        return originalQuery;
+    }
+    
+    /**
+     * Extrae el tipo de work item de la cláusula WHERE si está presente.
+     */
+    private String extractWorkItemTypeFromWhere(String whereClause) {
+        if (whereClause == null || whereClause.isEmpty()) {
+            return null;
+        }
+        
+        // Buscar patrones como [System.WorkItemType] = 'Feature'
+        Pattern workItemTypePattern = Pattern.compile(
+            "\\[System\\.WorkItemType\\]\\s*=\\s*['\"]([^'\"]+)['\"]",
+            Pattern.CASE_INSENSITIVE
+        );
+        
+        Matcher matcher = workItemTypePattern.matcher(whereClause);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        
+        // Buscar patrones como [System.WorkItemType] IN ('Feature', 'Epic')
+        Pattern inPattern = Pattern.compile(
+            "\\[System\\.WorkItemType\\]\\s+IN\\s*\\([^)]*['\"]([^'\"]+)['\"]",
+            Pattern.CASE_INSENSITIVE
+        );
+        
+        matcher = inPattern.matcher(whereClause);
+        if (matcher.find()) {
+            return matcher.group(1); // Devolver el primer tipo encontrado
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Ejecuta una consulta WIQL con fallback en caso de error.
+     * Si la consulta enriquecida falla, intenta con la consulta original.
+     */
+    private WiqlQueryResult executeWiqlQueryWithFallback(String project, String team, String enrichedQuery, String originalQuery) throws AzureDevOpsException {
+        try {
+            // Intentar con la consulta enriquecida primero
+            return azureDevOpsClient.executeWiqlQuery(project, team, enrichedQuery);
+        } catch (AzureDevOpsException e) {
+            System.out.println("La consulta enriquecida falló, intentando con consulta original: " + e.getMessage());
+            
+            // Si la consulta enriquecida falla, intentar con la original
+            if (!enrichedQuery.equals(originalQuery)) {
+                try {
+                    return azureDevOpsClient.executeWiqlQuery(project, team, originalQuery);
+                } catch (AzureDevOpsException originalError) {
+                    // Si ambas fallan, intentar con una consulta básica
+                    System.out.println("La consulta original también falló, intentando consulta básica: " + originalError.getMessage());
+                    
+                    String basicQuery = createBasicFallbackQuery(originalQuery);
+                    if (basicQuery != null) {
+                        return azureDevOpsClient.executeWiqlQuery(project, team, basicQuery);
+                    } else {
+                        // Si todo falla, lanzar el error original
+                        throw e;
+                    }
+                }
+            } else {
+                // Si la consulta enriquecida es igual a la original, intentar consulta básica
+                String basicQuery = createBasicFallbackQuery(originalQuery);
+                if (basicQuery != null) {
+                    return azureDevOpsClient.executeWiqlQuery(project, team, basicQuery);
+                } else {
+                    throw e;
+                }
+            }
+        }
+    }
+    
+    /**
+     * Crea una consulta básica de fallback basada en la consulta original.
+     */
+    private String createBasicFallbackQuery(String originalQuery) {
+        if (originalQuery == null || originalQuery.trim().isEmpty()) {
+            return null;
+        }
+        
+        // Extraer la cláusula WHERE de la consulta original
+        String upperQuery = originalQuery.toUpperCase();
+        int whereIndex = upperQuery.indexOf("WHERE");
+        
+        if (whereIndex != -1) {
+            String whereClause = originalQuery.substring(whereIndex);
+            
+            // Construir consulta básica con campos garantizados
+            String basicSelect = organizationContextService.buildBasicWiqlSelectClause();
+            return basicSelect + " FROM WorkItems " + whereClause;
+        }
+        
+        return null;
     }
 }

@@ -36,9 +36,11 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     implementation 'com.fasterxml.jackson.core:jackson-core'
     implementation 'com.fasterxml.jackson.core:jackson-annotations'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
     
     // Utilities
     implementation 'org.apache.commons:commons-lang3'
+    implementation 'org.yaml:snakeyaml'
     
     // Logging (ya incluido en Spring Boot, pero explícito por claridad)
     implementation 'org.springframework.boot:spring-boot-starter-logging'

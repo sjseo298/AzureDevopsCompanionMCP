@@ -69,7 +69,10 @@ public class GetWorkItemTool implements McpTool {
         try {
             if (!azureDevOpsClient.isConfigured()) {
                 return Map.of(
-                    "error", "Azure DevOps no está configurado. Necesita configurar AZURE_DEVOPS_ORGANIZATION y AZURE_DEVOPS_PAT."
+                    "content", List.of(Map.of(
+                        "type", "text",
+                        "text", "Azure DevOps no está configurado. Necesita configurar AZURE_DEVOPS_ORGANIZATION y AZURE_DEVOPS_PAT."
+                    ))
                 );
             }
             
@@ -80,11 +83,21 @@ public class GetWorkItemTool implements McpTool {
             List<String> fields = (List<String>) arguments.get("fields");
             
             if (project == null || project.trim().isEmpty()) {
-                return Map.of("error", "El parámetro 'project' es requerido");
+                return Map.of(
+                    "content", List.of(Map.of(
+                        "type", "text",
+                        "text", "El parámetro 'project' es requerido"
+                    ))
+                );
             }
             
             if (workItemIdNum == null) {
-                return Map.of("error", "El parámetro 'workItemId' es requerido");
+                return Map.of(
+                    "content", List.of(Map.of(
+                        "type", "text",
+                        "text", "El parámetro 'workItemId' es requerido"
+                    ))
+                );
             }
             
             Integer workItemId = workItemIdNum.intValue();
@@ -92,7 +105,12 @@ public class GetWorkItemTool implements McpTool {
             WorkItem workItem = azureDevOpsClient.getWorkItem(project, workItemId, fields, expand);
             
             if (workItem == null) {
-                return Map.of("error", String.format("No se encontró el work item con ID %d en el proyecto '%s'", workItemId, project));
+                return Map.of(
+                    "content", List.of(Map.of(
+                        "type", "text",
+                        "text", String.format("No se encontró el work item con ID %d en el proyecto '%s'", workItemId, project)
+                    ))
+                );
             }
             
             StringBuilder result = new StringBuilder();
@@ -109,17 +127,27 @@ public class GetWorkItemTool implements McpTool {
             
             result.append(String.format("URL: %s%n", workItem.url()));
             
-            return(Map.of(
+            return Map.of(
                 "content", List.of(Map.of(
                     "type", "text",
                     "text", result.toString()
                 ))
-            ));
+            );
             
         } catch (AzureDevOpsException e) {
-            return Map.of("error", "Error de Azure DevOps: " + e.getMessage());
+            return Map.of(
+                "content", List.of(Map.of(
+                    "type", "text",
+                    "text", "Error de Azure DevOps: " + e.getMessage()
+                ))
+            );
         } catch (Exception e) {
-            return Map.of("error", "Error inesperado: " + e.getMessage());
+            return Map.of(
+                "content", List.of(Map.of(
+                    "type", "text",
+                    "text", "Error inesperado: " + e.getMessage()
+                ))
+            );
         }
     }
 }

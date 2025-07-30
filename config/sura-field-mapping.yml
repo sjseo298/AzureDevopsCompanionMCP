@@ -1,0 +1,473 @@
+# Mapeo de Campos Personalizados de Sura
+# Este archivo documenta todos los campos personalizados extraídos del código actual
+# Actualizado con campos de fecha descubiertos durante el desarrollo
+
+# Campos extraídos de CreateWorkItemTool.java y archivos de definición
+# ACTUALIZACIÓN: Se agregaron campos de fecha que faltaban en consultas WIQL
+
+customFields:
+  historia:
+    # Campos obligatorios para Historia
+    - referenceName: "Microsoft.VSTS.Common.AcceptanceCriteria"
+      displayName: "Criterios de aceptación"
+      type: "html"
+      required: true
+      helpText: "Definir claramente los criterios de aceptación de la historia"
+    
+    - referenceName: "Custom.TipoDeHistoria"
+      displayName: "Tipo de Historia"
+      type: "picklistString"
+      required: true
+      allowedValues:
+        - "Historia Funcional"
+        - "Historia de Infraestructura"
+        - "Historia de Configuración"
+        - "Historia de Seguridad"
+        - "Historia de Performance"
+    
+    - referenceName: "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"
+      displayName: "ID de la solución en el APM"
+      type: "string"
+      required: true
+      helpText: "Identificador único de la solución en el Application Portfolio Management"
+    
+    - referenceName: "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3"
+      displayName: "La historia hace parte de una migración de datos"
+      type: "picklistString"
+      required: true
+      allowedValues: ["Si", "No"]
+      defaultValue: "No"
+    
+    - referenceName: "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
+      displayName: "La historia corresponde a un cumplimiento regulatorio"
+      type: "picklistString"
+      required: true
+      allowedValues: ["Si", "No"]
+      defaultValue: "No"
+    
+    - referenceName: "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1"
+      displayName: "La historia hace parte de un control automático o control de aplicación"
+      type: "picklistString"
+      required: true
+      allowedValues: ["Si", "No"]
+      defaultValue: "No"
+    
+    # Campos adicionales de Historia (del JSON)
+    - referenceName: "Custom.PuntosdeEsfuerzo"
+      displayName: "Puntos de Esfuerzo"
+      type: "integer"
+      required: false
+    
+    - referenceName: "Custom.Prioridad"
+      displayName: "Prioridad"
+      type: "picklistString"
+      required: false
+    
+    - referenceName: "Custom.Riesgo"
+      displayName: "Riesgo"
+      type: "picklistString"
+      required: false
+    
+    - referenceName: "Custom.ControldeCambios"
+      displayName: "Control de Cambios"
+      type: "picklistString"
+      required: false
+    
+    - referenceName: "Custom.CausaControldeCambios"
+      displayName: "Causa Control de Cambios"
+      type: "string"
+      required: false
+    
+    - referenceName: "Custom.TipodeHistoria"
+      displayName: "Tipo de Historia"
+      type: "picklistString"
+      required: false
+      note: "Posible campo duplicado con Custom.TipoDeHistoria"
+    
+    - referenceName: "Custom.2d56f0ee-ac95-4e05-893f-1b44cea1352d"
+      displayName: "Estado Resolución"
+      type: "picklistString"
+      required: false
+    
+    - referenceName: "Custom.IDCasoProblema"
+      displayName: "ID Caso Problema"
+      type: "string"
+      required: false
+
+  historiaTecnica:
+    # Campos específicos para Historia Técnica
+    - referenceName: "Custom.14858558-3edb-485a-9a52-a38c03c65c62"
+      displayName: "Tipo de Historia Técnica"
+      type: "picklistString"
+      required: true
+      allowedValues:
+        - "Refactoring"
+        - "Optimización"
+        - "Deuda Técnica"
+        - "Actualización Tecnológica"
+        - "Mejora de Arquitectura"
+    
+    # Hereda campos de Historia estándar
+    - inherits: "historia"
+
+  tarea:
+    # Campos específicos para Tarea
+    - referenceName: "Custom.TipoDeTarea"
+      displayName: "Tipo de Tarea"
+      type: "picklistString"
+      required: true
+      allowedValues:
+        - "Desarrollo"
+        - "Testing"
+        - "Documentación"
+        - "Configuración"
+        - "Despliegue"
+        - "Análisis"
+
+  subtarea:
+    # Campos específicos para Subtarea
+    - referenceName: "Custom.TipoDeSubtarea"
+      displayName: "Tipo de Subtarea"
+      type: "picklistString"
+      required: true
+      allowedValues:
+        - "Implementación"
+        - "Pruebas Unitarias"
+        - "Pruebas Integración"
+        - "Code Review"
+        - "Documentación Técnica"
+
+  bug:
+    # Campos obligatorios para Bug
+    - referenceName: "Microsoft.VSTS.TCM.ReproSteps"
+      displayName: "Pasos para reproducir"
+      type: "html"
+      required: true
+      helpText: "Descripción detallada de los pasos para reproducir el defecto"
+    
+    - referenceName: "Custom.DatosDePrueba"
+      displayName: "Datos de prueba"
+      type: "string"
+      required: true
+      helpText: "Datos específicos utilizados durante las pruebas"
+    
+    - referenceName: "Custom.Bloqueante"
+      displayName: "¿Es bloqueante?"
+      type: "boolean"
+      required: true
+      defaultValue: false
+    
+    - referenceName: "Custom.NivelPrueba"
+      displayName: "Nivel de prueba"
+      type: "picklistString"
+      required: true
+      allowedValues:
+        - "Unitaria"
+        - "Integración"
+        - "Sistema"
+        - "Aceptación"
+        - "Regresión"
+        - "Performance"
+    
+    - referenceName: "Custom.Origen"
+      displayName: "Origen del bug"
+      type: "picklistString"
+      required: true
+      allowedValues:
+        - "Desarrollo"
+        - "Testing"
+        - "Producción"
+        - "Cliente"
+        - "Monitoreo"
+    
+    - referenceName: "Custom.EtapaDescubrimiento"
+      displayName: "Etapa de descubrimiento"
+      type: "picklistString"
+      required: true
+      allowedValues:
+        - "Análisis"
+        - "Desarrollo"
+        - "Testing"
+        - "UAT"
+        - "Producción"
+    
+    - referenceName: "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"
+      displayName: "ID de la solución en el APM"
+      type: "string"
+      required: true
+
+# Campos del sistema estándar utilizados
+systemFields:
+  common:
+    - referenceName: "System.Title"
+      displayName: "Título"
+      type: "string"
+      required: true
+    
+    - referenceName: "System.Description"
+      displayName: "Descripción"
+      type: "html"
+      required: false
+    
+    - referenceName: "System.AssignedTo"
+      displayName: "Asignado a"
+      type: "identity"
+      required: false
+    
+    - referenceName: "System.AreaPath"
+      displayName: "Área"
+      type: "treePath"
+      required: false
+    
+    - referenceName: "System.IterationPath"
+      displayName: "Iteración"
+      type: "treePath"
+      required: false
+    
+    - referenceName: "System.State"
+      displayName: "Estado"
+      type: "string"
+      required: true
+    
+    - referenceName: "System.Tags"
+      displayName: "Etiquetas"
+      type: "plainText"
+      required: false
+
+  scheduling:
+    - referenceName: "Microsoft.VSTS.Scheduling.RemainingWork"
+      displayName: "Trabajo restante"
+      type: "double"
+      required: false
+    
+    - referenceName: "Microsoft.VSTS.Scheduling.StoryPoints"
+      displayName: "Puntos de historia"
+      type: "double"
+      required: false
+    
+    - referenceName: "Microsoft.VSTS.Scheduling.StartDate"
+      displayName: "Fecha de inicio"
+      type: "dateTime"
+      required: false
+      helpText: "Fecha planificada de inicio del trabajo"
+    
+    - referenceName: "Microsoft.VSTS.Scheduling.FinishDate"
+      displayName: "Fecha de finalización"
+      type: "dateTime"
+      required: false
+      helpText: "Fecha planificada de finalización del trabajo"
+    
+    - referenceName: "Microsoft.VSTS.Scheduling.TargetDate"
+      displayName: "Fecha objetivo"
+      type: "dateTime"
+      required: false
+      helpText: "Fecha objetivo para completar el trabajo"
+    
+    - referenceName: "Microsoft.VSTS.Scheduling.DueDate"
+      displayName: "Fecha de vencimiento"
+      type: "dateTime"
+      required: false
+      helpText: "Fecha límite para completar el trabajo"
+    
+    - referenceName: "Microsoft.VSTS.Scheduling.OriginalEstimate"
+      displayName: "Estimación original"
+      type: "double"
+      required: false
+      helpText: "Estimación original en horas"
+    
+    - referenceName: "Microsoft.VSTS.Scheduling.CompletedWork"
+      displayName: "Trabajo completado"
+      type: "double"
+      required: false
+      helpText: "Horas de trabajo completadas"
+    
+    - referenceName: "Microsoft.VSTS.Common.Priority"
+      displayName: "Prioridad"
+      type: "integer"
+      required: false
+
+# Mapeo de campos hardcodeados en el código Java
+javaCodeMapping:
+  userProvidedValues:
+    acceptanceCriteria: "Microsoft.VSTS.Common.AcceptanceCriteria"
+    tipoHistoria: "Custom.TipoDeHistoria"
+    tipoHistoriaTecnica: "Custom.14858558-3edb-485a-9a52-a38c03c65c62"
+    tipoTarea: "Custom.TipoDeTarea"
+    tipoSubtarea: "Custom.TipoDeSubtarea"
+    idSolucionAPM: "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"
+    migracionDatos: "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3"
+    cumplimientoRegulatorio: "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
+    controlAutomatico: "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1"
+    reproSteps: "Microsoft.VSTS.TCM.ReproSteps"
+    datosPrueba: "Custom.DatosDePrueba"
+    bloqueante: "Custom.Bloqueante"
+    nivelPrueba: "Custom.NivelPrueba"
+    origen: "Custom.Origen"
+    etapaDescubrimiento: "Custom.EtapaDescubrimiento"
+
+# Información extraída de SuraWorkItemFieldsHandler
+requiredFieldsByType:
+  Historia:
+    - "Microsoft.VSTS.Common.AcceptanceCriteria"
+    - "Custom.TipoDeHistoria"
+    - "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"
+    - "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3"
+    - "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
+    - "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1"
+  
+  "Historia técnica":
+    - "Microsoft.VSTS.Common.AcceptanceCriteria"
+    - "Custom.14858558-3edb-485a-9a52-a38c03c65c62"
+    - "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"
+    - "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3"
+    - "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
+    - "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1"
+  
+  Tarea:
+    - "Custom.TipoDeTarea"
+  
+  Subtarea:
+    - "Custom.TipoDeSubtarea"
+  
+  Bug:
+    - "Microsoft.VSTS.TCM.ReproSteps"
+    - "Custom.DatosDePrueba"
+    - "Custom.Bloqueante"
+    - "Custom.NivelPrueba"
+    - "Custom.Origen"
+    - "Custom.EtapaDescubrimiento"
+    - "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"
+
+# Valores por defecto extraídos del código
+defaultValues:
+  "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3": "No"  # Migración Datos
+  "Custom.Lahistoriacorrespondeauncumplimientoregulatorio": "No"  # Cumplimiento Regulatorio
+  "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1": "No"  # Control Automático
+  "Custom.Bloqueante": false
+
+# Conversiones booleanas usadas en el código
+booleanConversions:
+  migracionDatos: 
+    true: "Si"
+    false: "No"
+  cumplimientoRegulatorio:
+    true: "Si"
+    false: "No"
+  controlAutomatico:
+    true: "Si"
+    false: "No"
+
+# DESCUBRIMIENTO CRÍTICO: Campos de fecha faltantes en consultas WIQL
+# Durante el desarrollo se identificaron campos que no se incluían automáticamente
+missingDateFieldsDiscovered:
+  discoveryDate: "2025-07-30"
+  impact: "CRITICAL"
+  description: |
+    Se descubrió que varios campos de fecha esenciales no se estaban incluyendo
+    en las consultas WIQL automáticas, causando que Features aparecieran sin
+    fechas estimadas de finalización.
+  
+  identifiedMissingFields:
+    - referenceName: "Microsoft.VSTS.Scheduling.TargetDate"
+      displayName: "Fecha objetivo"
+      type: "dateTime"
+      impact: "CRITICAL"
+      issue: "Features sin fechas estimadas de finalización"
+      solution: "Agregado al enriquecimiento automático de consultas"
+      
+    - referenceName: "Microsoft.VSTS.Scheduling.StartDate"
+      displayName: "Fecha de inicio"
+      type: "dateTime"
+      impact: "HIGH"
+      issue: "Información de planificación incompleta"
+      solution: "Incluido en campos contextuales automáticos"
+      
+    - referenceName: "Microsoft.VSTS.Scheduling.FinishDate"
+      displayName: "Fecha de finalización"
+      type: "dateTime"
+      impact: "HIGH"
+      issue: "Seguimiento de progreso limitado"
+      solution: "Agregado a consultas enriquecidas"
+      
+    - referenceName: "Microsoft.VSTS.Scheduling.DueDate"
+      displayName: "Fecha de vencimiento"
+      type: "dateTime"
+      impact: "MEDIUM"
+      issue: "Priorización afectada"
+      solution: "Incluido en contexto organizacional"
+
+# Configuración mejorada para enriquecimiento contextual
+contextualEnrichmentConfig:
+  description: |
+    Configuración para el enriquecimiento automático de consultas WIQL
+    basado en el contexto organizacional de Sura Colombia.
+  
+  wiqlEnrichmentRules:
+    features:
+      mandatoryFields:
+        - "Microsoft.VSTS.Scheduling.TargetDate"  # CRÍTICO para Sura
+        - "Microsoft.VSTS.Scheduling.StartDate"
+        - "Microsoft.VSTS.Scheduling.FinishDate"
+      
+      optionalFields:
+        - "Microsoft.VSTS.Scheduling.DueDate"
+        - "Microsoft.VSTS.Common.Priority"
+        - "Microsoft.VSTS.Scheduling.StoryPoints"
+    
+    historias:
+      mandatoryFields:
+        - "Custom.TipoDeHistoria"
+        - "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"  # ID APM
+        - "Microsoft.VSTS.Common.AcceptanceCriteria"
+      
+      dateFields:
+        - "Microsoft.VSTS.Scheduling.StartDate"
+        - "Microsoft.VSTS.Scheduling.FinishDate"
+        - "Microsoft.VSTS.Scheduling.TargetDate"
+    
+    bugs:
+      mandatoryFields:
+        - "Microsoft.VSTS.TCM.ReproSteps"
+        - "Custom.NivelPrueba"
+        - "Custom.Origen"
+      
+      dateFields:
+        - "Microsoft.VSTS.Scheduling.DueDate"  # Importante para bugs críticos
+
+# Implementación del contexto organizacional
+organizationalContext:
+  implementation:
+    service: "OrganizationContextService"
+    configFile: "discovered-organization.yml"
+    
+  enrichmentStrategy:
+    approach: "conservative"  # Solo agregar campos que existen
+    fallback: "original_query"  # Si falla, usar consulta original
+    validation: "field_existence"  # Validar campos antes de usar
+    
+  queryTypes:
+    simple:
+      pattern: "SELECT [System.Id], [System.Title] FROM WorkItems"
+      action: "enrich_automatically"
+      
+    complex:
+      pattern: "SELECT [Custom.*] FROM WorkItems"
+      action: "preserve_original"
+      
+    templated:
+      pattern: "@Template queries"
+      action: "apply_context_variables"
+
+# Mapeo para otras organizaciones (patrón genérico)
+genericOrganizationPattern:
+  configStructure:
+    discoveredFields: "discovered-[org].yml"
+    fieldMappings: "[org]-field-mapping.yml"
+    businessRules: "[org]-business-rules.yml"
+    
+  adaptationProcess:
+    step1: "Ejecutar descubrimiento automático"
+    step2: "Generar configuración organizacional"
+    step3: "Validar campos existentes"
+    step4: "Configurar enriquecimiento contextual"
+    step5: "Probar consultas enriquecidas"
