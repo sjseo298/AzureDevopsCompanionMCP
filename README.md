@@ -198,6 +198,57 @@ await mcp.call("azuredevops_query_workitems", {
 - **SLF4J + Logback**: Logging estructurado y configurable
 - **JUnit 5**: Testing moderno con Spring Boot Test
 
+## 🤖 Prompts MCP Disponibles
+
+El servidor incluye prompts inteligentes para asistir en tareas comunes:
+
+### 🔧 `generar_configuracion_organizacional`
+**Genera automáticamente la configuración organizacional completa**
+
+```javascript
+// Generación automática en nueva instalación
+generar_configuracion_organizacional({})
+
+// Regeneración con parámetros específicos
+generar_configuracion_organizacional({
+    "forzar_regeneracion": true,
+    "proyecto_principal": "Mi_Proyecto",
+    "incluir_campos_extendidos": true,
+    "generar_backup": true
+})
+```
+
+**Qué hace:**
+- ✅ Detecta archivos de configuración faltantes
+- ✅ Ejecuta descubrimiento automático de Azure DevOps
+- ✅ Genera `discovered-organization.yml`, `organization-config.yml`, `field-mappings.yml`
+- ✅ Incluye campos personalizados, tipos de work items y reglas de negocio
+- ✅ Valida sintaxis YAML y optimiza configuración
+
+### 🔍 `buscar_workitem`
+**Busca work items por ID, título o criterios específicos**
+
+```javascript
+buscar_workitem({
+    "criterio_busqueda": "login authentication",
+    "tipo_workitem": "User Story",
+    "proyecto": "MiProyecto",
+    "incluir_detalles": true
+})
+```
+
+### 📊 `consulta_proyectos_pertenencia`
+**Consulta proyectos y estructura organizacional**
+
+```javascript
+consulta_proyectos_pertenencia({
+    "incluir_equipos": true,
+    "incluir_estadisticas": true
+})
+```
+
+> 📖 **Documentación completa**: Ver [docs/PROMPT-GENERAR-CONFIGURACION.md](docs/PROMPT-GENERAR-CONFIGURACION.md) y [docs/EJEMPLO-USO-PROMPT.md](docs/EJEMPLO-USO-PROMPT.md)
+
 ## 📋 Campos Personalizados Soportados
 
 El servidor maneja automáticamente los campos personalizados específicos:

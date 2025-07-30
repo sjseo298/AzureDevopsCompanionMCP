@@ -3,7 +3,7 @@ package com.mcp.server.tools.azuredevops;
 import com.mcp.server.tools.azuredevops.client.AzureDevOpsClient;
 import com.mcp.server.tools.azuredevops.client.AzureDevOpsException;
 import com.mcp.server.tools.azuredevops.model.WorkItem;
-import com.mcp.server.tools.azuredevops.model.YOUR_ORGANIZATIONWorkItemFieldsHandler;
+import com.mcp.server.service.workitem.GenericWorkItemFieldsHandler;
 import com.mcp.server.tools.base.McpTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -25,10 +25,12 @@ import java.util.Set;
 public class CreateWorkItemTool implements McpTool {
     
     private final AzureDevOpsClient azureDevOpsClient;
+    private final GenericWorkItemFieldsHandler fieldsHandler;
     
     @Autowired
-    public CreateWorkItemTool(AzureDevOpsClient azureDevOpsClient) {
+    public CreateWorkItemTool(AzureDevOpsClient azureDevOpsClient, GenericWorkItemFieldsHandler fieldsHandler) {
         this.azureDevOpsClient = azureDevOpsClient;
+        this.fieldsHandler = fieldsHandler;
     }
     
     @Override
@@ -429,23 +431,23 @@ public class CreateWorkItemTool implements McpTool {
                 ));
             }
             
-            // Usar el manejador de campos obligatorios de YOUR_ORGANIZATION
-            operations = YOUR_ORGANIZATIONWorkItemFieldsHandler.addMissingRequiredFields(type, operations, userProvidedValues);
+            // Procesar campos con el manejador genérico
+            Map<String, Object> allFields = new HashMap<>();
+            for (Map<String, Object> op : operations) {
+                allFields.put((String) op.get("path"), ((Map<String, Object>) op.get("value")).get("value"));
+            }
             
-            // Validar que todos los campos obligatorios estén presentes
-            YOUR_ORGANIZATIONWorkItemFieldsHandler.ValidationResult validation = 
-                YOUR_ORGANIZATIONWorkItemFieldsHandler.validateRequiredFields(type, operations);
+            // Validar campos requeridos
+            GenericWorkItemFieldsHandler.ValidationResult validation = 
+                fieldsHandler.validateRequiredFields(type, allFields);
             
             if (!validation.isValid()) {
                 StringBuilder errorMsg = new StringBuilder();
                 errorMsg.append("❌ Faltan campos obligatorios para el tipo '").append(type).append("':\n\n");
                 
-                Set<String> missingFields = validation.getMissingFields();
-                Map<String, String> fieldDescriptions = YOUR_ORGANIZATIONWorkItemFieldsHandler.getRequiredFieldsWithDescriptions(type);
-                
-                for (String field : missingFields) {
-                    String fieldDescription = fieldDescriptions.getOrDefault(field, field);
-                    errorMsg.append("• ").append(fieldDescription).append("\n");
+                List<String> errors = validation.getErrors();
+                for (String error : errors) {
+                    errorMsg.append("• ").append(error).append("\n");
                 }
                 
                 errorMsg.append("\n📋 Use los parámetros correspondientes para proporcionar estos valores obligatorios.");
@@ -486,10 +488,10 @@ public class CreateWorkItemTool implements McpTool {
                 result.append(String.format("🔗 Vinculado como hijo del work item #%d%n", parentIdNum.intValue()));
             }
             
-            // Agregar información sobre campos obligatorios aplicados
-            Set<String> requiredFields = YOUR_ORGANIZATIONWorkItemFieldsHandler.getRequiredFields(type);
-            if (requiredFields.size() > 4) { // Más que los básicos
-                result.append(String.format("%n📋 Campos obligatorios de YOUR_ORGANIZATION aplicados para '%s'%n", type));
+            // Agregar información sobre campos aplicados
+            List<String> availableFields = fieldsHandler.getAvailableFields(type);
+            if (availableFields.size() > 2) { // Más que los básicos
+                result.append(String.format("%n📋 Campos aplicados para '%s'%n", type));
             }
             
             return Map.of(

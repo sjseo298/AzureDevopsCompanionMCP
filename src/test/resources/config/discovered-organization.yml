@@ -1,0 +1,10 @@
+# Test discovery results
+organization:
+  name: "Test Organization"
+  displayName: "Test Organization"
+  description: "Test configuration"
+
+projects: []
+workItemTypes: {}
+customFields: {}
+metadata: {}

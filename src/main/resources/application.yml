@@ -43,6 +43,16 @@ spring:
   messages:
     encoding: UTF-8
   
+  # Configuración de WebClient para Azure DevOps API
+  webflux:
+    buffer:
+      # Aumentar límite de buffer para respuestas grandes de Azure DevOps
+      max-in-memory-size: 10MB
+  
+  # Configuración de codec para parsing JSON
+  codec:
+    max-in-memory-size: 10MB
+  
   # Configuración de tareas asíncronas
   task:
     execution:

@@ -1,0 +1,237 @@
+# Configuración de mapeo de campos específicos de YOUR_ORGANIZATION
+# Basado en la implementación real de YOUR_ORGANIZATIONWorkItemFieldsHandler
+
+fieldMappings:
+  # Campos básicos
+  title:
+    azureFieldName: "System.Title"
+    required: true
+    type: "string"
+    helpText: "Título descriptivo del work item"
+    
+  description:
+    azureFieldName: "System.Description"
+    required: false
+    type: "html"
+    helpText: "Descripción detallada del work item"
+    
+  assignedTo:
+    azureFieldName: "System.AssignedTo"
+    required: false
+    type: "identity"
+    helpText: "Usuario asignado al work item"
+    
+  state:
+    azureFieldName: "System.State"
+    required: true
+    type: "string"
+    defaultValue: "New"
+    allowedValues: ["New", "Active", "Resolved", "Closed", "Done"]
+    helpText: "Estado actual del work item"
+    
+  priority:
+    azureFieldName: "Microsoft.VSTS.Common.Priority"
+    required: false
+    type: "integer"
+    defaultValue: 2
+    allowedValues: [1, 2, 3, 4]
+    helpText: "Prioridad del work item (1=High, 4=Low)"
+    
+  tags:
+    azureFieldName: "System.Tags"
+    required: false
+    type: "plainText"
+    helpText: "Etiquetas separadas por punto y coma"
+    
+  # Campos específicos de Historia
+  tipoHistoria:
+    azureFieldName: "Custom.TipoHistoria"
+    required: true
+    type: "string"
+    allowedValues: ["Funcional", "No Funcional", "Técnica"]
+    helpText: "Tipo de historia según clasificación de YOUR_ORGANIZATION"
+    
+  acceptanceCriteria:
+    azureFieldName: "Microsoft.VSTS.Common.AcceptanceCriteria"
+    required: true
+    type: "html"
+    helpText: "Criterios de aceptación para la historia"
+    
+  controlAutomatico:
+    azureFieldName: "Custom.ControlAutomatico"
+    required: true
+    type: "boolean"
+    defaultValue: false
+    helpText: "¿Es control automático?"
+    
+  cumplimientoRegulatorio:
+    azureFieldName: "Custom.CumplimientoRegulatorio"
+    required: true
+    type: "boolean"
+    defaultValue: false
+    helpText: "¿Es cumplimiento regulatorio?"
+    
+  migracionDatos:
+    azureFieldName: "Custom.MigracionDatos"
+    required: true
+    type: "boolean"
+    defaultValue: false
+    helpText: "¿Hace parte de migración de datos?"
+    
+  idSolucionAPM:
+    azureFieldName: "Custom.IdSolucionAPM"
+    required: true
+    type: "string"
+    helpText: "ID de la solución en el APM"
+    
+  # Campos específicos de Historia Técnica
+  tipoHistoriaTecnica:
+    azureFieldName: "Custom.TipoHistoriaTecnica"
+    required: true
+    type: "string"
+    allowedValues: ["Infraestructura", "Arquitectura", "Refactoring", "Deuda Técnica"]
+    helpText: "Tipo de historia técnica"
+    
+  # Campos específicos de Tarea
+  tipoTarea:
+    azureFieldName: "Custom.TipoTarea"
+    required: true
+    type: "string"
+    allowedValues: ["Desarrollo", "Testing", "Documentación", "Despliegue"]
+    helpText: "Tipo de tarea"
+    
+  # Campos específicos de Subtarea
+  tipoSubtarea:
+    azureFieldName: "Custom.TipoSubtarea"
+    required: true
+    type: "string"
+    allowedValues: ["Análisis", "Diseño", "Implementación", "Pruebas"]
+    helpText: "Tipo de subtarea"
+    
+  # Campos específicos de Bug
+  reproSteps:
+    azureFieldName: "Microsoft.VSTS.TCM.ReproSteps"
+    required: true
+    type: "html"
+    helpText: "Pasos para reproducir el problema"
+    
+  origen:
+    azureFieldName: "Custom.Origen"
+    required: true
+    type: "string"
+    allowedValues: ["Producción", "QA", "Desarrollo", "Usuario"]
+    helpText: "Origen del bug"
+    
+  bloqueante:
+    azureFieldName: "Custom.Bloqueante"
+    required: true
+    type: "boolean"
+    defaultValue: false
+    helpText: "¿Es bloqueante?"
+    
+  etapaDescubrimiento:
+    azureFieldName: "Custom.EtapaDescubrimiento"
+    required: true
+    type: "string"
+    allowedValues: ["Análisis", "Desarrollo", "Testing", "Producción"]
+    helpText: "Etapa de descubrimiento"
+    
+  datosPrueba:
+    azureFieldName: "Custom.DatosPrueba"
+    required: true
+    type: "string"
+    helpText: "Datos de prueba"
+    
+  nivelPrueba:
+    azureFieldName: "Custom.NivelPrueba"
+    required: true
+    type: "string"
+    allowedValues: ["Unitaria", "Integración", "Sistema", "Aceptación"]
+    helpText: "Nivel de prueba"
+
+# Configuración de tipos de work item específicos de YOUR_ORGANIZATION
+workItemTypeFields:
+  Historia:
+    requiredFields: 
+      - "title"
+      - "description" 
+      - "tipoHistoria"
+      - "acceptanceCriteria"
+      - "controlAutomatico"
+      - "cumplimientoRegulatorio"
+      - "migracionDatos"
+      - "idSolucionAPM"
+      - "state"
+    optionalFields:
+      - "assignedTo"
+      - "priority"
+      - "tags"
+      
+  "Historia Técnica":
+    requiredFields:
+      - "title"
+      - "description"
+      - "tipoHistoriaTecnica"
+      - "controlAutomatico"
+      - "cumplimientoRegulatorio"
+      - "migracionDatos"
+      - "idSolucionAPM"
+      - "state"
+    optionalFields:
+      - "assignedTo"
+      - "priority"
+      - "tags"
+      
+  Tarea:
+    requiredFields:
+      - "title"
+      - "description"
+      - "tipoTarea"
+      - "state"
+    optionalFields:
+      - "assignedTo"
+      - "priority"
+      - "tags"
+      
+  Subtarea:
+    requiredFields:
+      - "title"
+      - "description"
+      - "tipoSubtarea"
+      - "state"
+    optionalFields:
+      - "assignedTo"
+      - "priority"
+      - "tags"
+      
+  Bug:
+    requiredFields:
+      - "title"
+      - "description"
+      - "reproSteps"
+      - "origen"
+      - "bloqueante"
+      - "etapaDescubrimiento"
+      - "datosPrueba"
+      - "nivelPrueba"
+      - "idSolucionAPM"
+      - "state"
+    optionalFields:
+      - "assignedTo"
+      - "priority"
+      - "tags"
+
+# Conversiones específicas de YOUR_ORGANIZATION
+conversions:
+  priority:
+    "1": "High"
+    "2": "Medium"
+    "3": "Low"
+    "4": "Very Low"
+    
+  state:
+    "Nuevo": "New"
+    "Activo": "Active"
+    "Resuelto": "Resolved"
+    "Cerrado": "Closed"
+    "Hecho": "Done"
