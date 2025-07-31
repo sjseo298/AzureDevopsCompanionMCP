@@ -70,10 +70,15 @@ public class GenerarConfiguracionOrganizacionalPrompt extends BasePrompt {
             toda la configuración organizacional necesaria mediante el uso inteligente de las 
             herramientas MCP disponibles, adaptándose dinámicamente a cualquier organización.
             
-            PRINCIPIO FUNDAMENTAL: DESCUBRIMIENTO DINÁMICO
+            PRINCIPIO FUNDAMENTAL: DESCUBRIMIENTO DINÁMICO EXHAUSTIVO
             - NO uses información hardcodeada de organizaciones específicas
             - SIEMPRE obtén información actual mediante herramientas MCP
+            - UTILIZA descubrimiento exhaustivo de tipos de work items para garantizar completitud
             - ADAPTA la configuración a la estructura organizacional real descubierta
+            
+            ⚠️ **CRÍTICO**: Utilizar exhaustiveTypeDiscovery=true en azuredevops_discover_organization
+            para obtener TODOS los tipos de work items de TODOS los proyectos, evitando perder
+            tipos personalizados críticos que podrían estar en proyectos específicos.
             
             PROCESO DE GENERACIÓN AUTOMÁTICA:
             
@@ -505,16 +510,24 @@ public class GenerarConfiguracionOrganizacionalPrompt extends BasePrompt {
             2. **OBTENER CONTEXTO ORGANIZACIONAL DINÁMICO**
                - PRIMER PASO: Ejecutar `get_help()` para obtener contexto organizacional actual
                - Usar `azuredevops_list_projects` para obtener proyectos reales disponibles
-               - Ejecutar `azuredevops_discover_organization` con parámetros completos:
+               
+               - **DESCUBRIMIENTO EXHAUSTIVO DE TIPOS DE WORK ITEMS (CRÍTICO):**
+                 Ejecutar `azuredevops_discover_organization` con parámetros:
+                 * exhaustiveTypeDiscovery: true
                  * includeWorkItemTypes: true
                  * includeFields: true (si incluir_campos_extendidos = true)
                  * generateConfig: true
+                 
+                 Este paso es FUNDAMENTAL porque descubre TODOS los tipos de work items 
+                 en TODOS los proyectos, garantizando que no se pierda ningún tipo 
+                 personalizado crítico para la organización.
+               
                - Si proyecto_principal está especificado, úsalo; sino detecta automáticamente
                - ADAPTAR toda la configuración basada en información real descubierta
             
             3. **GENERAR ESTRUCTURA COMPLETA**
-               Para cada proyecto descoberto, ejecutar:
-               - `azuredevops_get_workitem_types` con includeExtendedInfo: true
+               Para cada proyecto descubierto, ejecutar:
+               - `azuredevops_get_workitem_types` con includeExtendedInfo: true y includeFieldDetails: true
                - `azuredevops_list_teams` para estructura organizacional
                - `azuredevops_list_iterations` para análisis de cadencia
             
