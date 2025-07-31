@@ -450,12 +450,24 @@ public class DiscoverOrganizationTool implements McpTool {
         List<String> workItemTypes = new ArrayList<>();
         
         try {
+            // Usar llamada directa para obtener todos los tipos
             String url = String.format("https://dev.azure.com/%s/%s/_apis/wit/workitemtypes?api-version=7.1", 
                     getOrganizationFromConfig(), project);
             
             String response = makeDirectApiRequest(url);
+            
             if (response != null && response.contains("\"value\"")) {
-                workItemTypes = parseWorkItemTypeNames(response);
+                workItemTypes = parseWorkItemTypeNamesImproved(response);
+            }
+            
+            // Si aún no tenemos tipos o tenemos pocos, intentar con el método original
+            if (workItemTypes.size() < 10) {
+                if (response != null) {
+                    List<String> originalMethod = parseWorkItemTypeNames(response);
+                    if (originalMethod.size() > workItemTypes.size()) {
+                        workItemTypes = originalMethod;
+                    }
+                }
             }
             
             // Si no pudimos obtener tipos dinámicamente, usar tipos comunes como fallback
@@ -465,6 +477,7 @@ public class DiscoverOrganizationTool implements McpTool {
             
         } catch (Exception e) {
             System.err.println("Error obteniendo tipos de work items: " + e.getMessage());
+            e.printStackTrace();
             // Fallback a tipos comunes
             workItemTypes = List.of("Task", "User Story", "Bug", "Feature", "Epic");
         }
@@ -478,15 +491,71 @@ public class DiscoverOrganizationTool implements McpTool {
     private List<String> parseWorkItemTypeNames(String jsonResponse) {
         List<String> typeNames = new ArrayList<>();
         
-        // Buscar nombres de tipos en el array "value" usando regex
-        Pattern typePattern = Pattern.compile("\"name\"\\s*:\\s*\"([^\"]+)\"");
-        Matcher matcher = typePattern.matcher(jsonResponse);
+        // Buscar nombres de tipos en el array "value" usando regex más específico
+        Pattern valueArrayPattern = Pattern.compile("\"value\"\\s*:\\s*\\[(.*?)\\]", Pattern.DOTALL);
+        Matcher valueArrayMatcher = valueArrayPattern.matcher(jsonResponse);
         
-        while (matcher.find()) {
-            String typeName = matcher.group(1);
-            if (!typeNames.contains(typeName)) {
-                typeNames.add(typeName);
+        if (valueArrayMatcher.find()) {
+            String valueArrayContent = valueArrayMatcher.group(1);
+            
+            // Buscar objetos individuales de work item types
+            Pattern typePattern = Pattern.compile("\\{[^{}]*\"name\"\\s*:\\s*\"([^\"]+)\"[^{}]*\\}");
+            Matcher matcher = typePattern.matcher(valueArrayContent);
+            
+            while (matcher.find()) {
+                String typeName = matcher.group(1);
+                if (!typeNames.contains(typeName)) {
+                    typeNames.add(typeName);
+                }
             }
+        }
+        
+        return typeNames;
+    }
+    
+    /**
+     * Parsea los nombres de tipos de work items de la respuesta JSON usando un enfoque más robusto
+     */
+    private List<String> parseWorkItemTypeNamesImproved(String jsonResponse) {
+        List<String> typeNames = new ArrayList<>();
+        
+        try {
+            // Buscar el array "value" primero
+            int valueStart = jsonResponse.indexOf("\"value\"");
+            if (valueStart == -1) {
+                return typeNames;
+            }
+            
+            // Encontrar el inicio del array
+            int arrayStart = jsonResponse.indexOf("[", valueStart);
+            if (arrayStart == -1) {
+                return typeNames;
+            }
+            
+            // Encontrar el final del array
+            int arrayEnd = jsonResponse.lastIndexOf("]");
+            if (arrayEnd == -1 || arrayEnd <= arrayStart) {
+                return typeNames;
+            }
+            
+            // Extraer el contenido del array
+            String arrayContent = jsonResponse.substring(arrayStart + 1, arrayEnd);
+            
+            // Buscar objetos individuales de work item types
+            Pattern objectPattern = Pattern.compile("\\{[^}]*\"name\"\\s*:\\s*\"([^\"]+)\"[^}]*\\}");
+            Matcher matcher = objectPattern.matcher(arrayContent);
+            
+            while (matcher.find()) {
+                String typeName = matcher.group(1);
+                if (!typeNames.contains(typeName)) {
+                    typeNames.add(typeName);
+                }
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Error parseando work item types: " + e.getMessage());
+            // Fallback al método original si falla
+            return parseWorkItemTypeNames(jsonResponse);
         }
         
         return typeNames;
@@ -560,7 +629,7 @@ public class DiscoverOrganizationTool implements McpTool {
     
     private String makeDirectApiRequest(String url) {
         try {
-            String pat = getPersonalAccessTokenFromConfig();
+            String pat = System.getenv("AZURE_DEVOPS_PAT");
             if (pat == null || pat.isEmpty()) {
                 return null;
             }
@@ -577,7 +646,11 @@ public class DiscoverOrganizationTool implements McpTool {
             
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             
-            return response.statusCode() == 200 ? response.body() : null;
+            if (response.statusCode() != 200) {
+                return null;
+            }
+            
+            return response.body();
             
         } catch (Exception e) {
             System.err.println("Error making API request to " + url + ": " + e.getMessage());
@@ -715,6 +788,13 @@ public class DiscoverOrganizationTool implements McpTool {
     // Métodos auxiliares para obtener configuración
     
     private String getOrganizationFromConfig() {
+        // Obtener de la variable de entorno directamente
+        String org = System.getenv("AZURE_DEVOPS_ORGANIZATION");
+        if (org != null && !org.isEmpty()) {
+            return org;
+        }
+        
+        // Fallback al config service
         Map<String, Object> config = configService.getDefaultOrganizationConfig();
         return (String) config.get("organization");
     }
