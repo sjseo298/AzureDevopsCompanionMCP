@@ -433,8 +433,31 @@ public class CreateWorkItemTool implements McpTool {
             
             // Procesar campos con el manejador genérico
             Map<String, Object> allFields = new HashMap<>();
+            
+            // Agregar campos de las operaciones (quitando el prefijo /fields/)
             for (Map<String, Object> op : operations) {
-                allFields.put((String) op.get("path"), ((Map<String, Object>) op.get("value")).get("value"));
+                String path = (String) op.get("path");
+                Object value = op.get("value");
+                
+                // Convertir /fields/System.Title a System.Title
+                if (path.startsWith("/fields/")) {
+                    String fieldName = path.substring("/fields/".length());
+                    allFields.put(fieldName, value);
+                } else {
+                    allFields.put(path, value);
+                }
+            }
+            
+            // Agregar también los valores proporcionados por el usuario
+            allFields.putAll(userProvidedValues);
+            
+            // Convertir valores de usuario a operaciones JSON Patch
+            for (Map.Entry<String, Object> entry : userProvidedValues.entrySet()) {
+                operations.add(Map.of(
+                    "op", "add",
+                    "path", "/fields/" + entry.getKey(),
+                    "value", entry.getValue()
+                ));
             }
             
             // Validar campos requeridos

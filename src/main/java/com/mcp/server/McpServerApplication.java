@@ -34,17 +34,32 @@ public class McpServerApplication {
      * @param args argumentos de línea de comandos
      */
     public static void main(String[] args) {
-        // Configurar UTF-8 como encoding por defecto
-        configureDefaultEncoding();
-        
-        var application = new SpringApplication(McpServerApplication.class);
-        
-        // Configurar modo STDIO si está habilitado
-        if (isStdioModeEnabled(args)) {
-            configureStdioMode();
+        try {
+            System.err.println("Starting MCP Server Application...");
+            System.err.println("Arguments: " + Arrays.toString(args));
+            
+            // Configurar UTF-8 como encoding por defecto
+            configureDefaultEncoding();
+            
+            var application = new SpringApplication(McpServerApplication.class);
+            
+            // Configurar modo STDIO si está habilitado
+            if (isStdioModeEnabled(args)) {
+                System.err.println("STDIO mode enabled");
+                configureStdioMode();
+            } else {
+                System.err.println("STDIO mode disabled");
+            }
+            
+            System.err.println("Starting Spring application...");
+            application.run(args);
+            System.err.println("Spring application started successfully");
+            
+        } catch (Exception e) {
+            System.err.println("ERROR: Failed to start application: " + e.getMessage());
+            e.printStackTrace();
+            System.exit(1);
         }
-        
-        application.run(args);
     }
 
     /**

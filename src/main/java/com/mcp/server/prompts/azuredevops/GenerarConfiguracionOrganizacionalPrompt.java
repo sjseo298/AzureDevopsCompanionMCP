@@ -23,30 +23,18 @@ public class GenerarConfiguracionOrganizacionalPrompt extends BasePrompt {
         super(
             "generar_configuracion_organizacional",
             "Generar Configuración Organizacional Automática",
-            "Detecta archivos de configuración faltantes y genera automáticamente la configuración organizacional completa mediante descubrimiento de Azure DevOps, incluyendo tipos de work items, campos personalizados y estructura de equipos.",
+            "Genera automáticamente la configuración organizacional completa con descubrimiento exhaustivo de Azure DevOps, incluyendo todos los tipos de work items, campos personalizados, valores permitidos y estructura completa de equipos. Siempre incluye el máximo detalle disponible.",
             List.of(
                 new Prompt.PromptArgument(
-                    "forzar_regeneracion",
-                    "Forzar Regeneración",
-                    "Si se debe regenerar la configuración aunque ya existan archivos (útil para actualizaciones). Por defecto: false",
-                    false
-                ),
-                new Prompt.PromptArgument(
-                    "proyecto_principal",
-                    "Proyecto Principal",
-                    "Nombre del proyecto principal a usar como base para el descubrimiento. Si no se especifica, intentará detectar automáticamente",
-                    false
-                ),
-                new Prompt.PromptArgument(
-                    "incluir_campos_extendidos",
-                    "Incluir Campos Extendidos",
-                    "Si se debe incluir información extendida de campos (valores permitidos, tipos de datos, etc.). Por defecto: true",
-                    false
-                ),
-                new Prompt.PromptArgument(
                     "generar_backup",
-                    "Generar Backup",
-                    "Si se debe hacer backup de archivos existentes antes de regenerar. Por defecto: true",
+                    "Generar Backup de Archivos Existentes",
+                    "Si se debe hacer backup de archivos de configuración existentes antes de regenerar. Recomendado: true para preservar configuraciones previas",
+                    false
+                ),
+                new Prompt.PromptArgument(
+                    "work_item_referencia",
+                    "Work Item de Referencia del Usuario",
+                    "URL completa o ID del work item que pertenece al equipo donde trabaja el usuario. Se usará para orientar la búsqueda hacia el área path correspondiente (ej: 'https://dev.azure.com/org/project/_workitems/edit/12345' o '12345')",
                     false
                 )
             )
@@ -57,10 +45,9 @@ public class GenerarConfiguracionOrganizacionalPrompt extends BasePrompt {
     public PromptResult execute(Map<String, Object> arguments) {
         validateArguments(arguments);
         
-        boolean forzarRegeneracion = getBooleanArgument(arguments, "forzar_regeneracion", false);
-        String proyectoPrincipal = getStringArgument(arguments, "proyecto_principal", null);
-        boolean incluirCamposExtendidos = getBooleanArgument(arguments, "incluir_campos_extendidos", true);
+        // Solo necesitamos la configuración de backup, todo lo demás es automático con máximo detalle
         boolean generarBackup = getBooleanArgument(arguments, "generar_backup", true);
+        String workItemReferencia = getStringArgument(arguments, "work_item_referencia", null);
         
         // Mensaje del sistema estableciendo el contexto
         String systemPrompt = """
@@ -113,6 +100,7 @@ public class GenerarConfiguracionOrganizacionalPrompt extends BasePrompt {
             3. `azuredevops_get_workitem_types` - Obtener tipos de work items detallados
             4. `azuredevops_list_teams` - Listar equipos por proyecto
             5. `azuredevops_list_iterations` - Analizar cadencia de entregas
+            6. `azuredevops_analyze_workitem` - Análisis profundo de work items de referencia
             
             📋 **CONTRATO TÉCNICO COMPLETO DE GENERACIÓN DE ARCHIVOS**
             
@@ -475,64 +463,68 @@ public class GenerarConfiguracionOrganizacionalPrompt extends BasePrompt {
             CONTEXTO DE EJECUCIÓN:
             """;
         
-        // Construir contexto específico basado en argumentos
+        // Construir contexto específico optimizado para máximo detalle
         StringBuilder contextBuilder = new StringBuilder(systemPrompt);
         
-        if (forzarRegeneracion) {
-            contextBuilder.append("\n🔄 **REGENERACIÓN FORZADA**: Se debe regenerar toda la configuración incluso si ya existe.");
-        }
+        // Configuración automática optimizada
+        contextBuilder.append("\n🔄 **MODO DETALLE COMPLETO**: Generación automática con descubrimiento exhaustivo activado.");
+        contextBuilder.append("\n🔍 **DETECCIÓN AUTOMÁTICA**: Procesando automáticamente TODOS los proyectos disponibles.");
+        contextBuilder.append("\n📋 **CAMPOS EXTENDIDOS**: Incluyendo información completa de todos los campos (allowedValues, fieldType, validaciones, etc.)");
         
-        if (proyectoPrincipal != null) {
-            contextBuilder.append("\n🎯 **PROYECTO PRINCIPAL**: ").append(proyectoPrincipal);
-        } else {
-            contextBuilder.append("\n🔍 **DETECCIÓN AUTOMÁTICA**: Detectar automáticamente el proyecto principal.");
-        }
-        
-        if (incluirCamposExtendidos) {
-            contextBuilder.append("\n📋 **CAMPOS EXTENDIDOS**: Incluir información completa de campos (allowedValues, fieldType, etc.)");
+        if (workItemReferencia != null && !workItemReferencia.trim().isEmpty()) {
+            contextBuilder.append("\n🎯 **WORK ITEM DE REFERENCIA**: Se usará el work item ").append(workItemReferencia).append(" para orientar la búsqueda hacia el área path correspondiente del usuario.");
         }
         
         if (generarBackup) {
-            contextBuilder.append("\n💾 **BACKUP**: Hacer backup de archivos existentes antes de regenerar.");
+            contextBuilder.append("\n💾 **BACKUP**: Haciendo backup de archivos existentes antes de regenerar.");
+        } else {
+            contextBuilder.append("\n⚠️ **SIN BACKUP**: No se generará backup de archivos existentes (se sobrescribirán).");
         }
         
-        // Prompt principal para el usuario
+        // Prompt simplificado que siempre genera todo el detalle
         String userPrompt = """
-            Ejecuta el proceso de generación automática de configuración organizacional para Azure DevOps MCP Server.
+            Ejecuta la generación automática COMPLETA de configuración organizacional para Azure DevOps MCP Server.
             
-            **INSTRUCCIONES ESPECÍFICAS:**
+            **CONFIGURACIÓN AUTOMÁTICA - MÁXIMO DETALLE:**
+            - ✅ Descubrimiento exhaustivo de TODOS los proyectos
+            - ✅ Análisis completo de TODOS los tipos de work items 
+            - ✅ Extracción de TODOS los campos personalizados y sus valores permitidos
+            - ✅ Documentación completa de estructura organizacional
+            - ✅ Generación de todos los archivos de configuración necesarios
             
-            1. **VERIFICAR ARCHIVOS EXISTENTES**
-               - Listar contenido del directorio config/
-               - Identificar qué archivos existen y cuáles faltan
-               - Evaluar si los archivos existentes están completos
+            **PROCESO AUTOMATIZADO:**
             
-            2. **OBTENER CONTEXTO ORGANIZACIONAL DINÁMICO**
-               - PRIMER PASO: Ejecutar `get_help()` para obtener contexto organizacional actual
-               - Usar `azuredevops_list_projects` para obtener proyectos reales disponibles
+            **SI SE PROPORCIONA WORK ITEM DE REFERENCIA:**
+            1. 🔍 **ANÁLISIS PROFUNDO DEL WORK ITEM DE REFERENCIA:**
+               - Usar `azuredevops_analyze_workitem` con el work item proporcionado
+               - Analizar tipo del work item, tipo de su padre e hijos
+               - Extraer valores de todos los campos personalizados
+               - Identificar patrones de configuración específicos del equipo
+               - Obtener información de proyecto, área path y equipo
                
-               - **DESCUBRIMIENTO EXHAUSTIVO DE TIPOS DE WORK ITEMS (CRÍTICO):**
-                 Ejecutar `azuredevops_discover_organization` con parámetros:
-                 * exhaustiveTypeDiscovery: true
+            2. 🎯 **ORIENTAR DESCUBRIMIENTO CON DATOS REALES:**
+               - Priorizar el proyecto donde está el work item de referencia
+               - Validar campos personalizados descubiertos contra valores reales
+               - Usar jerarquía del work item para identificar tipos más utilizados
+               - Enfocar la documentación en patrones de configuración detectados
+            
+            **PROCESO PRINCIPAL:**
+            
+            1. **DESCUBRIMIENTO ORGANIZACIONAL COMPLETO**
+               - Ejecutar `azuredevops_discover_organization` con configuración de máximo detalle:
                  * includeWorkItemTypes: true
-                 * includeFields: true (si incluir_campos_extendidos = true)
-                 * generateConfig: true
-                 
-                 Este paso es FUNDAMENTAL porque descubre TODOS los tipos de work items 
-                 en TODOS los proyectos, garantizando que no se pierda ningún tipo 
-                 personalizado crítico para la organización.
-               
-               - Si proyecto_principal está especificado, úsalo; sino detecta automáticamente
-               - ADAPTAR toda la configuración basada en información real descubierta
+                 * includeFieldDetails: true  
+                 * includeExtendedInfo: true
+                 * backupExistingFiles: """ + generarBackup + """
+                 """ + (workItemReferencia != null && !workItemReferencia.trim().isEmpty() ? 
+                     "* workItemReferencia: \"" + workItemReferencia + "\" (para orientar búsqueda hacia área path del usuario)" : 
+                     "") + """
+               - Procesar TODOS los proyectos disponibles automáticamente
+               - Extraer TODOS los campos personalizados y valores permitidos
             
-            3. **GENERAR ESTRUCTURA COMPLETA**
-               Para cada proyecto descubierto, ejecutar:
-               - `azuredevops_get_workitem_types` con includeExtendedInfo: true y includeFieldDetails: true
-               - `azuredevops_list_teams` para estructura organizacional
-               - `azuredevops_list_iterations` para análisis de cadencia
-            
-            4. **CREAR ARCHIVOS DE CONFIGURACIÓN**
-               Generar y guardar los siguientes archivos YAML válidos:
+            2. **GENERACIÓN AUTOMÁTICA DE ARCHIVOS**
+               Crear todos los archivos de configuración con información completa siguiendo 
+               estrictamente los contratos técnicos definidos:
                
                **discovered-organization.yml** con:
                - Metadata de descubrimiento (fecha, versión, etc.)
@@ -541,26 +533,30 @@ public class GenerarConfiguracionOrganizacionalPrompt extends BasePrompt {
                - Campos de fecha críticos (StartDate, FinishDate, TargetDate, DueDate)
                - Patrones de nomenclatura reales detectados en la organización
                - Análisis de cadencia organizacional actual
+               - **SI HAY WORK ITEM DE REFERENCIA:** Validación de configuración usando datos reales
                
                **organization-config.yml** con:
                - Configuración personalizable adaptada a la organización real
                - Mapeo de campos específicos de la organización descubierta
                - Reglas de negocio específicas
                - Estructura de equipos y proyectos
+               - **SI HAY WORK ITEM DE REFERENCIA:** Priorización del proyecto/equipo del usuario
                
                **field-mappings.yml** con:
                - Mapeo detallado de campos personalizados
                - Tipos de datos y validaciones
                - Valores permitidos (allowedValues)
                - Campos requeridos por tipo de work item
+               - **SI HAY WORK ITEM DE REFERENCIA:** Valores reales encontrados en campos personalizados
                
                **business-rules.yml** con:
                - Reglas de validación organizacionales
                - Flujos de trabajo (workflows)
                - Dependencias entre campos
                - Reglas de autocompletado
+               - **SI HAY WORK ITEM DE REFERENCIA:** Patrones de configuración específicos del equipo
             
-            5. **VALIDAR Y OPTIMIZAR**
+            3. **VALIDACIÓN Y OPTIMIZACIÓN COMPLETA**
                - Verificar sintaxis YAML válida usando herramientas como yamllint
                - Validar que todos los campos obligatorios estén presentes
                - Verificar que las referencias de campos sean correctas
@@ -595,7 +591,7 @@ public class GenerarConfiguracionOrganizacionalPrompt extends BasePrompt {
                - defaultValues deben coincidir con allowedValues si es picklist
                - workItemTypes deben tener baseType válido
             
-            6. **PROPORCIONAR GUÍA DE USO**
+            4. **PROPORCIONAR GUÍA DE USO**
                - Explicar qué archivos se generaron y su propósito
                - Indicar cómo personalizar la configuración generada
                - Sugerir próximos pasos de configuración
@@ -627,6 +623,20 @@ public class GenerarConfiguracionOrganizacionalPrompt extends BasePrompt {
                - "Feature" → Características de producto
                - "Epic" → Épicas de alto nivel
                
+               🎯 **ANÁLISIS DE WORK ITEM DE REFERENCIA (si se proporciona):**
+               
+               **Validación de configuración usando datos reales:**
+               - Comparar campos personalizados descubiertos vs. campos reales en el work item
+               - Verificar que valores permitidos incluyan los valores actuales del work item
+               - Identificar discrepancias entre configuración teórica y datos reales
+               - Priorizar tipos de work item más utilizados en la jerarquía del item de referencia
+               
+               **Refinamiento basado en patrones reales:**
+               - Usar valores de campos personalizados como ejemplos en la documentación
+               - Ajustar reglas de negocio basándose en configuración actual del equipo
+               - Enfocar documentación en el proyecto/área específica del usuario
+               - Incluir notas sobre patrones específicos encontrados en el work item
+               
                **VERIFICACIÓN FINAL DE ARCHIVOS GENERADOS:**
                
                Después de generar todos los archivos, OBLIGATORIAMENTE verificar:
@@ -654,7 +664,7 @@ public class GenerarConfiguracionOrganizacionalPrompt extends BasePrompt {
                
                🔍 **VALIDACIÓN DE INTEGRIDAD REFERENCIAL:**
                - Campos en requiredFields tienen definición completa
-               - defaultValues coinciden con allowedValues si es picklist
+               - defaultValues coinciden con allowedValues si es piclist
                - workItemTypes tienen baseType de la lista válida
                
                📊 **REPORTE FINAL:**
@@ -668,10 +678,10 @@ public class GenerarConfiguracionOrganizacionalPrompt extends BasePrompt {
                
                Este contrato técnico es OBLIGATORIO y garantiza compatibilidad 100% con la aplicación.
             
-            **INICIO DEL PROCESO:**
-            
-            Comienza verificando qué archivos de configuración existen actualmente en config/ 
-            y procede con el descubrimiento y generación automática según las especificaciones.
+            **INSTRUCCIONES DE EJECUCIÓN:**
+            Inicia inmediatamente el proceso de descubrimiento y generación automática. 
+            No solicites confirmaciones adicionales - procede con la configuración optimizada 
+            para obtener el máximo detalle organizacional disponible.
             """;
         
         List<PromptResult.PromptMessage> messages = List.of(
