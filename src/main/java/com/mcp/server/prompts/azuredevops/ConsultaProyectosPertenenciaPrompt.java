@@ -11,8 +11,8 @@ import java.util.Map;
  * Prompt para consultar a qué proyectos pertenece el usuario en Azure DevOps.
  * 
  * Este prompt genera una consulta estructurada para identificar todos los
- * proyectos de Azure DevOps a los que el usuario tiene acceso, considerando
- * la estructura organizacional de YOUR_ORGANIZATION.
+ * proyectos de Azure DevOps a los que el usuario tiene acceso, adaptándose
+ * a la estructura organizacional configurada.
  */
 public class ConsultaProyectosPertenenciaPrompt extends BasePrompt {
     
@@ -20,7 +20,7 @@ public class ConsultaProyectosPertenenciaPrompt extends BasePrompt {
         super(
             "consulta_proyectos_pertenencia",
             "Consulta de Proyectos de Pertenencia",
-            "Genera una consulta para identificar todos los proyectos de Azure DevOps a los que pertenece el usuario, considerando la estructura organizacional de YOUR_ORGANIZATION con sus tres proyectos principales: Gerencia_Tecnologia, Gerencia_Tecnologia_Egv_Aseguramiento y Portafolios.",
+            "Genera una consulta para identificar todos los proyectos de Azure DevOps a los que pertenece el usuario, adaptándose a la estructura organizacional configurada.",
             List.of(
                 new Prompt.PromptArgument(
                     "usuario",
@@ -56,16 +56,14 @@ public class ConsultaProyectosPertenenciaPrompt extends BasePrompt {
         
         // Mensaje del sistema estableciendo el contexto
         String systemPrompt = """
-            Eres un asistente especializado en Azure DevOps para la organización YOUR_ORGANIZATION.
+            Eres un asistente especializado en Azure DevOps para organizaciones.
             
             Tu tarea es ayudar a consultar y analizar la pertenencia a proyectos en Azure DevOps.
             
-            ESTRUCTURA ORGANIZACIONAL DE SURA:
+            ESTRUCTURA ORGANIZACIONAL:
             
-            YOUR_ORGANIZATION maneja tres proyectos principales en Azure DevOps:
-            1. **Gerencia_Tecnologia** - Proyecto principal de tecnología
-            2. **Gerencia_Tecnologia_Egv_Aseguramiento** - Proyecto de aseguramiento y calidad
-            3. **Portafolios** - Proyecto de gestión de portafolios
+            La organización puede manejar múltiples proyectos en Azure DevOps con diferentes
+            estructuras y equipos según su configuración específica.
             
             PREFIJOS DE EQUIPOS:
             - EQP_xxx: Equipos de desarrollo específicos
@@ -86,7 +84,7 @@ public class ConsultaProyectosPertenenciaPrompt extends BasePrompt {
         } else {
             promptText.append("el usuario: ").append(usuario);
         }
-        promptText.append(" en Azure DevOps de YOUR_ORGANIZATION.\n\n");
+        promptText.append(" en Azure DevOps.\n\n");
         
         promptText.append("Por favor:\n");
         promptText.append("1. Lista todos los proyectos disponibles usando list_projects\n");
@@ -114,7 +112,7 @@ public class ConsultaProyectosPertenenciaPrompt extends BasePrompt {
         );
         
         return new PromptResult(
-            "Consulta estructurada para identificar proyectos de pertenencia del usuario en Azure DevOps de YOUR_ORGANIZATION",
+            "Consulta estructurada para identificar proyectos de pertenencia del usuario en Azure DevOps",
             messages
         );
     }

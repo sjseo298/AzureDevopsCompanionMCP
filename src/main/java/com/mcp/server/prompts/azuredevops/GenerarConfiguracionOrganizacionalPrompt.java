@@ -68,7 +68,12 @@ public class GenerarConfiguracionOrganizacionalPrompt extends BasePrompt {
             
             Tu misión es detectar archivos de configuración faltantes y generar automáticamente 
             toda la configuración organizacional necesaria mediante el uso inteligente de las 
-            herramientas MCP disponibles.
+            herramientas MCP disponibles, adaptándose dinámicamente a cualquier organización.
+            
+            PRINCIPIO FUNDAMENTAL: DESCUBRIMIENTO DINÁMICO
+            - NO uses información hardcodeada de organizaciones específicas
+            - SIEMPRE obtén información actual mediante herramientas MCP
+            - ADAPTA la configuración a la estructura organizacional real descubierta
             
             PROCESO DE GENERACIÓN AUTOMÁTICA:
             
@@ -77,16 +82,17 @@ public class GenerarConfiguracionOrganizacionalPrompt extends BasePrompt {
             2. Identificar archivos faltantes o desactualizados
             3. Evaluar si se necesita regeneración completa o parcial
             
-            📊 **FASE 2: DESCUBRIMIENTO**
-            1. Usar `azuredevops_discover_organization` para análisis completo
+            📊 **FASE 2: DESCUBRIMIENTO DINÁMICO**
+            1. Usar `azuredevops_discover_organization` para análisis completo de la organización real
             2. Ejecutar con todos los parámetros extendidos habilitados
-            3. Capturar toda la información organizacional disponible
+            3. Capturar información específica de la organización sin asumir estructura previa
+            4. Adaptar configuración basada en los datos reales descubiertos
             
-            📁 **FASE 3: GENERACIÓN DE ARCHIVOS**
-            Generar los siguientes archivos de configuración:
+            📁 **FASE 3: GENERACIÓN DE ARCHIVOS ADAPTATIVA**
+            Generar archivos de configuración basados en la estructura organizacional real:
             
-            ▪️ **config/discovered-organization.yml** - Estructura completa descubierta
-            ▪️ **config/organization-config.yml** - Configuración personalizable
+            ▪️ **config/discovered-organization.yml** - Estructura real descubierta dinámicamente
+            ▪️ **config/organization-config.yml** - Configuración adaptada a la organización
             ▪️ **config/field-mappings.yml** - Mapeo de campos personalizados
             ▪️ **config/business-rules.yml** - Reglas de negocio organizacionales
             
@@ -438,22 +444,25 @@ public class GenerarConfiguracionOrganizacionalPrompt extends BasePrompt {
             
             📋 **EJEMPLOS DE REFERENCIAS REALES COMUNES**
             
-            **Campos Personalizados Típicos:**
-            - "Custom.TipoDeHistoria" → Tipo de historia de usuario
-            - "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14" → ID Solución APM
-            - "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3" → Migración de Datos
-            - "Custom.Lahistoriacorrespondeauncumplimientoregulatorio" → Cumplimiento
-            - "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1" → Control Automático
+            **Ejemplos de Campos Personalizados Comunes:**
+            - "Custom.FieldName" → Campo personalizado con nombre descriptivo
+            - "Custom.{GUID}" → Campo personalizado con identificador único
+            - "Custom.Category" → Campo de categorización organizacional
+            - "Custom.Status" → Campo de estado personalizado
+            - "Custom.BooleanField" → Campo de tipo verdadero/falso
+            - "Custom.Priority" → Campo de prioridad personalizada
+            - "Custom.Department" → Campo de departamento o área
+            - "Custom.BusinessValue" → Campo de valor de negocio
             
-            **Patrones de Equipos:**
-            - Prefijo "do-" → Equipos de dominio operativo
-            - Prefijo "egv-" → Equipos de aseguramiento EGV  
-            - Prefijo "tech-" → Equipos de tecnología
-            - Patrón: "{prefijo}-{dominio}-{funcion}"
+            **Patrones de Equipos Organizacionales:**
+            - Prefijos funcionales → Equipos por función específica
+            - Prefijos de dominio → Equipos por área de negocio
+            - Prefijos técnicos → Equipos por especialización técnica
+            - Patrón común: "{prefijo}-{area}-{funcion}"
             
             **Tipos de Work Items Estándar:**
-            - "User Story" / "Historia" → Historias de usuario
-            - "Task" / "Tarea" → Tareas de implementación
+            - "User Story" → Historias de usuario estándar
+            - "Task" → Tareas de implementación
             - "Bug" → Defectos del sistema
             - "Feature" → Características de producto
             - "Epic" → Épicas de alto nivel
@@ -493,13 +502,15 @@ public class GenerarConfiguracionOrganizacionalPrompt extends BasePrompt {
                - Identificar qué archivos existen y cuáles faltan
                - Evaluar si los archivos existentes están completos
             
-            2. **EJECUTAR DESCUBRIMIENTO ORGANIZACIONAL**
-               - Usar `azuredevops_list_projects` para obtener proyectos disponibles
+            2. **OBTENER CONTEXTO ORGANIZACIONAL DINÁMICO**
+               - PRIMER PASO: Ejecutar `get_help()` para obtener contexto organizacional actual
+               - Usar `azuredevops_list_projects` para obtener proyectos reales disponibles
                - Ejecutar `azuredevops_discover_organization` con parámetros completos:
                  * includeWorkItemTypes: true
                  * includeFields: true (si incluir_campos_extendidos = true)
                  * generateConfig: true
                - Si proyecto_principal está especificado, úsalo; sino detecta automáticamente
+               - ADAPTAR toda la configuración basada en información real descubierta
             
             3. **GENERAR ESTRUCTURA COMPLETA**
                Para cada proyecto descoberto, ejecutar:
@@ -512,15 +523,15 @@ public class GenerarConfiguracionOrganizacionalPrompt extends BasePrompt {
                
                **discovered-organization.yml** con:
                - Metadata de descubrimiento (fecha, versión, etc.)
-               - Estructura completa de proyectos y equipos
-               - Tipos de work items con campos completos
+               - Estructura real de proyectos y equipos descubierta dinámicamente
+               - Tipos de work items reales con campos específicos de la organización
                - Campos de fecha críticos (StartDate, FinishDate, TargetDate, DueDate)
-               - Patrones de nomenclatura detectados
-               - Análisis de cadencia organizacional
+               - Patrones de nomenclatura reales detectados en la organización
+               - Análisis de cadencia organizacional actual
                
                **organization-config.yml** con:
-               - Configuración personalizable por el usuario
-               - Mapeo de campos organizacionales
+               - Configuración personalizable adaptada a la organización real
+               - Mapeo de campos específicos de la organización descubierta
                - Reglas de negocio específicas
                - Estructura de equipos y proyectos
                
@@ -578,24 +589,27 @@ public class GenerarConfiguracionOrganizacionalPrompt extends BasePrompt {
                - Documentar campos específicos encontrados
                - Proporcionar ejemplos de uso de los archivos generados
                
-               **EJEMPLOS DE REFERENCIAS REALES DETECTADAS:**
+               **EJEMPLOS DE PATRONES ORGANIZACIONALES COMUNES:**
                
-               🔍 **Campos personalizados comunes encontrados en organizaciones:**
-               - "Custom.TipoDeHistoria" → Tipo de historia de usuario
-               - "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14" → ID Solución APM
-               - "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3" → Migración de Datos
-               - "Custom.Lahistoriacorrespondeauncumplimientoregulatorio" → Cumplimiento
-               - "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1" → Control Automático
+               🔍 **Tipos de campos personalizados encontrados típicamente:**
+               - "Custom.WorkItemType" → Clasificaciones específicas
+               - "Custom.{GUID-unico}" → Campos con identificadores únicos
+               - "Custom.DescriptiveField" → Campos con nombres descriptivos
+               - "Custom.CustomStatus" → Estados específicos de la organización
+               - "Custom.BooleanField" → Campos de validación verdadero/falso
+               - "Custom.Priority" → Campos de prioridad personalizada
+               - "Custom.Department" → Campos de departamento o área
+               - "Custom.BusinessValue" → Campos de valor de negocio
                
-               📋 **Patrones de equipos típicos:**
-               - Prefijo "do-" → Equipos de dominio operativo
-               - Prefijo "egv-" → Equipos de aseguramiento EGV
-               - Prefijo "tech-" → Equipos de tecnología
-               - Patrón: "{prefijo}-{dominio}-{funcion}"
+               📋 **Patrones de nomenclatura de equipos típicos:**
+               - Prefijos funcionales → Equipos por función específica
+               - Prefijos de dominio → Equipos por área de negocio
+               - Prefijos técnicos → Equipos por especialización
+               - Patrón común: "{prefijo}-{area}-{funcion}"
                
                🏗️ **Tipos de work items estándar a incluir:**
-               - "User Story" / "Historia" → Historias de usuario
-               - "Task" / "Tarea" → Tareas de implementación
+               - "User Story" → Historias de usuario estándar
+               - "Task" → Tareas de implementación
                - "Bug" → Defectos del sistema
                - "Feature" → Características de producto
                - "Epic" → Épicas de alto nivel

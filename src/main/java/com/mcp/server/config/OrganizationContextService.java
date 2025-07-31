@@ -23,6 +23,8 @@ public class OrganizationContextService {
     private final ObjectMapper yamlMapper;
     private Map<String, Object> discoveredConfig;
     private Map<String, Object> fieldMappingConfig;
+    private Map<String, Object> organizationConfig;
+    private Map<String, Object> businessRulesConfig;
     private boolean configLoaded = false;
     
     public OrganizationContextService() {
@@ -46,19 +48,37 @@ public class OrganizationContextService {
                 discoveredConfig = new HashMap<>();
             }
             
+            // Cargar configuración organizacional
+            File organizationFile = new File(configPath + "organization-config.yml");
+            if (organizationFile.exists()) {
+                organizationConfig = yamlMapper.readValue(organizationFile, Map.class);
+            } else {
+                organizationConfig = new HashMap<>();
+            }
+            
             // Cargar mapeo de campos
-            File fieldMappingFile = new File(configPath + "sura-field-mapping.yml");
+            File fieldMappingFile = new File(configPath + "field-mappings.yml");
             if (fieldMappingFile.exists()) {
                 fieldMappingConfig = yamlMapper.readValue(fieldMappingFile, Map.class);
             } else {
                 fieldMappingConfig = new HashMap<>();
             }
             
+            // Cargar reglas de negocio
+            File businessRulesFile = new File(configPath + "business-rules.yml");
+            if (businessRulesFile.exists()) {
+                businessRulesConfig = yamlMapper.readValue(businessRulesFile, Map.class);
+            } else {
+                businessRulesConfig = new HashMap<>();
+            }
+            
             configLoaded = true;
         } catch (IOException e) {
             System.err.println("Error loading organization configuration: " + e.getMessage());
             discoveredConfig = new HashMap<>();
+            organizationConfig = new HashMap<>();
             fieldMappingConfig = new HashMap<>();
+            businessRulesConfig = new HashMap<>();
             configLoaded = true;
         }
     }
@@ -141,7 +161,7 @@ public class OrganizationContextService {
                 
                 customFields.addAll(typeFields.stream()
                     .map(field -> (String) field.get("referenceName"))
-                    .filter(Objects::nonNull)
+                    .filter(referenceName -> referenceName != null)
                     .collect(Collectors.toList()));
             }
         }
@@ -307,6 +327,38 @@ public class OrganizationContextService {
     public boolean isConfigurationLoaded() {
         loadConfiguration();
         return configLoaded && (discoveredConfig != null || fieldMappingConfig != null);
+    }
+    
+    /**
+     * Obtiene la configuración organizacional completa.
+     */
+    public Map<String, Object> getOrganizationConfig() {
+        loadConfiguration();
+        return organizationConfig != null ? organizationConfig : new HashMap<>();
+    }
+    
+    /**
+     * Obtiene las reglas de negocio organizacionales.
+     */
+    public Map<String, Object> getBusinessRulesConfig() {
+        loadConfiguration();
+        return businessRulesConfig != null ? businessRulesConfig : new HashMap<>();
+    }
+    
+    /**
+     * Obtiene la configuración de mapeo de campos.
+     */
+    public Map<String, Object> getFieldMappingConfig() {
+        loadConfiguration();
+        return fieldMappingConfig != null ? fieldMappingConfig : new HashMap<>();
+    }
+    
+    /**
+     * Obtiene la configuración organizacional descubierta.
+     */
+    public Map<String, Object> getDiscoveredConfig() {
+        loadConfiguration();
+        return discoveredConfig != null ? discoveredConfig : new HashMap<>();
     }
     
     /**

@@ -83,7 +83,7 @@ public class CreateWorkItemTool implements McpTool {
             "description", "ID del work item padre para crear jerarquía (opcional). Si se proporciona, el proyecto, área e iteración se obtendrán automáticamente del padre."
         ));
         
-        // Campos específicos de YOUR_ORGANIZATION
+        // Campos organizacionales
         properties.put("acceptanceCriteria", Map.of(
             "type", "string",
             "description", "Criterios de aceptación (obligatorio para Historia/Historia técnica)"
@@ -259,7 +259,7 @@ public class CreateWorkItemTool implements McpTool {
                 }
             }
             
-            // Extraer campos específicos de YOUR_ORGANIZATION
+            // Extraer campos organizacionales
             String acceptanceCriteria = (String) arguments.get("acceptanceCriteria");
             String tipoHistoria = (String) arguments.get("tipoHistoria");
             String tipoHistoriaTecnica = (String) arguments.get("tipoHistoriaTecnica");
@@ -351,7 +351,7 @@ public class CreateWorkItemTool implements McpTool {
                 userProvidedValues.put("System.AreaPath", areaPath);
             }
             
-            // Mapear campos específicos de YOUR_ORGANIZATION
+            // Mapear campos organizacionales
             if (acceptanceCriteria != null && !acceptanceCriteria.trim().isEmpty()) {
                 userProvidedValues.put("Microsoft.VSTS.Common.AcceptanceCriteria", acceptanceCriteria);
             }

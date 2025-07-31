@@ -7,7 +7,7 @@ import java.util.*;
 
 /**
  * Servicio para manejar la configuración organizacional de manera genérica.
- * Reemplaza la lógica hardcodeada específica de YOUR_ORGANIZATION con configuración dinámica.
+ * Lee configuración dinámica desde archivos YAML para adaptarse a cualquier organización.
  */
 @Service
 public class OrganizationConfigService {
@@ -15,7 +15,7 @@ public class OrganizationConfigService {
     @Value("${app.config.path:config/}")
     private String configPath;
     
-    @Value("${AZUREDEVOPS_ORGANIZATION:suramericana}")
+    @Value("${AZUREDEVOPS_ORGANIZATION:organization}")
     private String azureDevOpsOrganization;
     
     private final Map<String, Map<String, Object>> fieldMappings;
@@ -69,7 +69,7 @@ public class OrganizationConfigService {
             "type", "plainText"
         ));
         
-        // Campos específicos de YOUR_ORGANIZATION (compatibilidad)
+        // Campos organizacionales (compatibilidad)
         mappings.put("tipoHistoria", Map.of(
             "azureFieldName", "Custom.TipoHistoria",
             "required", false,
