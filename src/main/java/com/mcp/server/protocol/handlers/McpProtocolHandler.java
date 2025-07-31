@@ -114,6 +114,22 @@ public class McpProtocolHandler {
         
         return prompt.execute(arguments).toMap();
     }
+
+    /**
+     * Procesa la solicitud de completion para argumentos de prompts.
+     */
+    public Map<String, Object> handleCompletionComplete(CompletionCompleteRequest.CompletionCompleteParams params) {
+        // For now, return an empty completion list
+        // In a more sophisticated implementation, this could provide auto-completion
+        // suggestions based on the prompt name and current argument being completed
+        Map<String, Object> result = new HashMap<>();
+        result.put("completion", Map.of(
+            "isIncomplete", false,
+            "values", List.of()
+        ));
+        
+        return result;
+    }
     
     /**
      * Procesa la solicitud de ejecución de herramienta.
@@ -152,6 +168,10 @@ public class McpProtocolHandler {
                         getPromptReq.getParams().getName(),
                         getPromptReq.getParams().getArguments()
                     );
+                }
+                case "completion/complete" -> {
+                    CompletionCompleteRequest completionReq = (CompletionCompleteRequest) request;
+                    yield handleCompletionComplete(completionReq.getParams());
                 }
                 default -> throw new IllegalArgumentException("Unknown method: " + request.getMethod());
             };
