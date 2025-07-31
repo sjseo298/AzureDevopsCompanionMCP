@@ -1,6 +1,9 @@
 package com.mcp.server.config;
 
+import com.mcp.server.tools.azuredevops.DiscoverOrganizationTool;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -19,8 +22,21 @@ public class OrganizationConfigService {
     private String azureDevOpsOrganization;
     
     private final Map<String, Map<String, Object>> fieldMappings;
+    private final OrganizationContextService contextService;
+    private final DiscoverOrganizationTool discoverTool;
     
+    // Constructor para uso en producción con inyección de dependencias
+    @Autowired
+    public OrganizationConfigService(OrganizationContextService contextService, @Lazy DiscoverOrganizationTool discoverTool) {
+        this.contextService = contextService;
+        this.discoverTool = discoverTool;
+        this.fieldMappings = createDefaultFieldMappings();
+    }
+    
+    // Constructor sin parámetros para mantener compatibilidad con tests existentes
     public OrganizationConfigService() {
+        this.contextService = null;
+        this.discoverTool = null;
         this.fieldMappings = createDefaultFieldMappings();
     }
     
@@ -187,8 +203,43 @@ public class OrganizationConfigService {
     
     /**
      * Obtiene los valores permitidos para un campo específico.
+     * Soporta valores dinámicos desde Azure DevOps usando @DYNAMIC_FROM_AZURE_DEVOPS.
      */
     public List<String> getAllowedValues(String fieldName) {
+        // Si tenemos dependencias inyectadas, intentar obtener desde la configuración YAML
+        if (contextService != null) {
+            Map<String, Object> fieldMappingConfig = contextService.getFieldMappingConfig();
+            
+            if (fieldMappingConfig.containsKey("fieldMappings")) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> fieldMappings = (Map<String, Object>) fieldMappingConfig.get("fieldMappings");
+                
+                if (fieldMappings.containsKey(fieldName)) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> fieldConfig = (Map<String, Object>) fieldMappings.get(fieldName);
+                    
+                    if (fieldConfig.containsKey("allowedValues")) {
+                        Object allowedValuesObj = fieldConfig.get("allowedValues");
+                        
+                        // Si es la directiva especial, obtener valores dinámicamente
+                        if ("@DYNAMIC_FROM_AZURE_DEVOPS".equals(allowedValuesObj) && discoverTool != null) {
+                            return getDynamicAllowedValues(fieldName, fieldConfig);
+                        }
+                        
+                        // Si es una lista estática
+                        if (allowedValuesObj instanceof List<?>) {
+                            @SuppressWarnings("unchecked")
+                            List<String> staticValues = (List<String>) allowedValuesObj;
+                            List<String> result = new ArrayList<>();
+                            result.addAll(staticValues);
+                            return result;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Fallback a valores hardcodeados para campos básicos
         switch (fieldName.toLowerCase()) {
             case "state":
                 return List.of("New", "Active", "Resolved", "Closed", "Done");
@@ -199,6 +250,129 @@ public class OrganizationConfigService {
             default:
                 return List.of();
         }
+    }
+    
+    /**
+     * Obtiene valores permitidos dinámicamente desde Azure DevOps.
+     */
+    private List<String> getDynamicAllowedValues(String fieldName, Map<String, Object> fieldConfig) {
+        if (contextService == null || discoverTool == null) {
+            System.err.println("No se pueden obtener valores dinámicos - dependencias no inyectadas");
+            return List.of();
+        }
+        
+        try {
+            String azureFieldName = (String) fieldConfig.get("azureFieldName");
+            if (azureFieldName == null) {
+                return List.of();
+            }
+            
+            // Obtener el proyecto primario desde la configuración
+            String primaryProject = getPrimaryProject();
+            if (primaryProject == null) {
+                return List.of();
+            }
+            
+            // Determinar el tipo de work item basado en el campo
+            String workItemType = determineWorkItemTypeFromField(azureFieldName);
+            
+            // Llamar al DiscoverOrganizationTool para obtener valores dinámicos
+            return getFieldAllowedValuesFromAzure(primaryProject, workItemType, azureFieldName);
+            
+        } catch (Exception e) {
+            System.err.println("Error obteniendo valores dinámicos para campo " + fieldName + ": " + e.getMessage());
+            return List.of();
+        }
+    }
+    
+    /**
+     * Obtiene el proyecto primario desde la configuración organizacional.
+     */
+    private String getPrimaryProject() {
+        if (contextService == null) {
+            return "Gerencia_Tecnologia"; // Fallback
+        }
+        
+        Map<String, Object> discoveredConfig = contextService.getDiscoveredConfig();
+        
+        if (discoveredConfig.containsKey("projects")) {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> projects = (List<Map<String, Object>>) discoveredConfig.get("projects");
+            
+            if (!projects.isEmpty()) {
+                // Buscar el proyecto "Gerencia_Tecnologia" o tomar el primero
+                return projects.stream()
+                    .map(project -> (String) project.get("name"))
+                    .filter(name -> "Gerencia_Tecnologia".equals(name))
+                    .findFirst()
+                    .orElse((String) projects.get(0).get("name"));
+            }
+        }
+        
+        return "Gerencia_Tecnologia"; // Fallback
+    }
+    
+    /**
+     * Determina el tipo de work item más apropiado basado en el campo.
+     */
+    private String determineWorkItemTypeFromField(String azureFieldName) {
+        // Mapeo basado en los campos más comunes por tipo
+        if (azureFieldName.contains("TipoDeHistoria")) {
+            return "Historia";
+        } else if (azureFieldName.contains("TipoDeHistoriaTecnica")) {
+            return "Historia técnica";
+        } else if (azureFieldName.contains("TipoDeTarea")) {
+            return "Tarea";
+        } else if (azureFieldName.contains("TipoDeSubtarea")) {
+            return "Subtarea";
+        } else if (azureFieldName.contains("NivelPrueba") || azureFieldName.contains("Origen") || azureFieldName.contains("EtapaDescubrimiento")) {
+            return "Bug";
+        } else if (azureFieldName.contains("TipoEjecucion") || azureFieldName.contains("Fase")) {
+            return "Caso de prueba";
+        } else if (azureFieldName.contains("Probabilidad") || azureFieldName.contains("Impacto")) {
+            return "Riesgo";
+        } else if (azureFieldName.contains("TipoDeProyecto")) {
+            return "Proyecto";
+        } else if (azureFieldName.contains("ResultadoRevision")) {
+            return "Revisión post implantación";
+        }
+        
+        return "Task"; // Fallback genérico
+    }
+    
+    /**
+     * Obtiene valores permitidos desde Azure DevOps usando el DiscoverOrganizationTool.
+     */
+    private List<String> getFieldAllowedValuesFromAzure(String project, String workItemType, String azureFieldName) {
+        try {
+            // Determinar el tipo de campo basado en el nombre del campo
+            String fieldType = determineFieldType(azureFieldName);
+            
+            // Llamar al método público del DiscoverOrganizationTool
+            return discoverTool.getFieldAllowedValues(project, workItemType, azureFieldName, fieldType);
+            
+        } catch (Exception e) {
+            System.err.println("Error obteniendo valores desde Azure DevOps para campo " + azureFieldName + ": " + e.getMessage());
+            return List.of();
+        }
+    }
+    
+    /**
+     * Determina el tipo de campo basado en el nombre del campo de Azure DevOps.
+     */
+    private String determineFieldType(String azureFieldName) {
+        if (azureFieldName.startsWith("Custom.") && 
+            (azureFieldName.contains("Tipo") || azureFieldName.contains("Nivel") || 
+             azureFieldName.contains("Origen") || azureFieldName.contains("Etapa") ||
+             azureFieldName.contains("Fase") || azureFieldName.contains("Resultado"))) {
+            return "picklistString";
+        } else if (azureFieldName.equals("System.State")) {
+            return "string";
+        } else if (azureFieldName.contains("Priority")) {
+            return "integer";
+        }
+        
+        return "string"; // Fallback
     }
     
     /**

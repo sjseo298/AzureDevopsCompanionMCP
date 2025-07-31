@@ -1,15 +1,17 @@
 package com.mcp.server.protocol.messages;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
 
 /**
- * Solicitud para completar argumentos de un prompt o referencia MCP.
+ * Solicitud para completar un prompt específico del servidor MCP.
  * 
- * Esta solicitud se utiliza para autocompletado de argumentos cuando
- * el cliente está construyendo una referencia a un prompt específico.
+ * Esta solicitud es parte del protocolo de completion y permite
+ * completar argumentos de prompts dinámicamente.
  */
 public class CompletionCompleteRequest extends McpRequest {
     
+    @JsonProperty("params")
     private CompletionCompleteParams params;
     
     public CompletionCompleteRequest() {
@@ -21,75 +23,128 @@ public class CompletionCompleteRequest extends McpRequest {
         this.params = params;
     }
     
-    public CompletionCompleteParams getParams() { 
-        return params; 
+    public CompletionCompleteParams getParams() {
+        return params;
     }
     
-    public void setParams(CompletionCompleteParams params) { 
-        this.params = params; 
+    public void setParams(CompletionCompleteParams params) {
+        this.params = params;
     }
     
     /**
-     * Parámetros de la solicitud de completion.
+     * Parámetros para la solicitud de completion.
      */
     public static class CompletionCompleteParams {
+        
+        @JsonProperty("ref")
         private CompletionRef ref;
+        
+        @JsonProperty("argument")
         private CompletionArgument argument;
-        private CompletionContext context;
+        
+        @JsonProperty("context")
+        private Map<String, Object> context;
         
         public CompletionCompleteParams() {}
         
-        public CompletionRef getRef() { return ref; }
-        public void setRef(CompletionRef ref) { this.ref = ref; }
+        public CompletionCompleteParams(CompletionRef ref, CompletionArgument argument, Map<String, Object> context) {
+            this.ref = ref;
+            this.argument = argument;
+            this.context = context;
+        }
         
-        public CompletionArgument getArgument() { return argument; }
-        public void setArgument(CompletionArgument argument) { this.argument = argument; }
+        public CompletionRef getRef() {
+            return ref;
+        }
         
-        public CompletionContext getContext() { return context; }
-        public void setContext(CompletionContext context) { this.context = context; }
+        public void setRef(CompletionRef ref) {
+            this.ref = ref;
+        }
+        
+        public CompletionArgument getArgument() {
+            return argument;
+        }
+        
+        public void setArgument(CompletionArgument argument) {
+            this.argument = argument;
+        }
+        
+        public Map<String, Object> getContext() {
+            return context;
+        }
+        
+        public void setContext(Map<String, Object> context) {
+            this.context = context;
+        }
     }
     
     /**
-     * Referencia al prompt o recurso para completar.
+     * Referencia al recurso para completion.
      */
     public static class CompletionRef {
+        
+        @JsonProperty("type")
         private String type;
+        
+        @JsonProperty("name")
         private String name;
         
         public CompletionRef() {}
         
-        public String getType() { return type; }
-        public void setType(String type) { this.type = type; }
+        public CompletionRef(String type, String name) {
+            this.type = type;
+            this.name = name;
+        }
         
-        public String getName() { return name; }
-        public void setName(String name) { this.name = name; }
+        public String getType() {
+            return type;
+        }
+        
+        public void setType(String type) {
+            this.type = type;
+        }
+        
+        public String getName() {
+            return name;
+        }
+        
+        public void setName(String name) {
+            this.name = name;
+        }
     }
     
     /**
-     * Argumento específico para completar.
+     * Argumento para completion.
      */
     public static class CompletionArgument {
+        
+        @JsonProperty("name")
         private String name;
+        
+        @JsonProperty("value")
         private String value;
         
         public CompletionArgument() {}
         
-        public String getName() { return name; }
-        public void setName(String name) { this.name = name; }
+        public CompletionArgument(String name, String value) {
+            this.name = name;
+            this.value = value;
+        }
         
-        public String getValue() { return value; }
-        public void setValue(String value) { this.value = value; }
-    }
-    
-    /**
-     * Contexto adicional para la completion.
-     */
-    public static class CompletionContext {
-        private Map<String, Object> arguments;
+        public String getName() {
+            return name;
+        }
         
-        public CompletionContext() {}
+        public void setName(String name) {
+            this.name = name;
+        }
         
-        public Map<String, Object> getArguments() { return arguments; }
-        public void setArguments(Map<String, Object> arguments) { this.arguments = arguments; }
+        public String getValue() {
+            return value;
+        }
+        
+        public void setValue(String value) {
+            this.value = value;
+        }
     }
 }

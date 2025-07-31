@@ -48,17 +48,15 @@ class GenerarConfiguracionOrganizacionalPromptTest {
     void testArgumentos() {
         var definition = prompt.getPromptDefinition();
         assertNotNull(definition.getArguments());
-        assertEquals(4, definition.getArguments().size());
+        assertEquals(2, definition.getArguments().size());
         
         // Verificar nombres de argumentos
         var argumentNames = definition.getArguments().stream()
             .map(arg -> arg.getName())
             .toList();
             
-        assertTrue(argumentNames.contains("forzar_regeneracion"));
-        assertTrue(argumentNames.contains("proyecto_principal"));
-        assertTrue(argumentNames.contains("incluir_campos_extendidos"));
         assertTrue(argumentNames.contains("generar_backup"));
+        assertTrue(argumentNames.contains("work_item_referencia"));
     }
 
     @Test
@@ -80,9 +78,6 @@ class GenerarConfiguracionOrganizacionalPromptTest {
     @DisplayName("Debe manejar argumentos personalizados")
     void testEjecucionConArgumentos() {
         Map<String, Object> args = Map.of(
-            "forzar_regeneracion", true,
-            "proyecto_principal", "Gerencia_Tecnologia",
-            "incluir_campos_extendidos", true,
             "generar_backup", false
         );
         
@@ -91,11 +86,9 @@ class GenerarConfiguracionOrganizacionalPromptTest {
         assertNotNull(result);
         assertTrue(result.getDescription().contains("automática"));
         
-        // Verificar que el contexto incluye los argumentos especificados
+        // Verificar que el contexto incluye el argumento de backup
         String systemMessage = ((PromptResult.TextContent) result.getMessages().get(0).getContent()).getText();
-        assertTrue(systemMessage.contains("REGENERACIÓN FORZADA"));
-        assertTrue(systemMessage.contains("Gerencia_Tecnologia"));
-        assertTrue(systemMessage.contains("CAMPOS EXTENDIDOS"));
+        assertTrue(systemMessage.contains("SIN BACKUP"));
     }
 
     @Test
@@ -109,17 +102,17 @@ class GenerarConfiguracionOrganizacionalPromptTest {
         // Verificar contenido del mensaje de sistema
         assertTrue(systemMessage.contains("FASE 1: DETECCIÓN"));
         assertTrue(systemMessage.contains("FASE 2: DESCUBRIMIENTO"));
-        assertTrue(systemMessage.contains("FASE 3: GENERACIÓN DE ARCHIVOS"));
+        assertTrue(systemMessage.contains("FASE 3: GENERACIÓN"));
         assertTrue(systemMessage.contains("FASE 4: VALIDACIÓN"));
         assertTrue(systemMessage.contains("discovered-organization.yml"));
         assertTrue(systemMessage.contains("organization-config.yml"));
         
         // Verificar contenido del mensaje de usuario
-        assertTrue(userMessage.contains("VERIFICAR ARCHIVOS EXISTENTES"));
-        assertTrue(userMessage.contains("OBTENER CONTEXTO ORGANIZACIONAL DINÁMICO"));
-        assertTrue(userMessage.contains("GENERAR ESTRUCTURA COMPLETA"));
-        assertTrue(userMessage.contains("CREAR ARCHIVOS DE CONFIGURACIÓN"));
+        assertTrue(userMessage.contains("DESCUBRIMIENTO ORGANIZACIONAL"));
         assertTrue(userMessage.contains("azuredevops_discover_organization"));
-        assertTrue(userMessage.contains("azuredevops_get_workitem_types"));
+        assertTrue(userMessage.contains("GENERACIÓN AUTOMÁTICA"));
+        assertTrue(userMessage.contains("VALIDACIÓN Y OPTIMIZACIÓN"));
+        assertTrue(userMessage.contains("field-mappings.yml"));
+        assertTrue(userMessage.contains("business-rules.yml"));
     }
 }

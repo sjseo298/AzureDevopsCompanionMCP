@@ -114,22 +114,6 @@ public class McpProtocolHandler {
         
         return prompt.execute(arguments).toMap();
     }
-
-    /**
-     * Procesa la solicitud de completion para argumentos de prompts.
-     */
-    public Map<String, Object> handleCompletionComplete(CompletionCompleteRequest.CompletionCompleteParams params) {
-        // For now, return an empty completion list
-        // In a more sophisticated implementation, this could provide auto-completion
-        // suggestions based on the prompt name and current argument being completed
-        Map<String, Object> result = new HashMap<>();
-        result.put("completion", Map.of(
-            "isIncomplete", false,
-            "values", List.of()
-        ));
-        
-        return result;
-    }
     
     /**
      * Procesa la solicitud de ejecución de herramienta.
@@ -141,6 +125,52 @@ public class McpProtocolHandler {
         }
         
         return tool.execute(arguments);
+    }
+    
+    /**
+     * Procesa la solicitud de completion para argumentos de prompt.
+     */
+    public Map<String, Object> handleCompletionComplete(CompletionCompleteRequest.CompletionCompleteParams params) {
+        // Para completion de prompts, proporcionamos sugerencias básicas
+        List<Map<String, Object>> completions = new ArrayList<>();
+        
+        // Analizar el tipo de referencia y el argumento para completion
+        if (params.getRef() != null && "ref/prompt".equals(params.getRef().getType())) {
+            String promptName = params.getRef().getName();
+            String argumentName = params.getArgument() != null ? params.getArgument().getName() : "";
+            String currentValue = params.getArgument() != null ? params.getArgument().getValue() : "";
+            
+            // Para el prompt de configuración organizacional
+            if ("generar_configuracion_organizacional".equals(promptName)) {
+                if ("generar_backup".equals(argumentName)) {
+                    // Sugerencias para el argumento generar_backup
+                    if (currentValue.isEmpty() || "s".startsWith(currentValue.toLowerCase()) || "y".startsWith(currentValue.toLowerCase())) {
+                        completions.add(Map.of(
+                            "label", "sí",
+                            "insertText", "sí",
+                            "documentation", "Generar backup de archivos existentes antes de sobreescribir"
+                        ));
+                        completions.add(Map.of(
+                            "label", "yes", 
+                            "insertText", "yes",
+                            "documentation", "Generate backup of existing files before overwriting"
+                        ));
+                    }
+                    if (currentValue.isEmpty() || "n".startsWith(currentValue.toLowerCase())) {
+                        completions.add(Map.of(
+                            "label", "no",
+                            "insertText", "no", 
+                            "documentation", "No generar backup - sobreescribir archivos directamente"
+                        ));
+                    }
+                }
+            }
+        }
+        
+        // Si no hay completions específicas, devolver lista vacía
+        Map<String, Object> result = new HashMap<>();
+        result.put("completions", completions);
+        return result;
     }
     
     /**

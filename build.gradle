@@ -42,8 +42,8 @@ dependencies {
     implementation 'org.apache.commons:commons-lang3'
     implementation 'org.yaml:snakeyaml'
     
-    // Logging (ya incluido en Spring Boot, pero explícito por claridad)
-    implementation 'org.springframework.boot:spring-boot-starter-logging'
+    // Logging ya está incluido automáticamente por Spring Boot Starter
+    // No es necesario incluirlo explícitamente
     
     // Test Dependencies
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -102,7 +102,7 @@ task runDev(type: JavaExec) {
     group = 'application'
     description = 'Ejecuta el servidor MCP en modo desarrollo'
     classpath = sourceSets.main.runtimeClasspath
-    mainClass = 'com.mcpserver.McpServerApplication'
+    mainClass = 'com.mcp.server.McpServerApplication'
     jvmArgs = [
         '-Dspring.profiles.active=dev',
         '-Dspring.devtools.restart.enabled=true',
