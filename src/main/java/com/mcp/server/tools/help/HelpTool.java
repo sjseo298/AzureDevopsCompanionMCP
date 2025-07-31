@@ -2,21 +2,24 @@ package com.mcp.server.tools.help;
 
 import com.mcp.server.tools.base.McpTool;
 import com.mcp.server.protocol.types.Tool;
+import com.mcp.server.config.OrganizationContextService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Herramienta de ayuda del servidor MCP Azure DevOps.
  * 
  * <p>Proporciona información comprensiva sobre las capacidades del servidor,
- * incluyendo contexto específico para la estructura organizacional de Sura Colombia.
+ * adaptada dinámicamente a la estructura organizacional descubierta.
  * 
  * <p>Esta herramienta incluye:
  * <ul>
  *   <li>Descripción general del servidor y sus capacidades</li>
  *   <li>Lista completa de herramientas disponibles</li>
- *   <li>Contexto específico de Sura (jerarquía, dominios, nomenclatura)</li>
+ *   <li>Contexto organizacional dinámico (jerarquía, dominios, nomenclatura)</li>
  *   <li>Ejemplos de uso para consultas básicas y avanzadas</li>
  *   <li>Mejores prácticas para el uso efectivo</li>
  * </ul>
@@ -29,7 +32,14 @@ import java.util.*;
 public class HelpTool implements McpTool {
     
     private static final String TOOL_NAME = "get_help";
-    private static final String DESCRIPTION = "Obtiene información completa de ayuda sobre el servidor MCP Azure DevOps, incluyendo contexto específico para Sura Colombia";
+    private static final String DESCRIPTION = "Obtiene información completa de ayuda sobre el servidor MCP Azure DevOps, incluyendo contexto organizacional dinámico";
+    
+    private final OrganizationContextService organizationContextService;
+    
+    @Autowired
+    public HelpTool(OrganizationContextService organizationContextService) {
+        this.organizationContextService = organizationContextService;
+    }
     
     @Override
     public Tool getToolDefinition() {
@@ -41,8 +51,8 @@ public class HelpTool implements McpTool {
                     "properties", Map.of(
                         "section", Map.of(
                             "type", "string",
-                            "description", "Sección específica de ayuda (opcional): 'overview', 'tools', 'sura_context', 'examples', 'best_practices'",
-                            "enum", List.of("overview", "tools", "sura_context", "examples", "best_practices")
+                            "description", "Sección específica de ayuda (opcional): 'overview', 'tools', 'organization_context', 'examples', 'best_practices'",
+                            "enum", List.of("overview", "tools", "organization_context", "examples", "best_practices")
                         )
                     ),
                     "required", List.of(),
@@ -61,7 +71,7 @@ public class HelpTool implements McpTool {
             // Mostrar toda la ayuda
             helpText.append(getOverview()).append("\n\n")
                    .append(getToolsHelp()).append("\n\n")
-                   .append(getSuraContext()).append("\n\n")
+                   .append(getOrganizationContext()).append("\n\n")
                    .append(getExamples()).append("\n\n")
                    .append(getBestPractices());
         } else {
@@ -73,8 +83,8 @@ public class HelpTool implements McpTool {
                 case "tools":
                     helpText.append(getToolsHelp());
                     break;
-                case "sura_context":
-                    helpText.append(getSuraContext());
+                case "organization_context":
+                    helpText.append(getOrganizationContext());
                     break;
                 case "examples":
                     helpText.append(getExamples());
@@ -100,13 +110,19 @@ public class HelpTool implements McpTool {
     }
     
     private String getOverview() {
-        return """
+        Map<String, Object> orgConfig = organizationContextService.getOrganizationConfig();
+        Map<String, Object> discoveredConfig = organizationContextService.getDiscoveredConfig();
+        
+        String organizationName = getOrganizationDisplayName(orgConfig, discoveredConfig);
+        String organizationDescription = getOrganizationDescription(orgConfig);
+        
+        return String.format("""
 # 🚀 Azure DevOps MCP Server - Guía Completa
 
 ## 📋 Descripción General
 Servidor MCP (Model Context Protocol) especializado para Azure DevOps implementado con Spring Boot 3.3.2 y Java 21. 
 Proporciona acceso completo a work items, proyectos, equipos e iteraciones a través de WebSocket y REST API.
-Optimizado específicamente para la estructura organizacional y metodología de Sura Colombia.
+%s
 
 ## ✨ Características Principales
 - 🌐 **Protocol MCP 2024-11-05**: Implementación completa del protocolo estándar
@@ -123,7 +139,7 @@ Optimizado específicamente para la estructura organizacional y metodología de 
 - 📊 **Análisis de Proyectos**: Ver estructura organizacional y equipos
 - 🔄 **Iteraciones y Sprints**: Gestión de ciclos de desarrollo ágil
 - 🏗️ **Tipos de Work Items**: Soporte para historias, tareas, bugs, features y épicas
-- 🎯 **Contexto Sura**: Configuración especializada para el entorno de Sura Colombia
+- 🎯 **Contexto Organizacional**: Configuración adaptada dinámicamente a la organización
 
 ## 🔧 Tecnologías y Stack
 - **Java**: 21 LTS con características modernas
@@ -138,14 +154,60 @@ Optimizado específicamente para la estructura organizacional y metodología de 
 - **Protocolo MCP**: 2024-11-05 (JSON-RPC 2.0)
 - **Azure DevOps API**: v7.1 REST API
 - **Autenticación**: Personal Access Token (PAT) con scope vso.work_write
-- **Organización**: sura (Azure DevOps)
+- **Organización**: %s
 - **Content-Type**: application/json-patch+json (JSON Patch RFC 6902)
-- **Formato**: Array de operaciones JSON Patch para create/update""";
+- **Formato**: Array de operaciones JSON Patch para create/update""", 
+                organizationDescription, getAzureOrganizationName(orgConfig, discoveredConfig));
+    }
+    
+    private String getOrganizationDisplayName(Map<String, Object> orgConfig, Map<String, Object> discoveredConfig) {
+        if (orgConfig.containsKey("organization")) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> org = (Map<String, Object>) orgConfig.get("organization");
+            Object displayName = org.get("displayName");
+            if (displayName != null) {
+                return displayName.toString();
+            }
+        }
+        
+        Object orgName = discoveredConfig.get("organizationName");
+        return orgName != null ? orgName.toString() : "Azure DevOps";
+    }
+    
+    private String getOrganizationDescription(Map<String, Object> orgConfig) {
+        if (orgConfig.containsKey("organization")) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> org = (Map<String, Object>) orgConfig.get("organization");
+            Object description = org.get("description");
+            if (description != null) {
+                String desc = description.toString();
+                return "Optimizado específicamente para " + desc.toLowerCase() + ".";
+            }
+        }
+        return "Configuración adaptada dinámicamente a la estructura organizacional.";
+    }
+    
+    private String getAzureOrganizationName(Map<String, Object> orgConfig, Map<String, Object> discoveredConfig) {
+        if (orgConfig.containsKey("organization")) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> org = (Map<String, Object>) orgConfig.get("organization");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> azure = (Map<String, Object>) org.get("azure");
+            if (azure != null) {
+                Object azureOrg = azure.get("organization");
+                if (azureOrg != null) {
+                    return azureOrg.toString();
+                }
+            }
+        }
+        
+        Object orgName = discoveredConfig.get("organizationName");
+        return orgName != null ? orgName.toString() : "azure-devops";
     }
     
     private String getToolsHelp() {
         return """
-# 🛠️ Herramientas Disponibles (12 herramientas)
+# 🛠️ Herramientas Disponibles (13 herramientas)
 
 ## 📋 Gestión de Proyectos y Organizacional
 - **list_projects**: Lista todos los proyectos disponibles en la organización
@@ -170,14 +232,21 @@ Optimizado específicamente para la estructura organizacional y metodología de 
 
 - **create_workitem**: Crea nuevos work items con JSON Patch API
   - Soporta: Historia, Historia técnica, Tarea, Subtarea, Bug, Épica, etc.
-  - Campos: Todos los campos estándar y personalizados de Sura
+  - Campos: Todos los campos estándar y personalizados de la organización
   - Relaciones: Soporte completo para jerarquías padre-hijo
-  - Validación: Campos obligatorios por tipo según configuración Sura
+  - Validación: Campos obligatorios por tipo según configuración organizacional
   
 - **update_workitem**: Actualiza work items existentes
   - Operaciones: Cambio de estado, asignación, campos personalizados
   - Formato: JSON Patch operations (RFC 6902)
   - Control de concurrencia: Revisión opcional para evitar conflictos
+  - 🛡️ **SEGURIDAD**: Validación automática para prevenir sobreescritura accidental
+
+- **azuredevops_add_comment**: ✨ **NUEVA** - Agrega comentarios de forma SEGURA
+  - Función: Solo agrega comentarios a la discusión sin riesgo de sobreescritura
+  - Parámetros: project, workItemId, comment
+  - Seguridad: NO puede sobreescribir la descripción original
+  - Recomendado: Use esta herramienta en lugar de update_workitem para comentarios
 
 - **delete_workitem**: Elimina work items de Azure DevOps
   - Modos: Papelera de reciclaje (por defecto) o eliminación permanente
@@ -207,301 +276,218 @@ Optimizado específicamente para la estructura organizacional y metodología de 
   - Útil para: Crear identificadores únicos en aplicaciones
 
 - **get_help**: Muestra información de ayuda completa (esta herramienta)
-  - Secciones: overview, tools, sura_context, examples, best_practices
-  - Contexto: Documentación específica para Sura Colombia
+  - Secciones: overview, tools, organization_context, examples, best_practices
+  - Contexto: Documentación específica adaptada a la organización
+
+## 🛡️ Características de Seguridad (NUEVO)
+- **Validación Automática**: Prevención de sobreescritura accidental de contenido
+- **Advertencias Proactivas**: Alertas cuando se intenta modificar contenido existente
+- **Registro de Auditoría**: Logging de operaciones de riesgo para revisión
+- **Herramientas Especializadas**: azuredevops_add_comment para comentarios seguros
+- **Recomendaciones Inteligentes**: Sugerencias de mejores prácticas en tiempo real
 
 ## 📊 Características Especiales
 - **JSON Patch Support**: Todas las operaciones de creación/actualización usan RFC 6902
-- **Sura Custom Fields**: Soporte completo para campos personalizados de Sura
-- **Work Item Types**: Tipos personalizados en español (Historia, Tarea, etc.)
+- **Custom Fields**: Soporte completo para campos personalizados organizacionales
+- **Work Item Types**: Tipos personalizados según configuración de la organización
 - **Error Handling**: Manejo detallado de errores específicos de Azure DevOps
 - **Validation**: Validación de campos obligatorios por tipo de work item
 - **Safe Deletion**: Eliminación con papelera de reciclaje y confirmación para eliminación permanente""";
     }
     
-    private String getSuraContext() {
-        return """
-# 🏢 Contexto Específico para Sura Colombia
-
-## 🔧 Tipos de Work Items Personalizados (OBLIGATORIO USAR EN ESPAÑOL)
-
-### ✅ Tipos Habilitados en Sura:
-1. **Historia** - Funcionalidades de negocio
-   - Campo clave: `Tipo de Historia` (Bug, Historia, Plan de pruebas, Plan migración de datos, Pruebas automatizadas)
-   - Campos obligatorios: Title, State, Description, AcceptanceCriteria, TipoDeHistoria, MigracionDatos, CumplimientoRegulatorio, ControlAutomatico, ID_APM
-
-2. **Historia técnica** - Trabajo técnico, infraestructura, bugs
-   - Campo clave: `Tipo de Historia Técnica` (Bug, Historia Técnica, Plan de pruebas, etc.)
-   - Campos obligatorios: Title, State, Description, AcceptanceCriteria, TipoDeHistoriaTecnica, MigracionDatos, CumplimientoRegulatorio, ControlAutomatico, ID_APM
-
-3. **Tarea** - Tareas específicas de desarrollo
-   - Campo clave: `Tipo de tarea` (Spike, Tarea)
-   - Campos obligatorios: Title, State, TipoDeTarea
-
-4. **Subtarea** - Subdivisiones de tareas
-   - Campo clave: `Tipo de subtarea` (Análisis de impacto, Aprobación arquitecto CAI, Pruebas de aceptación, etc.)
-   - Campos obligatorios: Title, State, TipoDeSubtarea
-
-5. **Bug** - ⚠️ USAR "Historia técnica" CON TIPO "Bug" EN SU LUGAR
-6. **Caso de prueba** - Casos de prueba específicos
-7. **Riesgo** - Gestión de riesgos del proyecto
-8. **Proyecto** - Iniciativas de alto nivel
-9. **Épica** - Épicas de producto
-10. **Revisión post implantación** - Revisiones después de despliegues
-
-### ❌ Tipos Deshabilitados (NO USAR):
-- Task → Usar **"Tarea"**
-- User Story → Usar **"Historia"**
-- Epic → Usar **"Épica"**
-- Issue → Usar **"Riesgo"**
-
-## 🏗️ Estructura Organizacional
-
-### Jerarquía de Work Items:
-```
-PROYECTO (400+ activos)
-├── ÉPICA/FEATURE (Capacidades de negocio)
-├── HISTORIA/HISTORIA TÉCNICA (Requerimientos funcionales)
-├── TAREA (Actividades específicas)
-├── SUBTAREA (Subdivisiones de tareas)
-├── BUG (como Historia técnica con tipo Bug)
-└── CASO DE PRUEBA (Validaciones de calidad)
-```
-
-### Dominios de Negocio:
-- **do-asegur-**: Aseguramiento (pólizas, reclamaciones, suscripción, ARL)
-- **egv-salud-**: Salud (PAC, atención virtual, inclusión asegurados)
-- **do-prestacion_distribucion-**: Prestación (salud en casa, medicamentos)
-- **do-acceso_clientes-**: Acceso (portales, canales masivos, sostenibilidad)
-- **do-infraestructura-**: Infraestructura (Kyndryl: core, DevOps, SRE, DBA)
-- **do-ciencia_analitica-**: Analítica (BI, IA aplicada, arquitectura)
-
-### Nomenclatura de Proyectos:
-- **[PETID] + año**: Proyectos con identificador formal
-- **[NO PETID] + año**: Proyectos sin identificador específico
-- **Archivar-**: Proyectos en proceso de cierre
-- **H_1_2025, T2 2025**: Hitos y trimestres específicos
-
-### Estructura de Equipos (100+ equipos):
-- **Prefijo "do-"**: Dominios operativos
-- **Prefijo "egv-"**: Evolución y gobierno
-- **Prefijo "t-"**: Equipos transversales
-- **Prefijo "mod-"**: Modificaciones operativas
-- **Sufijo "inactivo-"**: Equipos deshabilitados
-
-## 🏢 Jerarquía de Proyectos en Sura (ACTUALIZADA 2025)
-
-### Estructura de Proyectos (3 niveles principales):
-
-#### 1. **Gerencia_Tecnologia** (Proyecto Principal)
-- **ID**: 985807ad-7ff9-438d-849c-794c9bbc50f4
-- **Descripción**: Agrupa todos los proyectos de desarrollo
-- **Equipos**: 100+ equipos activos
-- **Work Items Activos**: 400+ proyectos de alto nivel
-- **Dominios incluidos**:
-  - `do-asegur-*`: Aseguramiento y pólizas
-  - `do-prestacion_distribucion-*`: Prestación y distribución
-  - `do-acceso_clientes-*`: Acceso de clientes
-  - `do-infraestructura-*`: Infraestructura (Kyndryl)
-  - `do-ciencia_analitica-*`: Analítica e IA
-  - `egv-salud-*`: Evolución en salud
-  - `t-*`: Equipos transversales
-
-#### 2. **Gerencia_Tecnologia_Egv_Aseguramiento** (Especializado)
-- **ID**: d4897a90-a850-48a6-8dd2-be1a1742067a
-- **Descripción**: Agrupa los proyectos de aseguramiento
-- **Equipos**: 74+ equipos especializados
-- **Enfoque**: Evolución y gobierno de aseguramiento
-- **Dominios incluidos**:
-  - `egv-asegur-*`: Evolución de aseguramiento
-  - `do-asegur-*`: Desarrollo operativo de aseguramiento
-  - `t-core_*`: Equipos transversales del core
-
-#### 3. **Portafolios** (Iniciativas Estratégicas)
-- **ID**: 4261b86e-ac42-449b-a360-113821717ccf
-- **Descripción**: Proyecto que agrupa las iniciativas de los portafolios
-- **Equipos**: 100+ equipos de iniciativas
-- **Enfoque**: Nuevos desarrollos y modernización
-- **Dominios incluidos**:
-  - `mod-operativo_*`: Modificaciones operativas
-  - `dllo-*`: Desarrollo de nuevos productos
-  - `alianza-ecosistemas_*`: Alianzas estratégicas
-  - `relev-pers-empr_*`: Relevancia personal empresarial
-
-### 🎯 JERARQUÍA DE WORK ITEMS EN SURA (ACTUALIZADA)
-
-#### Nivel 1: **PROYECTO** (Más alto - Iniciativas estratégicas)
-- **Ejemplo**: "Remediación GW - 2025" (ID: 695480)
-- **Área**: `Gerencia_Tecnologia\\do-asegur-plan_de_remediacion`
-- **Propósito**: Agrupa iniciativas completas de gran envergadura
-- **Estados**: New, En progreso, Cerrado, Planeado
-- **Duración**: Típicamente anuales o multi-anuales
-
-#### Nivel 2: **ÉPICA/FEATURE** (Capacidades de negocio)
-- Agrupa funcionalidades relacionadas
-- Duración: Trimestral o semestral
-
-#### Nivel 3: **HISTORIA / HISTORIA TÉCNICA** (Requerimientos funcionales)
-- **Historia**: Funcionalidades de usuario final
-- **Historia técnica**: Trabajo técnico, infraestructura, desarrollo
-- Duración: Sprint (1-4 semanas)
-
-#### Nivel 4: **TAREA** (Actividades específicas)
-- Trabajo granular dentro de historias
-- Duración: Días o una semana
-
-#### Nivel 5: **SUBTAREA** (Más granular)
-- Subdivisiones de tareas específicas
-- Duración: Horas o días
-
-### 📁 ESTRUCTURA DE ÁREAS ORGANIZACIONALES
-
-#### Patrón de Nomenclatura de Áreas:
-```
-Gerencia_Tecnologia\\{dominio}-{función}-{iniciativa}
-```
-
-**Ejemplo Real**: 
-- Área: `Gerencia_Tecnologia\\do-asegur-plan_de_remediacion`
-- Interpretación: dominio_aseguramiento - función_aseguramiento - iniciativa_plan_de_remediacion
-
-#### Prefijos de Dominio:
-- **do-**: Dominios operativos (desarrollo operativo)
-- **egv-**: Evolución y gobierno
-- **t-**: Transversales
-- **mod-**: Modificaciones operativas
-- **dllo-**: Desarrollo de nuevos productos
-
-#### Sufijos de Función:
-- **-asegur-**: Aseguramiento (pólizas, siniestros, suscripción)
-- **-salud-**: Salud (PAC, consultas médicas)
-- **-prestacion_distribucion-**: Prestación y distribución
-- **-acceso_clientes-**: Portales y canales
-- **-infraestructura-**: Infraestructura tecnológica
-- **-ciencia_analitica-**: Analítica de datos e IA
-
-### 🏷️ PATRONES DE NOMENCLATURA DE PROYECTOS
-
-#### Clasificación por Tipo de Demanda:
-1. **[PETID] + año**: Proyectos con identificador formal en sistema PETID
-   - Ejemplo: "[PETID] 2025", "[PETID] H_1_2025"
-   - Representan demandas oficiales registradas
-
-2. **[NO PETID] + año**: Proyectos sin identificador específico
-   - Ejemplo: "[NO PETID] 2025"
-   - Proyectos internos o de mantenimiento
-
-3. **Archivar-**: Proyectos en proceso de cierre o archivados
-   - Ejemplo: "Archivar-[PETID] 2025"
-   - Estado transitorio antes del cierre definitivo
-
-#### Indicadores Temporales:
-- **H_1_2025**: Hito 1 del año 2025
-- **T2 2025, T3 2025, T4 2025**: Trimestre específico
-- **Q1 2025, Q2 2025**: Quarter específico
-- **Sprint X**: Iteraciones específicas de desarrollo
-
-#### Proyectos Temáticos (Ejemplos Reales):
-- **"Remediación GW - 2025"**: Plan de remediación de Guidewire
-- **"Sostenibilidad de dominio"**: Iniciativas de sostenibilidad
-- **"Demandas cruzadas 2025"**: Demandas entre múltiples dominios
-- **"PILAR DE GESTIÓN DEL CONOCIMIENTO"**: Gestión del conocimiento organizacional
-- **"Transformación Plan Vive"**: Transformación digital del Plan Vive
-- **"IFRS17 - FeniX"**: Implementación de normativas contables
-
-### 🔍 Cómo Determinar a Qué Proyectos Pertenezco
-
-Para identificar los proyectos donde tienes acceso, usa estas herramientas:
-
-1. **Lista todos los proyectos disponibles**:
-   ```
-   azuredevops_list_projects
-   ```
-   - Muestra los 3 proyectos principales de Sura
-   - Solo verás proyectos donde tengas permisos
-
-2. **Lista equipos de un proyecto específico**:
-   ```
-   azuredevops_list_teams project="Gerencia_Tecnologia"
-   ```
-   - Muestra todos los equipos donde puedes trabajar
-   - Solo aparecen equipos con permisos de acceso
-
-3. **Consulta tu trabajo asignado**:
-   ```
-   azuredevops_get_assigned_work project="Gerencia_Tecnologia"
-   ```
-   - Lista work items asignados a tu usuario
-   - Indica automáticamente los proyectos activos
-
-### 📊 Distribución por Dominio de Negocio
-
-| Prefijo | Dominio | Proyecto Principal | Ejemplos de Equipos |
-|---------|---------|-------------------|---------------------|
-| `do-asegur-` | Aseguramiento | Gerencia_Tecnologia | Pólizas, Reclamaciones, ARL |
-| `egv-asegur-` | Evolución Aseguramiento | Gerencia_Tecnologia_Egv_Aseguramiento | OIPA, Kinesis, Reaseguro |
-| `do-prestacion-` | Prestación | Gerencia_Tecnologia | Salud en casa, Medicamentos |
-| `do-acceso-` | Acceso Clientes | Gerencia_Tecnologia | Portales, Canales masivos |
-| `mod-operativo-` | Modificaciones | Portafolios | IFRS17, Core, Nuevos modelos |
-| `dllo-` | Desarrollo | Portafolios | Nuevos productos, Canales |
-
-## ⚙️ Metodología Ágil y Iteraciones
-- **Sprints**: Trimestrales (Q1, Q2, Q3, Q4)
-- **Iteraciones**: Por días hábiles [11 días hábiles]
-- **Jerarquía**: Gerencia_Tecnologia > Año > Sprint
-- **Estados**: New → Active → Resolved → Closed
-
-## 📋 Campos Obligatorios por Tipo
-
-### Campos Universales (TODOS los tipos):
-- **System.Title** - Título descriptivo
-- **System.State** - Estado del work item (New por defecto)
-- **System.AreaPath** - Ruta de área (dominio de negocio)
-- **System.IterationPath** - Ruta de iteración (sprint)
-
-### Campos Específicos Sura:
-- **ID de la solución en el APM**: Campo Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14 (valor numérico, ej: 448)
-- **Migración de datos**: Custom.MigracionDatos (Si/No)
-- **Cumplimiento regulatorio**: Custom.CumplimientoRegulatorio (Si/No)
-- **Control automático**: Custom.ControlAutomatico (Si/No)
-
-## 🔧 Azure DevOps API - Formato JSON Patch
-
-### Estructura Obligatoria (RFC 6902):
-```json
-[
-  {
-    "op": "add",
-    "path": "/fields/System.Title",
-    "value": "Título del work item"
-  },
-  {
-    "op": "add", 
-    "path": "/fields/Custom.TipoDeHistoria",
-    "value": "Historia"
-  }
-]
-```
-
-### Content-Type Requerido:
-- **OBLIGATORIO**: `application/json-patch+json`
-- **NO usar**: `application/json`
-
-### Relaciones Padre-Hijo:
-```json
-{
-  "op": "add",
-  "path": "/relations/-", 
-  "value": {
-    "rel": "System.LinkTypes.Hierarchy-Reverse",
-    "url": "https://dev.azure.com/sura/_apis/wit/workItems/{parentId}"
-  }
-}
-```""";
+    private String getOrganizationContext() {
+        Map<String, Object> orgConfig = organizationContextService.getOrganizationConfig();
+        Map<String, Object> discoveredConfig = organizationContextService.getDiscoveredConfig();
+        List<Map<String, Object>> discoveredProjects = organizationContextService.getDiscoveredProjects();
+        
+        String organizationName = getOrganizationDisplayName(orgConfig, discoveredConfig);
+        
+        StringBuilder contextBuilder = new StringBuilder();
+        contextBuilder.append("# 🏢 Contexto Organizacional - ").append(organizationName).append("\n\n");
+        
+        // Información de proyectos
+        if (!discoveredProjects.isEmpty()) {
+            contextBuilder.append("## 📁 Proyectos Disponibles\n\n");
+            for (Map<String, Object> project : discoveredProjects) {
+                String projectName = (String) project.get("name");
+                String description = (String) project.get("description");
+                String azureProjectId = (String) project.get("azureProjectId");
+                
+                contextBuilder.append(String.format("### %s\n", projectName));
+                if (description != null) {
+                    contextBuilder.append(String.format("- **Descripción**: %s\n", description));
+                }
+                if (azureProjectId != null) {
+                    contextBuilder.append(String.format("- **ID Azure**: %s\n", azureProjectId));
+                }
+                
+                // Información de equipos
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> teams = (List<Map<String, Object>>) project.get("teams");
+                if (teams != null && !teams.isEmpty()) {
+                    contextBuilder.append("- **Equipos activos**: ").append(teams.size()).append("\n");
+                    
+                    // Agrupar equipos por dominio si tienen prefijo
+                    Map<String, Long> domainCounts = teams.stream()
+                        .map(team -> (String) team.get("name"))
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.groupingBy(
+                            name -> {
+                                String[] parts = name.split("-");
+                                return parts.length >= 2 ? parts[0] + "-" + parts[1] : "otros";
+                            },
+                            Collectors.counting()
+                        ));
+                    
+                    if (!domainCounts.isEmpty()) {
+                        contextBuilder.append("- **Dominios principales**:\n");
+                        domainCounts.entrySet().stream()
+                            .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                            .limit(5)
+                            .forEach(entry -> 
+                                contextBuilder.append(String.format("  - %s: %d equipos\n", entry.getKey(), entry.getValue()))
+                            );
+                    }
+                }
+                contextBuilder.append("\n");
+            }
+        }
+        
+        // Información de tipos de work items desde configuración
+        Map<String, Object> fieldMappingConfig = organizationContextService.getFieldMappingConfig();
+        if (fieldMappingConfig.containsKey("workItemTypes")) {
+            contextBuilder.append("## 🔧 Tipos de Work Items Disponibles\n\n");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> workItemTypes = (Map<String, Object>) fieldMappingConfig.get("workItemTypes");
+            
+            workItemTypes.forEach((type, config) -> {
+                contextBuilder.append(String.format("### %s\n", type));
+                if (config instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> typeConfig = (Map<String, Object>) config;
+                    
+                    Object description = typeConfig.get("description");
+                    if (description != null) {
+                        contextBuilder.append(String.format("- **Propósito**: %s\n", description));
+                    }
+                    
+                    @SuppressWarnings("unchecked")
+                    List<String> requiredFields = (List<String>) typeConfig.get("requiredFields");
+                    if (requiredFields != null && !requiredFields.isEmpty()) {
+                        contextBuilder.append("- **Campos obligatorios**: ");
+                        contextBuilder.append(String.join(", ", requiredFields));
+                        contextBuilder.append("\n");
+                    }
+                }
+                contextBuilder.append("\n");
+            });
+        }
+        
+        // Información de campos personalizados
+        if (fieldMappingConfig.containsKey("customFields")) {
+            contextBuilder.append("## ⚙️ Campos Personalizados\n\n");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> customFields = (Map<String, Object>) fieldMappingConfig.get("customFields");
+            
+            customFields.forEach((fieldType, fields) -> {
+                if (fields instanceof List) {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> fieldList = (List<Map<String, Object>>) fields;
+                    
+                    if (!fieldList.isEmpty()) {
+                        contextBuilder.append(String.format("### %s\n", fieldType));
+                        fieldList.forEach(field -> {
+                            String name = (String) field.get("name");
+                            String referenceName = (String) field.get("referenceName");
+                            String type = (String) field.get("type");
+                            
+                            if (name != null) {
+                                contextBuilder.append(String.format("- **%s**", name));
+                                if (type != null) {
+                                    contextBuilder.append(String.format(" (%s)", type));
+                                }
+                                if (referenceName != null) {
+                                    contextBuilder.append(String.format(" - `%s`", referenceName));
+                                }
+                                contextBuilder.append("\n");
+                            }
+                        });
+                        contextBuilder.append("\n");
+                    }
+                }
+            });
+        }
+        
+        // Reglas de negocio si están disponibles
+        Map<String, Object> businessRules = organizationContextService.getBusinessRulesConfig();
+        if (!businessRules.isEmpty()) {
+            contextBuilder.append("## 📋 Reglas de Negocio\n\n");
+            businessRules.forEach((rule, value) -> {
+                contextBuilder.append(String.format("- **%s**: %s\n", rule, value.toString()));
+            });
+            contextBuilder.append("\n");
+        }
+        
+        // Información de configuración organizacional
+        if (orgConfig.containsKey("organization")) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> org = (Map<String, Object>) orgConfig.get("organization");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> azure = (Map<String, Object>) org.get("azure");
+            
+            if (azure != null) {
+                contextBuilder.append("## 🔗 Configuración Azure DevOps\n\n");
+                Object baseUrl = azure.get("baseUrl");
+                Object defaultProject = azure.get("defaultProject");
+                
+                if (baseUrl != null) {
+                    contextBuilder.append(String.format("- **URL Base**: %s\n", baseUrl));
+                }
+                if (defaultProject != null) {
+                    contextBuilder.append(String.format("- **Proyecto por defecto**: %s\n", defaultProject));
+                }
+            }
+        }
+        
+        return contextBuilder.toString();
     }
     
     private String getExamples() {
-        return """
+        Map<String, Object> orgConfig = organizationContextService.getOrganizationConfig();
+        List<Map<String, Object>> discoveredProjects = organizationContextService.getDiscoveredProjects();
+        
+        // Obtener el primer proyecto disponible como ejemplo
+        String exampleProject = "MiProyecto";
+        String exampleTeam = "mi-equipo";
+        String exampleAreaPath = "MiProyecto";
+        String exampleIterationPath = "MiProyecto\\Sprint 1";
+        
+        if (!discoveredProjects.isEmpty()) {
+            Map<String, Object> firstProject = discoveredProjects.get(0);
+            exampleProject = (String) firstProject.get("name");
+            exampleAreaPath = exampleProject;
+            exampleIterationPath = exampleProject + "\\Sprint 1";
+            
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> teams = (List<Map<String, Object>>) firstProject.get("teams");
+            if (teams != null && !teams.isEmpty()) {
+                exampleTeam = (String) teams.get(0).get("name");
+            }
+        }
+        
+        // Obtener configuración organizacional
+        String defaultProject = exampleProject;
+        if (orgConfig.containsKey("organization")) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> org = (Map<String, Object>) orgConfig.get("organization");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> azure = (Map<String, Object>) org.get("azure");
+            if (azure != null && azure.get("defaultProject") != null) {
+                defaultProject = azure.get("defaultProject").toString();
+            }
+        }
+        
+        return String.format("""
 # 📚 Ejemplos de Uso
 
 ## 🔍 Consultas Básicas
@@ -509,187 +495,158 @@ Para identificar los proyectos donde tienes acceso, usa estas herramientas:
 # Listar todos los proyectos
 list_projects
 
-# Ver equipos de Gerencia_Tecnologia
-list_teams(project: "Gerencia_Tecnologia")
+# Ver equipos del proyecto principal
+list_teams(project: "%s")
 
 # Ver work item específico
-get_workitem(project: "Gerencia_Tecnologia", workItemId: 695480)
+get_workitem(project: "%s", workItemId: 12345)
 
 # Obtener mis tareas asignadas
-get_assigned_work(project: "Gerencia_Tecnologia")
+get_assigned_work(project: "%s")
 
 # Ver tipos de work items disponibles
-get_workitem_types(project: "Gerencia_Tecnologia")
+get_workitem_types(project: "%s")
 
 # Iteraciones del equipo 
-list_iterations(project: "Gerencia_Tecnologia", team: "do-asegur-arl")
+list_iterations(project: "%s", team: "%s")
 ```
 
-## 📝 Creación de Work Items (Formato Sura)
+## 📝 Creación de Work Items
 
-### Crear Historia de Negocio:
+### Crear Work Item Básico:
 ```json
 create_workitem({
-  "project": "Gerencia_Tecnologia",
-  "type": "Historia",
-  "title": "Como usuario quiero poder consultar mis pólizas",
+  "project": "%s",
+  "type": "Task",
+  "title": "Implementar nueva funcionalidad",
   "description": "Descripción detallada de la funcionalidad",
-  "acceptanceCriteria": "Criterios de aceptación específicos",
-  "tipoHistoria": "Historia",
-  "migracionDatos": false,
-  "cumplimientoRegulatorio": true,
-  "controlAutomatico": false,
-  "idSolucionAPM": "448",
-  "assignedTo": "usuario@sura.com.co",
-  "iterationPath": "Gerencia_Tecnologia\\2025\\Sprint 3 Q2 2025",
-  "areaPath": "Gerencia_Tecnologia\\do-asegur-arl"
+  "assignedTo": "usuario@organizacion.com",
+  "iterationPath": "%s",
+  "areaPath": "%s"
 })
 ```
 
-### Crear Tarea de Desarrollo:
+### Crear Work Item con Relación Padre-Hijo:
 ```json
 create_workitem({
-  "project": "Gerencia_Tecnologia", 
-  "type": "Tarea",
-  "title": "Implementar endpoint REST para consulta de pólizas",
-  "tipoTarea": "Tarea",
-  "assignedTo": "desarrollador@sura.com.co",
-  "remainingWork": 16,
-  "parentId": 695480
-})
-```
-
-### Crear Bug (usando Historia técnica):
-```json
-create_workitem({
-  "project": "Gerencia_Tecnologia",
-  "type": "Historia técnica", 
-  "title": "Error en validación de campos de póliza",
-  "description": "Descripción del error encontrado",
-  "tipoHistoriaTecnica": "Bug",
-  "migracionDatos": false,
-  "cumplimientoRegulatorio": false,
-  "controlAutomatico": true,
-  "idSolucionAPM": "448",
-  "priority": 1
+  "project": "%s", 
+  "type": "Task",
+  "title": "Subtarea de desarrollo",
+  "assignedTo": "desarrollador@organizacion.com",
+  "remainingWork": 8,
+  "parentId": 12345
 })
 ```
 
 ## 🔍 Consultas WIQL Avanzadas
 
-### Análisis Organizacional:
-```sql
--- Proyectos activos
+### Buscar Work Items Asignados:
+```
 query_workitems({
-  "project": "Gerencia_Tecnologia",
-  "query": "SELECT [System.Id], [System.Title], [System.State] FROM WorkItems WHERE [System.WorkItemType] = 'Proyecto' AND [System.State] <> 'Closed'"
-})
-
--- Distribution por dominios  
-query_workitems({
-  "project": "Gerencia_Tecnologia",
-  "query": "SELECT [System.AreaPath], COUNT() FROM WorkItems WHERE [System.WorkItemType] IN ('Historia', 'Historia técnica') GROUP BY [System.AreaPath]"
+  "project": "%s",
+  "query": "SELECT [System.Id], [System.Title], [System.State] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.State] <> 'Closed'"
 })
 ```
 
-### Seguimiento Personal:
-```sql
--- Mis work items asignados
+### Buscar por Tipo y Estado:
+```
 query_workitems({
-  "project": "Gerencia_Tecnologia", 
-  "query": "SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.State] <> 'Closed'"
-})
-
--- Work items de la iteración actual
-query_workitems({
-  "project": "Gerencia_Tecnologia",
-  "query": "SELECT * FROM WorkItems WHERE [System.IterationPath] UNDER @CurrentIteration"
+  "project": "%s",
+  "query": "SELECT [System.Id], [System.Title], [System.AssignedTo] FROM WorkItems WHERE [System.WorkItemType] = 'Bug' AND [System.State] = 'Active'",
+  "maxResults": 20
 })
 ```
 
-### Análisis por Dominio:
-```sql
--- Proyectos de aseguramiento (ARL)
-query_workitems({
-  "project": "Gerencia_Tecnologia",
-  "query": "SELECT [System.Id], [System.Title] FROM WorkItems WHERE [System.AreaPath] UNDER 'Gerencia_Tecnologia\\do-asegur-arl'"
-})
-
--- Trabajo de Kyndryl (infraestructura)
-query_workitems({
-  "project": "Gerencia_Tecnologia", 
-  "query": "SELECT * FROM WorkItems WHERE [System.AreaPath] CONTAINS 'kyndryl' AND [System.State] = 'Active'"
-})
-
--- Análisis trimestral Q2 2025
-query_workitems({
-  "project": "Gerencia_Tecnologia",
-  "query": "SELECT [System.WorkItemType], [System.State], COUNT() FROM WorkItems WHERE [System.IterationPath] CONTAINS 'Q2 2025' GROUP BY [System.WorkItemType], [System.State]"
-})
+### Consulta por Iteración Actual:
 ```
-
-### Reportes de Calidad:
-```sql
--- Bugs activos por área
 query_workitems({
-  "project": "Gerencia_Tecnologia",
-  "query": "SELECT [System.AreaPath], COUNT() FROM WorkItems WHERE [System.WorkItemType] = 'Historia técnica' AND [Custom.TipoDeHistoriaTecnica] = 'Bug' AND [System.State] <> 'Closed' GROUP BY [System.AreaPath]"
-})
-
--- Items de cumplimiento regulatorio
-query_workitems({
-  "project": "Gerencia_Tecnologia", 
-  "query": "SELECT [System.Id], [System.Title] FROM WorkItems WHERE [Custom.CumplimientoRegulatorio] = 'Si'"
+  "project": "%s",
+  "query": "SELECT [System.Id], [System.Title] FROM WorkItems WHERE [System.IterationPath] = @CurrentIteration",
+  "includeDetails": true
 })
 ```
 
 ## 🔄 Actualización de Work Items
-```json
-# Cambiar estado y asignación
-update_workitem({
-  "project": "Gerencia_Tecnologia",
-  "workItemId": 695480,
-  "state": "Active", 
-  "assignedTo": "nuevo.usuario@sura.com.co",
-  "remainingWork": 8
-})
 
-# Mover a nueva iteración
+### Cambiar Estado:
+```json
 update_workitem({
-  "project": "Gerencia_Tecnologia",
-  "workItemId": 695480,
-  "iterationPath": "Gerencia_Tecnologia\\2025\\Sprint 4 Q2 2025"
+  "project": "%s",
+  "workItemId": 12345,
+  "state": "Active"
 })
 ```
 
-## 🧪 Testing y Validación
-
-### Verificar configuración:
+### Actualizar Múltiples Campos:
 ```json
-# Validar conexión
-list_projects
-
-# Verificar tipos disponibles
-get_workitem_types(project: "Gerencia_Tecnologia")
-
-# Probar work item existente
-get_workitem(project: "Gerencia_Tecnologia", workItemId: 1)
+update_workitem({
+  "project": "%s",
+  "workItemId": 12345,
+  "title": "Nuevo título actualizado",
+  "assignedTo": "nuevo-usuario@organizacion.com",
+  "remainingWork": 4,
+  "state": "In Progress"
+})
 ```
 
-### Crear work item de prueba:
-```json
-create_workitem({
-  "project": "Gerencia_Tecnologia",
-  "type": "Tarea",
-  "title": "Prueba de creación de work item",
-  "tipoTarea": "Tarea"
+## 📊 Análisis y Reportes
+
+### Trabajo Asignado con Agrupación:
+```
+get_assigned_work({
+  "project": "%s",
+  "groupBy": "state",
+  "includeCompleted": false
 })
-```""";
+```
+
+### Análisis de Iteraciones:
+```
+list_iterations({
+  "project": "%s",
+  "team": "%s",
+  "timeFrame": "current",
+  "includeDetails": true
+})
+```
+
+## 🛠️ Utilidades
+
+### Generar UUID:
+```
+generate_uuid()
+```
+
+### Ayuda Específica:
+```
+get_help(section: "organization_context")
+```
+
+## ⚠️ Mejores Prácticas
+
+1. **Siempre especifica el proyecto**: Todas las operaciones requieren el parámetro project
+2. **Usa @Me en consultas**: Para filtrar work items asignados al usuario actual
+3. **Limita resultados de consultas**: Usa maxResults para evitar timeouts
+4. **Valida campos obligatorios**: Verifica get_workitem_types antes de crear work items
+5. **Usa parentId para jerarquías**: Crear relaciones padre-hijo al crear work items""", 
+            exampleProject, exampleProject, exampleProject, exampleProject, 
+            exampleProject, exampleTeam, exampleProject, exampleIterationPath, 
+            exampleAreaPath, exampleProject, exampleProject, exampleProject, 
+            exampleProject, exampleProject, exampleProject, exampleProject, 
+            exampleProject, exampleTeam);
     }
     
     private String getBestPractices() {
         return """
 # 🎯 Mejores Prácticas
+
+## 🛡️ Seguridad y Prevención de Errores (NUEVO)
+- **Use azuredevops_add_comment para comentarios**: Evita sobreescritura accidental de contenido
+- **Lea advertencias del sistema**: El sistema alerta sobre operaciones de riesgo automáticamente
+- **Verifique antes de actualizar**: Siempre revise el contenido actual antes de actualizaciones masivas
+- **Use 'comment' en lugar de 'description'**: Para agregar información sin sobreescribir
+- **Respete las advertencias de seguridad**: El sistema registra operaciones de riesgo para auditoría
+- **Confirme operaciones destructivas**: delete_workitem con destroy=true es IRREVERSIBLE
 
 ## ✅ Consultas Eficientes y Rendimiento
 - **Usar WIQL para análisis complejos**: En lugar de múltiples llamadas individuales
@@ -699,110 +656,43 @@ create_workitem({
 - **Campos específicos**: Usar SELECT con campos específicos en lugar de SELECT *
 - **Paginar resultados**: Para conjuntos de datos grandes usar maxResults apropiados
 
-## 🏗️ Estructura Organizacional Sura
-- **Respetar jerarquía**: Proyecto > Épica > Historia/Historia técnica > Tarea > Subtarea
-- **Nomenclatura estándar**: Usar prefijos correctos (do-, egv-, t-, mod-) según dominios
-- **Contexto temporal**: Considerar Q1/Q2/Q3/Q4 en iteraciones y planificación
+## 🏗️ Estructura Organizacional
+- **Respetar jerarquía**: Proyecto > Épica > Historia > Tarea > Subtarea
+- **Nomenclatura estándar**: Usar prefijos consistentes según dominios organizacionales
+- **Contexto temporal**: Considerar sprints e iteraciones en planificación
 - **AreaPath por dominio**: Usar estructura de área según dominio de negocio
-- **Estados consistentes**: Seguir flujo New → Active → Resolved → Closed
+- **Estados consistentes**: Seguir flujo definido por la organización
 
-## � Gestión de Work Items
-- **Tipos en español**: OBLIGATORIO usar "Historia", "Tarea", etc. (no Task, User Story)
+## 📝 Gestión de Work Items
+- **Tipos organizacionales**: Usar tipos definidos por la organización
 - **Campos obligatorios**: Validar todos los campos requeridos por tipo antes de crear
 - **IterationPath completo**: Incluir ruta completa al crear work items
 - **AreaPath apropiado**: Asignar según dominio de negocio correspondiente
-- **Tags descriptivos**: Usar para categorización adicional (urgent, bug-fix, etc.)
-- **Emails corporativos**: Mantener consistencia en assignedTo con @sura.com.co
+- **Tags descriptivos**: Usar para categorización adicional
+- **Emails organizacionales**: Mantener consistencia en assignedTo
 
 ## 🔧 Creación y Actualización
 - **JSON Patch obligatorio**: Usar format RFC 6902 para create/update
 - **Content-Type correcto**: Siempre usar 'application/json-patch+json'
 - **Validación por tipo**: Verificar campos específicos según tipo de work item
 - **Relaciones padre-hijo**: Usar parentId para jerarquías automáticas
-- **Campos Sura**: Incluir campos personalizados (ID APM, migración datos, etc.)
+- **Campos personalizados**: Incluir campos custom según configuración organizacional
 - **Control de concurrencia**: Usar revision para updates seguros
 
-## 🏢 Trabajando con Proyectos Sura
-
-### Identificar Mis Proyectos:
-```bash
-# 1. Listar todos los proyectos disponibles
-list_projects()
-
-# 2. Ver equipos de proyecto principal
-list_teams(project: "Gerencia_Tecnologia")
-
-# 3. Consultar mi trabajo asignado por proyecto
-get_assigned_work(project: "Gerencia_Tecnologia")
-get_assigned_work(project: "Gerencia_Tecnologia_Egv_Aseguramiento")  
-get_assigned_work(project: "Portafolios")
-```
-
-### Determinar el Proyecto Correcto para un Work Item:
-- **Desarrollo operativo** → `Gerencia_Tecnologia`
-- **Evolución de aseguramiento** → `Gerencia_Tecnologia_Egv_Aseguramiento`
-- **Nuevas iniciativas/portafolios** → `Portafolios`
-
-### Consultas Cross-Proyecto:
-```sql
-# Buscar trabajo asignado en todos mis proyectos
-SELECT [System.Id], [System.Title], [System.TeamProject]
-FROM WorkItems
-WHERE [System.AssignedTo] = @Me
-AND [System.State] <> 'Closed'
-```
-
-### 🎯 Prompt: "¿A qué proyectos pertenezco?"
-
-Para determinar tus proyectos de pertenencia, sigue esta secuencia:
-
-1. **Lista proyectos disponibles**:
-   ```
-   azuredevops_list_projects
-   ```
-
-2. **Verifica trabajo asignado por proyecto**:
-   ```
-   azuredevops_query_workitems({
-     "project": "Gerencia_Tecnologia",
-     "query": "SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType] FROM WorkItems WHERE [System.AssignedTo] = @Me",
-     "maxResults": 10
-   })
-   ```
-   Repetir para: `Gerencia_Tecnologia_Egv_Aseguramiento` y `Portafolios`
-
-3. **Analiza trabajo activo**:
-   ```
-   azuredevops_query_workitems({
-     "project": "PROYECTO_PRINCIPAL",
-     "query": "SELECT [System.Id], [System.Title], [System.State] FROM WorkItems WHERE [System.AssignedTo] = @Me AND [System.State] <> 'Cerrado'",
-     "maxResults": 20
-   })
-   ```
-
-**Criterios de pertenencia**:
-- ✅ **Acceso Activo**: Work items asignados (especialmente no cerrados)
-- 📋 **Acceso Histórico**: Solo work items cerrados
-- ❌ **Sin Acceso**: No aparecen work items
-
-**Indicadores de tu rol**:
-- **Cantidad de work items** por proyecto
-- **Tipos de trabajo**: Historia, Tarea, Feature, etc.
-- **Áreas de negocio**: System.AreaPath (do-*, egv-*, t-*)
-- **Proyecto principal**: Donde tienes más actividad
-
-## 🔍 Análisis y Reportes
-- **Agrupar por AreaPath**: Para análisis por dominio de negocio
-- **Filtrar por WorkItemType**: Para análisis específicos por tipo
-- **Usar ChangedDate**: Para seguimiento temporal y tendencias
-- **Combinar State + IterationPath**: Para seguimiento ágil efectivo
-- **Macros en consultas**: Aprovechar @CurrentIteration para reportes dinámicos
+## 🚨 Prevención de Errores Comunes (NUEVO)
+1. **NO use 'description' para comentarios**: Use 'comment' o azuredevops_add_comment
+2. **Verifique contenido antes de actualizar**: El sistema mostrará advertencias automáticamente
+3. **Lea los logs de seguridad**: Operaciones de riesgo se registran para revisión
+4. **Use herramientas especializadas**: azuredevops_add_comment es más seguro para comentarios
+5. **Confirme operaciones destructivas**: delete con destroy=true no se puede deshacer
+6. **Respete las validaciones**: El sistema previene errores comunes automáticamente
 
 ## ⚠️ Consideraciones de Seguridad y Permisos
 - **PAT con scope correcto**: Usar vso.work_write para operaciones de escritura
 - **Validar permisos**: Verificar acceso a proyectos antes de operaciones
 - **Datos sensibles**: No incluir información confidencial en títulos/descripciones
 - **Logs seguros**: Evitar logging de tokens o información personal
+- **Auditoría**: El sistema registra operaciones de riesgo automáticamente
 
 ## 🎛️ Configuración y Entorno
 - **Variables de entorno**: AZURE_DEVOPS_ORGANIZATION y AZURE_DEVOPS_PAT correctas
@@ -815,41 +705,7 @@ Para determinar tus proyectos de pertenencia, sigue esta secuencia:
 - **Response codes**: Monitorear 400, 401, 403, 404 para identificar patrones
 - **Rate limiting**: Respetar límites de Azure DevOps API
 - **Network issues**: Considerar proxy/firewall corporativo en troubleshooting
-
-## 🚀 Arquitectura del Servidor MCP
-
-### Stack Tecnológico:
-- **Java 21 LTS**: Aprovechar características modernas (pattern matching, records)
-- **Spring Boot 3.3.2**: Configuración automática y gestión de dependencias
-- **WebSocket**: Para comunicación en tiempo real con VS Code
-- **JSON-RPC 2.0**: Protocolo estándar MCP para interoperabilidad
-- **Maven/Gradle**: Gestión de dependencias y build reproducible
-
-### Patrones de Diseño Implementados:
-- **Builder Pattern**: Para construcción de objetos complejos (Tool, McpResponse)
-- **Strategy Pattern**: Diferentes herramientas implementan estrategias específicas
-- **Factory Pattern**: Creación de respuestas success/error
-- **Template Method**: Comportamiento común en McpTool interface
-
-### Extensibilidad:
-- **Plugin Architecture**: Nuevas herramientas via @Component sin código adicional
-- **Configuration Driven**: Configuración externa via application.yml
-- **Dependency Injection**: Spring IoC para gestión automática de dependencias
-- **Interface Based**: Extensión fácil mediante interfaces bien definidas
-
-## 📚 Referencias y Recursos
-
-### Documentación Oficial:
-- **Azure DevOps REST API v7.1**: https://docs.microsoft.com/en-us/rest/api/azure/devops/
-- **Model Context Protocol**: https://spec.modelcontextprotocol.io/
-- **JSON Patch RFC 6902**: https://datatracker.ietf.org/doc/html/rfc6902
-- **Spring Boot Reference**: https://docs.spring.io/spring-boot/docs/current/reference/html/
-
-### Guías del Proyecto:
-- **README.md**: Configuración completa e instalación
-- **ARCHITECTURE.md**: Arquitectura detallada del servidor
-- **DEVELOPMENT.md**: Guía de desarrollo y testing
-- **JAVA_MCP_GUIDE.md**: Guía completa de servidores MCP en Java""";
+- **Security logs**: Revisar logs de seguridad para detectar patrones de riesgo""";
     }
     
     @Override

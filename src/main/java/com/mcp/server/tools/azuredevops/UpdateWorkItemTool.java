@@ -4,6 +4,8 @@ import com.mcp.server.tools.azuredevops.client.AzureDevOpsClient;
 import com.mcp.server.tools.azuredevops.client.AzureDevOpsException;
 import com.mcp.server.tools.azuredevops.model.WorkItem;
 import com.mcp.server.tools.base.McpTool;
+import com.mcp.server.config.SecurityValidationService;
+import com.mcp.server.config.SecurityValidationService.ValidationResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -23,10 +25,12 @@ import java.util.Map;
 public class UpdateWorkItemTool implements McpTool {
     
     private final AzureDevOpsClient azureDevOpsClient;
+    private final SecurityValidationService securityValidationService;
     
     @Autowired
-    public UpdateWorkItemTool(AzureDevOpsClient azureDevOpsClient) {
+    public UpdateWorkItemTool(AzureDevOpsClient azureDevOpsClient, SecurityValidationService securityValidationService) {
         this.azureDevOpsClient = azureDevOpsClient;
+        this.securityValidationService = securityValidationService;
     }
     
     @Override
@@ -56,7 +60,7 @@ public class UpdateWorkItemTool implements McpTool {
         ));
         properties.put("description", Map.of(
             "type", "string",
-            "description", "Nueva descripción del work item (opcional)"
+            "description", "Nueva descripción del work item (ADVERTENCIA: sobreescribe completamente la descripción existente)"
         ));
         properties.put("state", Map.of(
             "type", "string",
@@ -97,6 +101,10 @@ public class UpdateWorkItemTool implements McpTool {
         properties.put("revision", Map.of(
             "type", "number",
             "description", "Número de revisión para control de concurrencia (opcional)"
+        ));
+        properties.put("comment", Map.of(
+            "type", "string",
+            "description", "Comentario a agregar a la discusión (recomendado si es para agregar un comentario de revision, la descripcion es solo para cuando se define la historia para no sobreescribir)"
         ));
         
         return Map.of(
@@ -163,6 +171,33 @@ public class UpdateWorkItemTool implements McpTool {
             }
             
             if (description != null) {
+                // VALIDACIÓN DE SEGURIDAD usando SecurityValidationService
+                ValidationResult validationResult = null;
+                if (!description.trim().isEmpty()) {
+                    try {
+                        WorkItem currentWorkItem = azureDevOpsClient.getWorkItem(project, workItemId, null, null);
+                        if (currentWorkItem != null && currentWorkItem.fields() != null) {
+                            String currentDescription = (String) currentWorkItem.fields().get("System.Description");
+                            validationResult = securityValidationService.validateDescriptionUpdate(
+                                currentDescription, description, workItemId);
+                            
+                            // Mostrar advertencias al usuario
+                            if (validationResult.hasWarnings()) {
+                                System.out.println(validationResult.getFormattedWarnings());
+                                
+                                // Si es de alto riesgo, registrar para auditoría
+                                if (validationResult.isHighRisk()) {
+                                    securityValidationService.logRiskOperation(
+                                        "DESCRIPTION_OVERWRITE", workItemId, 
+                                        "User attempting to overwrite existing description");
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        System.out.println("⚠️  No se pudo verificar la descripción actual: " + e.getMessage());
+                    }
+                }
+                
                 operations.add(Map.of(
                     "op", "add",
                     "path", "/fields/System.Description",

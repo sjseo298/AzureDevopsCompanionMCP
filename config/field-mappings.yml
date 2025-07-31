@@ -1,0 +1,567 @@
+# =============================================================================
+# MAPEO DE CAMPOS ORGANIZACIONAL - SURA COLOMBIA
+# =============================================================================
+# Este archivo contiene el mapeo detallado entre campos internos de la aplicación
+# y los campos específicos de Azure DevOps utilizados en Sura Colombia.
+#
+# ARCHIVO CRÍTICO - Los cambios afectan directamente la compatibilidad
+# Modifique con precaución y valide después de cada cambio
+# =============================================================================
+
+# =============================================================================
+# MAPEO DE CAMPOS BÁSICOS (REQUERIDO)
+# =============================================================================
+fieldMappings:
+  
+  # CAMPOS BÁSICOS OBLIGATORIOS
+  title:
+    azureFieldName: "System.Title"
+    required: true
+    type: "string"
+    maxLength: 255
+    helpText: "Título descriptivo del work item"
+    examples:
+      - "[FUNCIONAL] Crear endpoint para consulta de pólizas"
+      - "[BUG] Error en cálculo de prima para ARL"
+      - "[MIGRACIÓN] Migrar datos de clientes legacy"
+
+  description:
+    azureFieldName: "System.Description"
+    required: false
+    type: "html"
+    helpText: "Descripción detallada del work item"
+    validation:
+      minLength: 10
+      recommendedLength: 100
+
+  state:
+    azureFieldName: "System.State"
+    required: true
+    type: "string"
+    defaultValue: "New"
+    allowedValues:
+      - "New"
+      - "Planeado"
+      - "En progreso"
+      - "Impedimento"
+      - "Disponible pruebas"
+      - "En pruebas"
+      - "Certificado"
+      - "Cerrado"
+      - "Reabierto"
+      - "Solucionado"
+    helpText: "Estado actual del work item en el flujo de trabajo"
+
+  assignedTo:
+    azureFieldName: "System.AssignedTo"
+    required: false
+    type: "identity"
+    helpText: "Usuario responsable del work item"
+    validation:
+      mustBeValidUser: true
+
+  areaPath:
+    azureFieldName: "System.AreaPath"
+    required: true
+    type: "string"
+    defaultValue: "Gerencia_Tecnologia"
+    helpText: "Ruta de área organizacional"
+    examples:
+      - "Gerencia_Tecnologia"
+      - "Gerencia_Tecnologia\\Aseguramiento"
+      - "Portafolios\\Iniciativas"
+
+  iterationPath:
+    azureFieldName: "System.IterationPath"
+    required: true
+    type: "string"
+    defaultValue: "Gerencia_Tecnologia"
+    helpText: "Ruta de iteración/sprint"
+
+  priority:
+    azureFieldName: "Microsoft.VSTS.Common.Priority"
+    required: false
+    type: "integer"
+    defaultValue: 2
+    allowedValues: [1, 2, 3, 4]
+    helpText: "Prioridad del work item (1=Más alta, 4=Más baja)"
+    valueMapping:
+      1: "Crítica"
+      2: "Alta"
+      3: "Media"
+      4: "Baja"
+
+  # CAMPOS DE FECHA Y PLANIFICACIÓN
+  startDate:
+    azureFieldName: "Microsoft.VSTS.Scheduling.StartDate"
+    required: false
+    type: "dateTime"
+    helpText: "Fecha de inicio planeada"
+
+  finishDate:
+    azureFieldName: "Microsoft.VSTS.Scheduling.FinishDate"
+    required: false
+    type: "dateTime"
+    helpText: "Fecha de finalización planeada"
+
+  targetDate:
+    azureFieldName: "Microsoft.VSTS.Scheduling.TargetDate"
+    required: false
+    type: "dateTime"
+    helpText: "Fecha objetivo de entrega"
+
+  dueDate:
+    azureFieldName: "Microsoft.VSTS.Scheduling.DueDate"
+    required: false
+    type: "dateTime"
+    helpText: "Fecha límite de entrega"
+
+  # CAMPOS DE MÉTRICAS
+  storyPoints:
+    azureFieldName: "Microsoft.VSTS.Scheduling.StoryPoints"
+    required: false
+    type: "double"
+    validation:
+      min: 0
+      max: 100
+    helpText: "Puntos de historia para estimación"
+
+  remainingWork:
+    azureFieldName: "Microsoft.VSTS.Scheduling.RemainingWork"
+    required: false
+    type: "double"
+    validation:
+      min: 0
+    helpText: "Trabajo restante en horas"
+
+  originalEstimate:
+    azureFieldName: "Microsoft.VSTS.Scheduling.OriginalEstimate"
+    required: false
+    type: "double"
+    validation:
+      min: 0
+    helpText: "Estimación original en horas"
+
+  completedWork:
+    azureFieldName: "Microsoft.VSTS.Scheduling.CompletedWork"
+    required: false
+    type: "double"
+    validation:
+      min: 0
+    helpText: "Trabajo completado en horas"
+
+# =============================================================================
+# CAMPOS PERSONALIZADOS ESPECÍFICOS DE SURA (REQUERIDO)
+# =============================================================================
+
+  # CAMPOS PARA HISTORIAS
+  tipoDeHistoria:
+    azureFieldName: "Custom.TipoDeHistoria"
+    required: true
+    type: "picklistString"
+    applicableWorkItemTypes: ["Historia"]
+    allowedValues:
+      - "Funcional"
+      - "No funcional"
+      - "Técnica"
+      - "Corrección"
+    defaultValue: "Funcional"
+    helpText: "Clasificación del tipo de historia según su naturaleza"
+
+  migracionDatos:
+    azureFieldName: "Custom.Lahistoriahacepartedeunamigraciondedatos"
+    required: true
+    type: "boolean"
+    applicableWorkItemTypes: ["Historia", "Historia técnica"]
+    defaultValue: false
+    helpText: "¿La historia hace parte de una migración de datos?"
+
+  cumplimientoRegulatorio:
+    azureFieldName: "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
+    required: true
+    type: "boolean"
+    applicableWorkItemTypes: ["Historia", "Historia técnica"]
+    defaultValue: false
+    helpText: "¿La historia corresponde a un cumplimiento regulatorio?"
+
+  controlAutomatico:
+    azureFieldName: "Custom.Lahistoriahaceparteduncontrolautomatico"
+    required: true
+    type: "boolean"
+    applicableWorkItemTypes: ["Historia", "Historia técnica"]
+    defaultValue: false
+    helpText: "¿La historia hace parte de un control automático o control de aplicación?"
+
+  idSolucionAPM:
+    azureFieldName: "Custom.IDdelasolucionenelAPM"
+    required: true
+    type: "string"
+    applicableWorkItemTypes: ["Historia", "Historia técnica", "Bug"]
+    validation:
+      pattern: "^[A-Z0-9-]{1,50}$"
+      example: "APM-2024-001"
+    helpText: "ID de la solución en el sistema APM (Application Portfolio Management)"
+
+  tipoDeHistoriaTecnica:
+    azureFieldName: "Custom.TipoDeHistoriaTecnica"
+    required: true
+    type: "picklistString"
+    applicableWorkItemTypes: ["Historia técnica"]
+    allowedValues:
+      - "Refactoring"
+      - "Configuración"
+      - "Infraestructura"
+      - "Arquitectura"
+      - "Seguridad"
+      - "Performance"
+      - "Mantenimiento"
+    defaultValue: "Configuración"
+    helpText: "Clasificación específica del tipo de historia técnica"
+
+  # CAMPOS PARA TAREAS
+  tipoDeTarea:
+    azureFieldName: "Custom.TipoDeTarea"
+    required: true
+    type: "picklistString"
+    applicableWorkItemTypes: ["Tarea"]
+    allowedValues:
+      - "Análisis"
+      - "Diseño"
+      - "Implementación"
+      - "Testing"
+      - "Documentación"
+      - "Despliegue"
+      - "Configuración"
+      - "Revisión"
+    defaultValue: "Implementación"
+    helpText: "Tipo específico de tarea a realizar"
+
+  tipoDeSubtarea:
+    azureFieldName: "Custom.TipoDeSubtarea"
+    required: true
+    type: "picklistString"
+    applicableWorkItemTypes: ["Subtarea"]
+    allowedValues:
+      - "Investigación"
+      - "Prototipo"
+      - "Configuración"
+      - "Testing unitario"
+      - "Documentación técnica"
+      - "Setup ambiente"
+    defaultValue: "Investigación"
+    helpText: "Tipo específico de subtarea"
+
+  # CAMPOS PARA BUGS
+  bloqueante:
+    azureFieldName: "Custom.Bloqueante"
+    required: true
+    type: "boolean"
+    applicableWorkItemTypes: ["Bug"]
+    defaultValue: false
+    helpText: "¿Es un impedimento para la continuidad de las pruebas?"
+
+  nivelPrueba:
+    azureFieldName: "Custom.NivelPrueba"
+    required: true
+    type: "picklistString"
+    applicableWorkItemTypes: ["Bug", "Caso de prueba"]
+    allowedValues:
+      - "Unitaria"
+      - "Integración"
+      - "Sistema"
+      - "Aceptación"
+      - "Regresión"
+      - "Performance"
+      - "Seguridad"
+    defaultValue: "Sistema"
+    helpText: "Nivel en la pirámide de estrategia de pruebas donde se encontró el bug"
+
+  origen:
+    azureFieldName: "Custom.Origen"
+    required: true
+    type: "picklistString"
+    applicableWorkItemTypes: ["Bug"]
+    allowedValues:
+      - "Manual"
+      - "Automatizada"
+      - "Exploratoria"
+      - "Regresión"
+      - "Smoke Test"
+      - "Usuario Final"
+    defaultValue: "Manual"
+    helpText: "Tipo de ejecución del escenario de prueba con el que se identificó el bug"
+
+  etapaDescubrimiento:
+    azureFieldName: "Custom.EtapaDeDescubrimiento"
+    required: true
+    type: "picklistString"
+    applicableWorkItemTypes: ["Bug"]
+    allowedValues:
+      - "Desarrollo"
+      - "QA"
+      - "Pre-producción"
+      - "Producción"
+      - "Post-despliegue"
+      - "Mantenimiento"
+    defaultValue: "QA"
+    helpText: "Etapa del ciclo de vida donde se descubrió el bug"
+
+  datosPrueba:
+    azureFieldName: "Custom.DatosDePrueba"
+    required: true
+    type: "plainText"
+    applicableWorkItemTypes: ["Bug"]
+    helpText: "Datos específicos utilizados para reproducir el bug"
+    validation:
+      minLength: 10
+
+  # CAMPOS PARA CASOS DE PRUEBA
+  tipoEjecucion:
+    azureFieldName: "Custom.TipoDeEjecucion"
+    required: true
+    type: "picklistString"
+    applicableWorkItemTypes: ["Caso de prueba"]
+    allowedValues:
+      - "Manual"
+      - "Automatizada"
+      - "Semi-automatizada"
+    defaultValue: "Manual"
+    helpText: "Tipo de ejecución del caso de prueba"
+
+  fase:
+    azureFieldName: "Custom.Fase"
+    required: false
+    type: "picklistString"
+    applicableWorkItemTypes: ["Caso de prueba"]
+    allowedValues:
+      - "Análisis"
+      - "Diseño"
+      - "Ejecución"
+      - "Reporte"
+      - "Cierre"
+    defaultValue: "Análisis"
+    helpText: "Fase actual del caso de prueba"
+
+  # CAMPOS PARA RIESGOS
+  planDeAccion:
+    azureFieldName: "Custom.PlanDeAccion"
+    required: true
+    type: "html"
+    applicableWorkItemTypes: ["Riesgo"]
+    helpText: "Plan de acción detallado para mitigar el riesgo"
+    validation:
+      minLength: 50
+
+  # CAMPOS PARA PROYECTOS
+  tipoDeProyecto:
+    azureFieldName: "Custom.TipoDeProyecto"
+    required: true
+    type: "picklistString"
+    applicableWorkItemTypes: ["Proyecto"]
+    allowedValues:
+      - "Evolutivo"
+      - "Correctivo"
+      - "Nuevo desarrollo"
+      - "Mejora"
+      - "Migración"
+      - "Regulatorio"
+    defaultValue: "Evolutivo"
+    helpText: "Clasificación del proyecto según su naturaleza"
+
+  trenesYDominios:
+    azureFieldName: "Custom.TrenesYDominios"
+    required: true
+    type: "picklistString"
+    applicableWorkItemTypes: ["Proyecto"]
+    allowedValues:
+      - "Tren Comercial"
+      - "Tren Post Venta"
+      - "Tren Gestion Comercial"
+      - "Dominio Transversal"
+      - "Dominio Técnico"
+      - "Dominio Operativo"
+    defaultValue: "Dominio Transversal"
+    helpText: "Clasificación por trenes y dominios organizacionales de Sura"
+
+  portafolio:
+    azureFieldName: "Custom.Portafolio"
+    required: false
+    type: "picklistString"
+    applicableWorkItemTypes: ["Proyecto"]
+    allowedValues:
+      - "Digital"
+      - "Core"
+      - "Infraestructura"
+      - "Regulatorio"
+      - "Innovación"
+    helpText: "Portafolio al que pertenece el proyecto"
+
+  egv:
+    azureFieldName: "Custom.EGV"
+    required: false
+    type: "picklistString"
+    applicableWorkItemTypes: ["Proyecto"]
+    allowedValues:
+      - "Aseguramiento"
+      - "Desarrollo"
+      - "Operación"
+    helpText: "Clasificación EGV (Estrategia, Gobierno, Valor)"
+
+  # CAMPOS PARA REVISIÓN POST IMPLANTACIÓN
+  nroOrdenCambio:
+    azureFieldName: "Custom.NroOrdenDeCambio"
+    required: true
+    type: "string"
+    applicableWorkItemTypes: ["Revisión post implantación"]
+    validation:
+      pattern: "^RPI-[0-9]{4}-[0-9]{3}$"
+      example: "RPI-2024-001"
+    helpText: "Número de orden de cambio asociado a la revisión"
+
+# =============================================================================
+# VALIDACIONES DE CAMPOS (OPCIONAL)
+# =============================================================================
+validations:
+  
+  # VALIDACIONES CONDICIONALES
+  idSolucionAPM:
+    rule: "required_if_condition"
+    condition: "migracionDatos == true OR cumplimientoRegulatorio == true"
+    message: "ID de solución APM es obligatorio para historias de migración o cumplimiento regulatorio"
+
+  storyPoints:
+    rule: "required_if_type"
+    types: ["Historia", "Historia técnica"]
+    message: "Story points son obligatorios para historias"
+
+  remainingWork:
+    rule: "required_if_type"
+    types: ["Tarea", "Subtarea"]
+    message: "Trabajo restante es obligatorio para tareas"
+
+  datosPrueba:
+    rule: "required_if_field_value"
+    field: "origen"
+    values: ["Manual", "Exploratoria"]
+    message: "Datos de prueba son obligatorios para bugs de origen manual o exploratorio"
+
+  planDeAccion:
+    rule: "required_and_not_empty"
+    message: "Plan de acción es obligatorio y no puede estar vacío para riesgos"
+
+# =============================================================================
+# MAPEO DE ESTADOS POR TIPO DE WORK ITEM
+# =============================================================================
+stateMapping:
+  "Historia":
+    validStates:
+      - "New"
+      - "Planeado"
+      - "En progreso"
+      - "Impedimento"
+      - "Disponible pruebas"
+      - "En pruebas"
+      - "Certificado"
+      - "Cerrado"
+    initialState: "New"
+    finalStates: ["Cerrado", "Certificado"]
+    
+  "Historia técnica":
+    validStates:
+      - "New"
+      - "Planeado"
+      - "En progreso"
+      - "Impedimento"
+      - "Disponible pruebas"
+      - "En pruebas"
+      - "Certificado"
+      - "Cerrado"
+    initialState: "New"
+    finalStates: ["Cerrado", "Certificado"]
+
+  "Tarea":
+    validStates:
+      - "New"
+      - "En progreso"
+      - "Impedimento"
+      - "Cerrado"
+    initialState: "New"
+    finalStates: ["Cerrado"]
+
+  "Bug":
+    validStates:
+      - "New"
+      - "En progreso"
+      - "Reabierto"
+      - "Solucionado"
+      - "Cerrado"
+    initialState: "New"
+    finalStates: ["Cerrado"]
+
+  "Caso de prueba":
+    validStates:
+      - "New"
+      - "En progreso"
+      - "Impedimento"
+      - "Cerrado"
+    initialState: "New"
+    finalStates: ["Cerrado"]
+
+  "Riesgo":
+    validStates:
+      - "New"
+      - "En progreso"
+      - "Impedimento"
+      - "Cerrado"
+    initialState: "New"
+    finalStates: ["Cerrado"]
+
+# =============================================================================
+# COMPATIBILIDAD CON CAMPOS LEGACY
+# =============================================================================
+legacyFieldMapping:
+  # Para mantener compatibilidad con versiones anteriores
+  aliases:
+    "historia_tipo": "tipoDeHistoria"
+    "bug_nivel": "nivelPrueba"
+    "tarea_tipo": "tipoDeTarea"
+    "proyecto_tren": "trenesYDominios"
+    "apm_id": "idSolucionAPM"
+
+  # Campos que han cambiado de nombre
+  deprecated:
+    "Custom.HistoryType":
+      newField: "Custom.TipoDeHistoria"
+      deprecationVersion: "1.0.0"
+      removalVersion: "2.0.0"
+
+# =============================================================================
+# CONFIGURACIÓN DE AUTOCOMPLETADO
+# =============================================================================
+autocompletion:
+  suggestedValues:
+    idSolucionAPM:
+      pattern: "APM-{YYYY}-{NNN}"
+      examples:
+        - "APM-2024-001"
+        - "APM-2024-REG-015"
+        - "APM-2024-MIG-008"
+    
+    nroOrdenCambio:
+      pattern: "RPI-{YYYY}-{NNN}"
+      examples:
+        - "RPI-2024-001"
+        - "RPI-2024-PROD-025"
+
+  dynamicValues:
+    assignedTo:
+      source: "azure_devops_users"
+      filter: "active_users"
+    
+    areaPath:
+      source: "azure_devops_areas"
+      projectSpecific: true
+    
+    iterationPath:
+      source: "azure_devops_iterations"
+      currentOnly: false

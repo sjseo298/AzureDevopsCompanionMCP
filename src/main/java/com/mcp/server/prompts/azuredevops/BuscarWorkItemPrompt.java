@@ -12,7 +12,8 @@ import java.util.Map;
  * 
  * Este prompt genera una consulta estructurada para encontrar work items
  * específicos en Azure DevOps, utilizando diferentes estrategias de búsqueda
- * como ID directo, búsqueda por título, o consultas WIQL avanzadas.
+ * y adaptándose dinámicamente al contexto organizacional mediante las
+ * herramientas MCP disponibles.
  */
 public class BuscarWorkItemPrompt extends BasePrompt {
     
@@ -20,7 +21,7 @@ public class BuscarWorkItemPrompt extends BasePrompt {
         super(
             "buscar_workitem",
             "Buscar Work Item",
-            "Genera una consulta para buscar work items en Azure DevOps por ID, nombre o criterios específicos, utilizando las herramientas MCP disponibles para obtener información detallada.",
+            "Genera una consulta dinámica para buscar work items en Azure DevOps por ID, nombre o criterios específicos, adaptándose al contexto organizacional mediante las herramientas MCP disponibles.",
             List.of(
                 new Prompt.PromptArgument(
                     "criterio_busqueda",
@@ -37,7 +38,7 @@ public class BuscarWorkItemPrompt extends BasePrompt {
                 new Prompt.PromptArgument(
                     "proyecto",
                     "Proyecto",
-                    "Proyecto específico donde buscar. Si no se especifica, busca en todos los proyectos de Sura",
+                    "Proyecto específico donde buscar. Si no se especifica, busca en todos los proyectos disponibles",
                     false
                 ),
                 new Prompt.PromptArgument(
@@ -68,35 +69,17 @@ public class BuscarWorkItemPrompt extends BasePrompt {
         
         // Mensaje del sistema estableciendo el contexto
         String systemPrompt = """
-            Eres un asistente especializado en Azure DevOps para la organización Sura.
+            Eres un asistente especializado en Azure DevOps para organizaciones.
             
             Tu tarea es ayudar a buscar y localizar work items específicos en Azure DevOps.
             
-            ESTRUCTURA ORGANIZACIONAL DE SURA:
+            INFORMACIÓN DINÁMICA:
+            Antes de realizar cualquier búsqueda, utiliza las herramientas MCP disponibles para obtener
+            información actualizada sobre la organización:
             
-            Sura maneja tres proyectos principales en Azure DevOps:
-            1. **Gerencia_Tecnologia** - Proyecto principal de tecnología y desarrollo
-            2. **Gerencia_Tecnologia_Egv_Aseguramiento** - Proyecto de aseguramiento y calidad
-            3. **Portafolios** - Proyecto de gestión de portafolios e iniciativas estratégicas
-            
-            JERARQUÍA DE WORK ITEMS EN SURA:
-            - **Proyecto**: Nivel más alto, agrupa iniciativas grandes (ej: "Remediación GW - 2025")
-            - **Historia**: Funcionalidades del usuario y requerimientos de negocio
-            - **Historia técnica**: Tareas técnicas de desarrollo e implementación
-            - **Tarea**: Tareas generales y actividades específicas
-            - **Subtarea**: Tareas granulares dentro de historias o tareas
-            - **Bug**: Defectos y errores identificados
-            - **Riesgo**: Gestión y seguimiento de riesgos
-            
-            ESTRUCTURA DE ÁREAS ORGANIZACIONALES:
-            - Areas como "do-asegur-plan_de_remediacion" indican: dominio-función-iniciativa
-            - Prefijos comunes: do- (dominio), plan_de_ (planes específicos)
-            - Estructura jerárquica: Gerencia_Tecnologia\\{dominio}\\{función}\\{iniciativa}
-            
-            PATRONES DE NOMENCLATURA:
-            - [PETID] y [NO PETID]: Clasificación de proyectos por tipo de demanda
-            - Años en títulos (2024, 2025): Indican el período de ejecución
-            - Estados comunes: New, En progreso, Cerrado, Planeado
+            1. **Estructura organizacional**: Usa get_help() para obtener contexto organizacional
+            2. **Proyectos disponibles**: Usa list_projects() para ver todos los proyectos
+            3. **Tipos de work items**: Usa get_workitem_types() para cada proyecto según sea necesario
             
             ESTRATEGIAS DE BÚSQUEDA:
             1. **Búsqueda por ID**: Si el criterio es numérico, usa get_workitem directamente
@@ -105,34 +88,41 @@ public class BuscarWorkItemPrompt extends BasePrompt {
             4. **Búsqueda jerárquica**: Considera la relación padre-hijo entre work items
             
             HERRAMIENTAS DISPONIBLES:
+            - get_help: Obtiene información contextual sobre la organización
             - get_workitem: Obtiene un work item específico por ID
             - query_workitems: Ejecuta consultas WIQL para búsquedas complejas
             - list_projects: Lista proyectos disponibles
+            - get_workitem_types: Obtiene tipos de work items disponibles por proyecto
             """;
         
         StringBuilder userPrompt = new StringBuilder();
         userPrompt.append("Necesito buscar work items en Azure DevOps con el siguiente criterio: \"")
                   .append(criterioBusqueda).append("\"\n\n");
         
+        userPrompt.append("PASOS A SEGUIR:\n");
+        userPrompt.append("1. OBTENER CONTEXTO ORGANIZACIONAL:\n");
+        userPrompt.append("   - Ejecuta get_help() para obtener información sobre la organización\n");
+        userPrompt.append("   - Si es necesario, ejecuta list_projects() para ver proyectos disponibles\n\n");
+        
         // Determinar estrategia de búsqueda
         boolean esID = criterioBusqueda.matches("\\d+");
         
-        userPrompt.append("ESTRATEGIA DE BÚSQUEDA:\n");
+        userPrompt.append("2. ESTRATEGIA DE BÚSQUEDA:\n");
         
         if (esID) {
-            userPrompt.append("1. El criterio parece ser un ID numérico (").append(criterioBusqueda).append(")\n");
-            userPrompt.append("2. Intenta primero usar get_workitem con este ID\n");
+            userPrompt.append("   - El criterio parece ser un ID numérico (").append(criterioBusqueda).append(")\n");
+            userPrompt.append("   - Intenta usar get_workitem con este ID\n");
             if (proyecto != null) {
-                userPrompt.append("3. Busca en el proyecto: ").append(proyecto).append("\n");
+                userPrompt.append("   - Busca en el proyecto especificado: ").append(proyecto).append("\n");
             } else {
-                userPrompt.append("3. Si no lo encuentra, intenta en todos los proyectos de Sura\n");
+                userPrompt.append("   - Si no se especificó proyecto, determina el proyecto apropiado\n");
             }
         } else {
-            userPrompt.append("1. El criterio es texto, usa query_workitems con consulta WIQL\n");
-            userPrompt.append("2. Busca en los campos Title y Description\n");
+            userPrompt.append("   - El criterio es texto, usa query_workitems con consulta WIQL\n");
+            userPrompt.append("   - Busca en los campos Title y Description\n");
             
             // Construir consulta WIQL sugerida
-            userPrompt.append("3. Consulta WIQL sugerida:\n");
+            userPrompt.append("   - Consulta WIQL sugerida:\n");
             StringBuilder wiqlQuery = new StringBuilder();
             wiqlQuery.append("SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType] ");
             wiqlQuery.append("FROM WorkItems WHERE ");
@@ -147,37 +137,47 @@ public class BuscarWorkItemPrompt extends BasePrompt {
                 wiqlQuery.append(" AND [System.State] = '").append(estado).append("'");
             }
             
-            userPrompt.append("   ```\n   ").append(wiqlQuery.toString()).append("\n   ```\n");
+            userPrompt.append("     ```\n     ").append(wiqlQuery.toString()).append("\n     ```\n");
         }
         
         // Filtros adicionales
+        userPrompt.append("\n3. FILTROS ADICIONALES:\n");
         if (tipoWorkItem != null) {
-            userPrompt.append("4. Filtrar por tipo de work item: ").append(tipoWorkItem).append("\n");
+            userPrompt.append("   - Filtrar por tipo de work item: ").append(tipoWorkItem).append("\n");
+        } else {
+            userPrompt.append("   - Sin filtro de tipo específico (buscar en todos los tipos)\n");
         }
         
         if (estado != null) {
-            userPrompt.append("5. Filtrar por estado: ").append(estado).append("\n");
+            userPrompt.append("   - Filtrar por estado: ").append(estado).append("\n");
+        } else {
+            userPrompt.append("   - Sin filtro de estado específico\n");
         }
         
         if (proyecto != null) {
-            userPrompt.append("6. Buscar solo en el proyecto: ").append(proyecto).append("\n");
+            userPrompt.append("   - Buscar solo en el proyecto: ").append(proyecto).append("\n");
         } else {
-            userPrompt.append("6. Buscar en todos los proyectos de Sura\n");
+            userPrompt.append("   - Determinar proyecto(s) apropiado(s) basado en contexto organizacional\n");
         }
         
         // Nivel de detalle
+        userPrompt.append("\n4. NIVEL DE DETALLE:\n");
         if (incluirDetalles) {
-            userPrompt.append("\nNIVEL DE DETALLE REQUERIDO:\n");
-            userPrompt.append("- Información completa del work item\n");
-            userPrompt.append("- Estado actual y historial de cambios\n");
-            userPrompt.append("- Asignaciones y comentarios\n");
-            userPrompt.append("- Work items relacionados (padre/hijo)\n");
-            userPrompt.append("- Campos personalizados de Sura\n");
+            userPrompt.append("   - Información completa del work item encontrado\n");
+            userPrompt.append("   - Estado actual y historial si está disponible\n");
+            userPrompt.append("   - Asignaciones y comentarios\n");
+            userPrompt.append("   - Work items relacionados (padre/hijo)\n");
+            userPrompt.append("   - Campos personalizados según configuración organizacional\n");
         } else {
-            userPrompt.append("\nNIVEL DE DETALLE: Información básica (ID, título, estado, tipo, asignado)\n");
+            userPrompt.append("   - Información básica (ID, título, estado, tipo, asignado)\n");
         }
         
-        userPrompt.append("\nPor favor, utiliza las herramientas MCP disponibles para realizar la búsqueda y proporciona los resultados encontrados.");
+        userPrompt.append("\n5. PRESENTACIÓN DE RESULTADOS:\n");
+        userPrompt.append("   - Proporciona un resumen claro de los work items encontrados\n");
+        userPrompt.append("   - Si no se encuentran resultados, sugiere búsquedas alternativas\n");
+        userPrompt.append("   - Incluye enlaces a Azure DevOps cuando sea posible\n");
+        
+        userPrompt.append("\nPor favor, sigue estos pasos utilizando las herramientas MCP disponibles para realizar la búsqueda.");
         
         List<PromptResult.PromptMessage> messages = List.of(
             systemMessage(systemPrompt),

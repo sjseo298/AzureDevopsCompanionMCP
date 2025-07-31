@@ -11,7 +11,7 @@ import java.util.Map;
  * Prompt para consultar y analizar la pertenencia a proyectos en Azure DevOps.
  * 
  * Este prompt ayuda a determinar a qué proyectos y equipos pertenece un usuario
- * específico en la organización Sura, proporcionando un análisis detallado
+ * específico en cualquier organización, proporcionando un análisis detallado
  * de la estructura organizacional y permisos de acceso.
  */
 public class ConsultarProyectosPertenenciaPrompt extends BasePrompt {
@@ -20,7 +20,7 @@ public class ConsultarProyectosPertenenciaPrompt extends BasePrompt {
         super(
             "consultar_proyectos_pertenencia",
             "Consultar Pertenencia a Proyectos",
-            "Consulta y analiza a qué proyectos y equipos pertenece un usuario específico en Azure DevOps de Sura, incluyendo análisis de permisos y estructura organizacional.",
+            "Consulta y analiza a qué proyectos y equipos pertenece un usuario específico en Azure DevOps, incluyendo análisis de permisos y estructura organizacional.",
             List.of(
                 new Prompt.PromptArgument(
                     "usuario",
@@ -54,20 +54,18 @@ public class ConsultarProyectosPertenenciaPrompt extends BasePrompt {
         
         // Mensaje del sistema estableciendo el contexto
         String systemPrompt = """
-            Eres un asistente especializado en Azure DevOps para la organización Sura.
+            Eres un asistente especializado en Azure DevOps para organizaciones.
             
             Tu tarea es ayudar a consultar y analizar la pertenencia a proyectos en Azure DevOps.
             
-            ESTRUCTURA ORGANIZACIONAL DE SURA:
+            ESTRUCTURA ORGANIZACIONAL:
             
-            Sura maneja tres proyectos principales en Azure DevOps:
-            1. **Gerencia_Tecnologia** - Proyecto principal de tecnología
-            2. **Gerencia_Tecnologia_Egv_Aseguramiento** - Proyecto de aseguramiento y calidad
-            3. **Portafolios** - Proyecto de gestión de portafolios
+            La organización puede manejar múltiples proyectos en Azure DevOps con diferentes
+            estructuras y equipos según su configuración específica.
 
             PREFIJOS DE EQUIPOS:
-            - EQP_xxx: Equipos de desarrollo específicos
-            - PROJ_xxx: Equipos de proyecto
+            - Equipos de desarrollo específicos
+            - Equipos de proyecto
             - AREA_xxx: Equipos por área funcional
 
             HERRAMIENTAS DISPONIBLES:
@@ -81,9 +79,9 @@ public class ConsultarProyectosPertenenciaPrompt extends BasePrompt {
         
         if (usuario != null && !usuario.trim().isEmpty()) {
             userPrompt.append("Quiero consultar a qué proyectos pertenece el usuario: ")
-                     .append(usuario).append(" en Azure DevOps de Sura.\n\n");
+                     .append(usuario).append(" en Azure DevOps.\n\n");
         } else {
-            userPrompt.append("Quiero consultar a qué proyectos pertenezco en Azure DevOps de Sura.\n\n");
+            userPrompt.append("Quiero consultar a qué proyectos pertenezco en Azure DevOps.\n\n");
         }
         
         userPrompt.append("Por favor:\n");
@@ -126,7 +124,7 @@ public class ConsultarProyectosPertenenciaPrompt extends BasePrompt {
         );
         
         return new PromptResult(
-            "Consulta de pertenencia a proyectos en Azure DevOps de Sura" + 
+            "Consulta de pertenencia a proyectos en Azure DevOps" + 
             (usuario != null ? " para usuario: " + usuario : ""),
             messages
         );

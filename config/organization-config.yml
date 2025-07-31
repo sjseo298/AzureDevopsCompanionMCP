@@ -1,335 +1,466 @@
-# Configuración Organizacional - Sura Colombia
-# Este archivo contiene la configuración personalizada para la organización
-# Generado automáticamente desde discovered-organization.yml
+# =============================================================================
+# CONFIGURACIÓN ORGANIZACIONAL PERSONALIZABLE - SURA COLOMBIA
+# =============================================================================
+# Este archivo contiene la configuración personalizable por el usuario final
+# para adaptar el comportamiento del MCP Server a las necesidades específicas
+# de Sura Colombia.
+#
+# ARCHIVO EDITABLE - Personalice según sus necesidades
+# Los cambios en este archivo afectan el comportamiento del sistema
+# =============================================================================
 
+# =============================================================================
+# INFORMACIÓN ORGANIZACIONAL (REQUERIDA)
+# =============================================================================
 organization:
-  name: "Sura Colombia"
-  displayName: "Sura - Seguros y Servicios Financieros"
-  description: "Organización líder en seguros y servicios financieros en América Latina"
+  name: "sura-colombia"
+  displayName: "Sura Colombia"
+  description: "Configuración organizacional para Suramericana de Seguros Colombia"
   
   azure:
-    organization: "sura"
-    baseUrl: "https://dev.azure.com/sura"
+    organization: "SuraColombia"
+    baseUrl: "https://dev.azure.com/SuraColombia"
     defaultProject: "Gerencia_Tecnologia"
-  
-  # Estructura de proyectos organizacionales
-  projects:
-    - id: "gerencia-tecnologia"
-      name: "Gerencia_Tecnologia"
-      displayName: "Gerencia de Tecnología"
-      description: "Proyecto principal de desarrollo tecnológico"
-      isDefault: true
-      
-      teams:
-        prefixes:
-          - prefix: "do-"
-            description: "Equipos de dominio operativo y aseguramiento"
-            pattern: "do-{domain}-{function}"
-            examples: ["do-asegur-arl", "do-asegur-plan_de_remediacion"]
-          
-          - prefix: "tech-"
-            description: "Equipos de desarrollo tecnológico"
-            pattern: "tech-{domain}-{function}"
-            examples: ["tech-backend-apis", "tech-frontend-web"]
-          
-          - prefix: "egv-"
-            description: "Equipos de aseguramiento EGV (Entidad Gubernamental de Validación)"
-            pattern: "egv-{domain}-{function}"
-            examples: ["egv-qa-automation", "egv-security-testing"]
-      
-      # Estructura de áreas personalizada
-      areaStructure:
-        separator: "\\"
-        pattern: "{project}\\{team_prefix}{domain}-{function}"
-        rootArea: "Gerencia_Tecnologia"
-        
-        domains:
-          - name: "asegur"
-            description: "Dominio de aseguramiento y calidad"
-            functions: ["arl", "plan_de_remediacion", "auditoria"]
-          
-          - name: "desarrollo"
-            description: "Dominio de desarrollo de software"
-            functions: ["backend", "frontend", "mobile", "apis"]
-          
-          - name: "infraestructura"
-            description: "Dominio de infraestructura tecnológica"
-            functions: ["cloud", "devops", "networking", "security"]
-    
-    - id: "gerencia-tecnologia-egv"
-      name: "Gerencia_Tecnologia_Egv_Aseguramiento"
-      displayName: "Aseguramiento EGV"
-      description: "Proyecto especializado en aseguramiento y validación gubernamental"
-      isDefault: false
-      
-      teams:
-        prefixes:
-          - prefix: "egv-"
-            description: "Equipos especializados en aseguramiento EGV"
-            pattern: "egv-{domain}-{function}"
-    
-    - id: "portafolios"
-      name: "Portafolios"
-      displayName: "Gestión de Portafolios"
-      description: "Gestión estratégica de portafolio de proyectos"
-      isDefault: false
-      
-      teams:
-        prefixes:
-          - prefix: "port-"
-            description: "Equipos de gestión de portafolio"
-            pattern: "port-{function}-{area}"
 
-# Tipos de work items específicos de Sura
+# =============================================================================
+# CONFIGURACIÓN DE PROYECTOS (REQUERIDA)
+# =============================================================================
+projects:
+  primary: "gerencia-tecnologia"
+  secondary:
+    - "gerencia-tecnologia-egv-aseguramiento"
+    - "portafolios"
+  
+  mappings:
+    "gerencia-tecnologia":
+      displayName: "Desarrollo Principal"
+      defaultArea: "Gerencia_Tecnologia"
+      defaultIteration: "Gerencia_Tecnologia"
+      primaryWorkItemTypes:
+        - "Historia"
+        - "Historia técnica"
+        - "Tarea"
+        - "Bug"
+    
+    "gerencia-tecnologia-egv-aseguramiento":
+      displayName: "Aseguramiento EGV"
+      defaultArea: "Gerencia_Tecnologia_Egv_Aseguramiento"
+      defaultIteration: "Gerencia_Tecnologia_Egv_Aseguramiento"
+      primaryWorkItemTypes:
+        - "Historia"
+        - "Historia técnica"
+        - "Caso de prueba"
+    
+    "portafolios":
+      displayName: "Gestión de Portafolios"
+      defaultArea: "Portafolios"
+      defaultIteration: "Portafolios"
+      primaryWorkItemTypes:
+        - "Historia"
+        - "Entregable"
+        - "Entregable de alto nivel"
+
+# =============================================================================
+# TIPOS DE WORK ITEMS PERSONALIZADOS (OPCIONAL)
+# =============================================================================
 workItemTypes:
   custom:
+    # CONFIGURACIÓN PARA HISTORIAS
     - name: "Historia"
       baseType: "User Story"
-      description: "Historia de usuario con campos específicos de Sura"
+      description: "Historia de usuario personalizada para el contexto de Sura"
       category: "functional"
       
       requiredFields:
-        - name: "acceptanceCriteria"
-          displayName: "Criterios de Aceptación"
-          fieldName: "Microsoft.VSTS.Common.AcceptanceCriteria"
-          type: "html"
-          helpText: "Definir claramente los criterios de aceptación de la historia"
-        
-        - name: "tipoHistoria"
+        - name: "tipoDeHistoria"
           displayName: "Tipo de Historia"
           fieldName: "Custom.TipoDeHistoria"
-          type: "picklist"
-          values: ["Historia Funcional", "Historia de Infraestructura", "Historia de Configuración", "Historia de Seguridad", "Historia de Performance"]
-          helpText: "Categorización del tipo de historia según su naturaleza"
-        
-        - name: "idSolucionAPM"
-          displayName: "ID Solución APM"
-          fieldName: "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"
-          type: "string"
-          helpText: "Identificador único de la solución en el Application Portfolio Management"
-        
+          type: "picklistString"
+          helpText: "Clasificación funcional de la historia"
+          values:
+            - "Funcional"
+            - "No funcional"
+            - "Técnica"
+            - "Corrección"
+          
         - name: "migracionDatos"
           displayName: "¿Migración de Datos?"
-          fieldName: "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3"
-          type: "picklist"
-          values: ["Si", "No"]
-          defaultValue: "No"
+          fieldName: "Custom.Lahistoriahacepartedeunamigraciondedatos"
+          type: "boolean"
           helpText: "Indica si la historia involucra migración de datos"
+          defaultValue: false
         
         - name: "cumplimientoRegulatorio"
           displayName: "¿Cumplimiento Regulatorio?"
           fieldName: "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
-          type: "picklist"
-          values: ["Si", "No"]
-          defaultValue: "No"
-          helpText: "Indica si la historia está relacionada con cumplimiento regulatorio"
+          type: "boolean"
+          helpText: "Indica si es requerimiento regulatorio"
+          defaultValue: false
         
         - name: "controlAutomatico"
           displayName: "¿Control Automático?"
-          fieldName: "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1"
-          type: "picklist"
-          values: ["Si", "No"]
-          defaultValue: "No"
-          helpText: "Indica si requiere implementación de controles automáticos"
-      
+          fieldName: "Custom.Lahistoriahaceparteduncontrolautomatico"
+          type: "boolean"
+          helpText: "Indica si involucra controles automáticos"
+          defaultValue: false
+        
+        - name: "idSolucionAPM"
+          displayName: "ID Solución APM"
+          fieldName: "Custom.IDdelasolucionenelAPM"
+          type: "string"
+          helpText: "Identificador de la solución en el sistema APM"
+
       businessRules:
-        - condition: "tipoHistoria == 'Historia de Seguridad'"
-          then: "cumplimientoRegulatorio = 'Si'"
-        - condition: "migracionDatos == 'Si'"
-          then: "controlAutomatico = 'Si'"
-    
+        - condition: "tipoDeHistoria == 'Técnica'"
+          then: "cumplimientoRegulatorio puede ser true"
+        
+        - condition: "migracionDatos == true"
+          then: "idSolucionAPM es obligatorio"
+
+    # CONFIGURACIÓN PARA HISTORIA TÉCNICA
     - name: "Historia técnica"
       baseType: "User Story"
-      description: "Historia técnica para mejoras de arquitectura y deuda técnica"
+      description: "Historia técnica para implementaciones no funcionales"
       category: "technical"
       
       requiredFields:
-        - name: "tipoHistoriaTecnica"
+        - name: "tipoDeHistoriaTecnica"
           displayName: "Tipo de Historia Técnica"
-          fieldName: "Custom.14858558-3edb-485a-9a52-a38c03c65c62"
-          type: "picklist"
-          values: ["Refactoring", "Optimización", "Deuda Técnica", "Actualización Tecnológica", "Mejora de Arquitectura"]
-          helpText: "Categorización específica para historias técnicas"
-        
-        # Hereda campos obligatorios de Historia estándar
-        - name: "idSolucionAPM"
-          fieldName: "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"
-        - name: "migracionDatos"
-          fieldName: "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3"
-        - name: "cumplimientoRegulatorio"
-          fieldName: "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
-        - name: "controlAutomatico"
-          fieldName: "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1"
-    
+          fieldName: "Custom.TipoDeHistoriaTecnica"
+          type: "picklistString"
+          helpText: "Clasificación específica de historia técnica"
+          values:
+            - "Refactoring"
+            - "Configuración"
+            - "Infraestructura"
+            - "Arquitectura"
+            - "Seguridad"
+            - "Performance"
+            - "Mantenimiento"
+
+    # CONFIGURACIÓN PARA TAREAS
     - name: "Tarea"
       baseType: "Task"
-      description: "Tarea de implementación o desarrollo"
+      description: "Tarea de implementación específica"
       category: "implementation"
       
       requiredFields:
-        - name: "tipoTarea"
+        - name: "tipoDeTarea"
           displayName: "Tipo de Tarea"
           fieldName: "Custom.TipoDeTarea"
-          type: "picklist"
-          values: ["Desarrollo", "Testing", "Documentación", "Configuración", "Despliegue", "Análisis"]
-          helpText: "Categorización del tipo de trabajo a realizar"
-    
-    - name: "Subtarea"
-      baseType: "Task"
-      description: "Subtarea de una tarea principal"
-      category: "implementation"
-      
-      requiredFields:
-        - name: "tipoSubtarea"
-          displayName: "Tipo de Subtarea"
-          fieldName: "Custom.TipoDeSubtarea"
-          type: "picklist"
-          values: ["Implementación", "Pruebas Unitarias", "Pruebas Integración", "Code Review", "Documentación Técnica"]
-          helpText: "Tipo específico de subtarea"
-    
+          type: "picklistString"
+          helpText: "Clasificación del tipo de trabajo a realizar"
+          values:
+            - "Análisis"
+            - "Diseño"
+            - "Implementación"
+            - "Testing"
+            - "Documentación"
+            - "Despliegue"
+            - "Configuración"
+            - "Revisión"
+
+    # CONFIGURACIÓN PARA BUGS
     - name: "Bug"
       baseType: "Bug"
-      description: "Defecto o error del sistema"
+      description: "Defecto o problema en el sistema"
       category: "defect"
       
       requiredFields:
-        - name: "reproSteps"
-          displayName: "Pasos para Reproducir"
-          fieldName: "Microsoft.VSTS.TCM.ReproSteps"
-          type: "html"
-          helpText: "Descripción detallada de los pasos para reproducir el defecto"
-        
-        - name: "datosPrueba"
-          displayName: "Datos de Prueba"
-          fieldName: "Custom.DatosDePrueba"
-          type: "string"
-          helpText: "Datos específicos utilizados durante las pruebas"
-        
         - name: "bloqueante"
           displayName: "¿Es Bloqueante?"
           fieldName: "Custom.Bloqueante"
           type: "boolean"
+          helpText: "Indica si impide la continuidad de las pruebas"
           defaultValue: false
-          helpText: "Indica si el bug bloquea la funcionalidad crítica"
         
         - name: "nivelPrueba"
           displayName: "Nivel de Prueba"
           fieldName: "Custom.NivelPrueba"
-          type: "picklist"
-          values: ["Unitaria", "Integración", "Sistema", "Aceptación", "Regresión", "Performance"]
-          helpText: "Nivel de pruebas donde se detectó el defecto"
+          type: "picklistString"
+          helpText: "Nivel en la pirámide de estrategia de pruebas"
+          values:
+            - "Unitaria"
+            - "Integración"
+            - "Sistema"
+            - "Aceptación"
+            - "Regresión"
         
         - name: "origen"
           displayName: "Origen del Bug"
           fieldName: "Custom.Origen"
-          type: "picklist"
-          values: ["Desarrollo", "Testing", "Producción", "Cliente", "Monitoreo"]
-          helpText: "Origen o fase donde se detectó el defecto"
+          type: "picklistString"
+          helpText: "Contexto donde se identificó el bug"
+          values:
+            - "Manual"
+            - "Automatizada"
+            - "Exploratoria"
+            - "Regresión"
+            - "Smoke Test"
         
         - name: "etapaDescubrimiento"
           displayName: "Etapa de Descubrimiento"
-          fieldName: "Custom.EtapaDescubrimiento"
-          type: "picklist"
-          values: ["Análisis", "Desarrollo", "Testing", "UAT", "Producción"]
-          helpText: "Etapa del ciclo de vida donde se descubrió el defecto"
+          fieldName: "Custom.EtapaDeDescubrimiento"
+          type: "picklistString"
+          helpText: "Etapa del ciclo de vida donde se encontró"
+          values:
+            - "Desarrollo"
+            - "QA"
+            - "Pre-producción"
+            - "Producción"
+            - "Post-despliegue"
+
+# =============================================================================
+# CONFIGURACIÓN DE CAMPOS POR DEFECTO (OPCIONAL)
+# =============================================================================
+defaultFieldValues:
+  # VALORES GLOBALES
+  global:
+    "Microsoft.VSTS.Common.Priority": 2
+    "Microsoft.VSTS.Common.ValueArea": "Business"
+    "System.Reason": "New"
+  
+  # VALORES ESPECÍFICOS POR TIPO
+  byWorkItemType:
+    "Historia":
+      "Custom.Lahistoriahacepartedeunamigraciondedatos": false
+      "Custom.Lahistoriacorrespondeauncumplimientoregulatorio": false
+      "Custom.Lahistoriahaceparteduncontrolautomatico": false
+      "Custom.TipoDeHistoria": "Funcional"
+    
+    "Historia técnica":
+      "Custom.Lahistoriahacepartedeunamigraciondedatos": false
+      "Custom.Lahistoriacorrespondeauncumplimientoregulatorio": false
+      "Custom.Lahistoriahaceparteduncontrolautomatico": false
+      "Custom.TipoDeHistoriaTecnica": "Configuración"
+    
+    "Bug":
+      "Custom.Bloqueante": false
+      "Custom.NivelPrueba": "Sistema"
+      "Custom.Origen": "Manual"
+      "Custom.EtapaDeDescubrimiento": "QA"
+      "Microsoft.VSTS.Common.Severity": "3 - Medium"
+    
+    "Tarea":
+      "Custom.TipoDeTarea": "Implementación"
+      "Microsoft.VSTS.Scheduling.RemainingWork": 8.0
+
+# =============================================================================
+# CONFIGURACIÓN DE VALIDACIONES (OPCIONAL)
+# =============================================================================
+validation:
+  # CONFIGURACIÓN DE SEGURIDAD PARA PREVENIR ERRORES
+  safetyRules:
+    # Prevenir sobreescritura accidental de descripciones
+    preventDescriptionOverwrite: true
+    warnOnDescriptionChange: true
+    requireConfirmationForCriticalFields: true
+    logSecurityWarnings: true
+  
+  rules:
+    # REGLAS PARA HISTORIAS
+    "Historia":
+      - field: "Custom.IDdelasolucionenelAPM"
+        rule: "required_if_condition"
+        condition: "Custom.Lahistoriahacepartedeunamigraciondedatos == true"
+        message: "ID de solución APM es obligatorio para historias de migración"
+      
+      - field: "System.Description"
+        rule: "not_empty"
+        message: "La descripción es obligatoria para historias"
+      
+      - field: "System.AcceptanceCriteria"
+        rule: "not_empty"
+        message: "Los criterios de aceptación son obligatorios"
+    
+    # REGLAS PARA BUGS
+    "Bug":
+      - field: "Microsoft.VSTS.TCM.ReproSteps"
+        rule: "not_empty"
+        message: "Los pasos de reproducción son obligatorios"
+      
+      - field: "Custom.DatosDePrueba"
+        rule: "not_empty"
+        message: "Los datos de prueba son obligatorios"
+      
+      - field: "Custom.IDdelasolucionenelAPM"
+        rule: "not_empty"
+        message: "ID de solución APM es obligatorio para bugs"
+    
+    # REGLAS PARA TAREAS
+    "Tarea":
+      - field: "Microsoft.VSTS.Scheduling.RemainingWork"
+        rule: "positive_number"
+        message: "El trabajo restante debe ser un número positivo"
+
+# =============================================================================
+# CONFIGURACIÓN DE PLANTILLAS (OPCIONAL)
+# =============================================================================
+templates:
+  workItemTemplates:
+    "Historia Funcional":
+      type: "Historia"
+      title: "[FUNCIONAL] {Título de la historia}"
+      description: |
+        ## Contexto
+        Describa el contexto de negocio...
         
-        - name: "idSolucionAPM"
-          fieldName: "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"
+        ## Criterios de Aceptación
+        - [ ] Criterio 1
+        - [ ] Criterio 2
+        
+        ## Definición de Hecho
+        - [ ] Código desarrollado
+        - [ ] Pruebas unitarias
+        - [ ] Documentación actualizada
+      fields:
+        "Custom.TipoDeHistoria": "Funcional"
+        "Microsoft.VSTS.Common.Priority": 2
+    
+    "Historia de Migración":
+      type: "Historia"
+      title: "[MIGRACIÓN] {Título de la historia}"
+      description: |
+        ## Datos a Migrar
+        Especificar qué datos se van a migrar...
+        
+        ## Proceso de Migración
+        Describir el proceso paso a paso...
+        
+        ## Validaciones Post-Migración
+        - [ ] Integridad de datos
+        - [ ] Consistencia
+        - [ ] Performance
+      fields:
+        "Custom.TipoDeHistoria": "Técnica"
+        "Custom.Lahistoriahacepartedeunamigraciondedatos": true
+        "Microsoft.VSTS.Common.Priority": 1
 
-# Configuración de nomenclatura y estándares
-naming:
-  conventions:
-    workItems:
-      historia:
-        pattern: "[{idSolucionAPM}] {titulo}"
-        example: "[SOL-001] Como usuario quiero realizar login"
-      
-      tarea:
-        pattern: "{tipoTarea}: {titulo}"
-        example: "Desarrollo: Implementar API de autenticación"
-      
-      bug:
-        pattern: "[{severity}] {titulo} - {origen}"
-        example: "[Critical] Error en login - Producción"
-    
-    branches:
-      feature: "feature/{idSolucionAPM}-{titulo-slug}"
-      bugfix: "bugfix/{id}-{titulo-slug}"
-      hotfix: "hotfix/{id}-{titulo-slug}"
-    
-    areas:
-      separator: "\\"
-      pattern: "{proyecto}\\{prefijo}{dominio}-{funcion}"
-      examples:
-        - "Gerencia_Tecnologia\\do-asegur-arl"
-        - "Gerencia_Tecnologia\\tech-backend-apis"
+    "Bug Crítico":
+      type: "Bug"
+      title: "[CRÍTICO] {Descripción del problema}"
+      reproSteps: |
+        ## Pasos para Reproducir
+        1. Paso 1
+        2. Paso 2
+        3. Resultado observado
+        
+        ## Resultado Esperado
+        Describir el comportamiento esperado...
+        
+        ## Información Adicional
+        - Navegador:
+        - Sistema Operativo:
+        - Datos de prueba utilizados:
+      fields:
+        "Microsoft.VSTS.Common.Severity": "1 - Critical"
+        "Microsoft.VSTS.Common.Priority": 1
+        "Custom.Bloqueante": true
 
-# Reglas de negocio específicas
-businessRules:
-  validation:
-    # Reglas para Historias
-    historia:
-      - rule: "Si tipoHistoria es 'Historia de Seguridad', cumplimientoRegulatorio debe ser 'Si'"
-      - rule: "Si migracionDatos es 'Si', se requiere justificación en descripción"
-      - rule: "idSolucionAPM debe seguir el formato SOL-XXX"
+# =============================================================================
+# CONFIGURACIÓN DE EQUIPOS Y ROLES (OPCIONAL)
+# =============================================================================
+teamConfiguration:
+  defaultAssignments:
+    "Historia":
+      defaultTeamPrefix: "do"
+      suggestedRoles:
+        - "Product Owner"
+        - "Business Analyst"
     
-    # Reglas para Bugs
-    bug:
-      - rule: "Si bloqueante es true, priority debe ser 1 o 2"
-      - rule: "Si origen es 'Producción', etapaDescubrimiento debe ser 'Producción'"
-      - rule: "Bugs críticos requieren reproSteps detallados (min 100 caracteres)"
-  
-  workflows:
-    historia:
-      states: ["New", "Active", "Resolved", "Closed"]
-      transitions:
-        - from: "New"
-          to: "Active"
-          condition: "Todos los campos obligatorios completados"
-        - from: "Active"
-          to: "Resolved"
-          condition: "Criterios de aceptación validados"
+    "Historia técnica":
+      defaultTeamPrefix: "t"
+      suggestedRoles:
+        - "Tech Lead"
+        - "Architect"
     
-    bug:
-      states: ["New", "Active", "Resolved", "Closed"]
-      escalation:
-        - condition: "bloqueante == true"
-          action: "Asignar a tech lead automáticamente"
-        - condition: "origen == 'Producción'"
-          action: "Notificar a equipo de soporte"
+    "Bug":
+      defaultTeamPrefix: "egv-asegur"
+      suggestedRoles:
+        - "QA Engineer"
+        - "Developer"
+    
+    "Caso de prueba":
+      defaultTeamPrefix: "egv-asegur"
+      suggestedRoles:
+        - "QA Engineer"
 
-# Configuración de integración y automatización
-integration:
+  workflowApprovals:
+    "Historia":
+      transitionToReady:
+        requiredApprovals:
+          - "Product Owner"
+      transitionToDone:
+        requiredApprovals:
+          - "QA Engineer"
+          - "Product Owner"
+    
+    "Bug":
+      transitionToResolved:
+        requiredApprovals:
+          - "Developer"
+      transitionToClosed:
+        requiredApprovals:
+          - "QA Engineer"
+
+# =============================================================================
+# CONFIGURACIÓN DE INTEGRACIONES (OPCIONAL)
+# =============================================================================
+integrations:
   apm:
-    baseUrl: "https://apm.sura.com"
-    apiVersion: "v2"
-    fieldMapping:
-      "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14": "solution_id"
+    enabled: true
+    fieldMapping: "Custom.IDdelasolucionenelAPM"
+    validationRequired: true
   
-  notifications:
-    teams:
-      webhook: "https://outlook.office.com/webhook/..."
-      channels:
-        critical: "critical-alerts"
-        general: "development-updates"
+  regulatoryCompliance:
+    enabled: true
+    trackingField: "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
+    requiredDocumentation: true
   
-  automation:
-    enableAutoFieldPopulation: true
-    enableBusinessRuleValidation: true
-    enableWorkflowEnforcement: true
+  automatedControls:
+    enabled: true
+    trackingField: "Custom.Lahistoriahaceparteduncontrolautomatico"
+    auditRequired: true
 
-# Configuración específica del entorno Sura
-environment:
-  region: "Colombia"
-  timezone: "America/Bogota"
-  language: "es-CO"
-  currency: "COP"
-  
-  compliance:
-    regulations: ["SOX", "IFRS", "Superintendencia Financiera"]
-    auditingEnabled: true
-    dataRetentionPeriod: "7 years"
-  
-  security:
-    classificationLevels: ["Public", "Internal", "Confidential", "Restricted"]
-    defaultClassification: "Internal"
+# =============================================================================
+# CONFIGURACIÓN DE REPORTES Y MÉTRICAS (OPCIONAL)
+# =============================================================================
+reporting:
+  dashboards:
+    - name: "Cumplimiento Regulatorio"
+      filters:
+        - "Custom.Lahistoriacorrespondeauncumplimientoregulatorio = true"
+      metrics:
+        - "Total historias regulatorias"
+        - "Tiempo promedio de implementación"
+        - "Porcentaje completado"
+    
+    - name: "Migración de Datos"
+      filters:
+        - "Custom.Lahistoriahacepartedeunamigraciondedatos = true"
+      metrics:
+        - "Historias de migración por sprint"
+        - "Errores post-migración"
+        - "Validaciones exitosas"
+    
+    - name: "Calidad y Testing"
+      filters:
+        - "System.WorkItemType = Bug"
+        - "Custom.NivelPrueba in (Sistema, Aceptación)"
+      metrics:
+        - "Defectos por nivel de prueba"
+        - "Tiempo de resolución por severidad"
+        - "Bugs bloqueantes activos"
+
+  kpis:
+    - name: "Velocity de Historias"
+      calculation: "Story Points completados por sprint"
+      target: "> 30 puntos por sprint"
+    
+    - name: "Déficit de Calidad"
+      calculation: "Bugs/Historias completadas"
+      target: "< 0.15 (15%)"
+    
+    - name: "Cumplimiento Regulatorio"
+      calculation: "Historias regulatorias completadas a tiempo"
+      target: "> 95%"

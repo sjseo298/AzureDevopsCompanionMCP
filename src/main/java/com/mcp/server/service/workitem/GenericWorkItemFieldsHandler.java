@@ -7,8 +7,8 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 
 /**
- * Manejador genérico de campos de work items que reemplaza la lógica hardcodeada específica de Sura.
- * Utiliza configuración dinámica para adaptarse a cualquier organización.
+ * Manejador genérico de campos de work items con configuración dinámica.
+ * Utiliza configuración organizacional para adaptarse a cualquier organización.
  */
 @Component
 public class GenericWorkItemFieldsHandler {
@@ -130,13 +130,13 @@ public class GenericWorkItemFieldsHandler {
     }
     
     /**
-     * Convierte valores específicos para tipos de work items de Sura.
+     * Convierte valores específicos para tipos de work items organizacionales.
      * Mantiene compatibilidad con los campos existentes.
      */
-    public Map<String, Object> processSuraCompatibleFields(String workItemType, Map<String, Object> inputFields) {
+    public Map<String, Object> processOrganizationCompatibleFields(String workItemType, Map<String, Object> inputFields) {
         Map<String, Object> processedFields = processWorkItemFields(workItemType, inputFields);
         
-        // Agregar lógica específica para tipos de Sura si es necesario
+        // Agregar lógica específica para tipos organizacionales si es necesario
         switch (workItemType.toLowerCase()) {
             case "historia":
                 return processHistoriaFields(processedFields);

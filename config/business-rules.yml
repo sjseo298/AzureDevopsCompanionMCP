@@ -1,0 +1,620 @@
+# =============================================================================
+# REGLAS DE NEGOCIO ORGANIZACIONAL - SURA COLOMBIA
+# =============================================================================
+# Este archivo define las reglas de negocio, flujos de trabajo y automatización
+# específicas para la implementación de Azure DevOps en Sura Colombia.
+#
+# ARCHIVO DE CONFIGURACIÓN AVANZADA
+# Las reglas aquí definidas se ejecutan automáticamente en el sistema
+# =============================================================================
+
+# =============================================================================
+# REGLAS DE NEGOCIO (REQUERIDO)
+# =============================================================================
+businessRules:
+
+  # VALIDACIONES POR TIPO DE WORK ITEM
+  validation:
+    
+    # REGLAS PARA HISTORIAS
+    Historia:
+      - rule: "Campo APM obligatorio para migración de datos"
+        field: "idSolucionAPM"
+        condition: "required_if_field_true"
+        dependentField: "migracionDatos"
+        message: "ID de solución APM es obligatorio cuando la historia involucra migración de datos"
+        severity: "error"
+
+      - rule: "Descripción mínima requerida"
+        field: "description"
+        condition: "min_length"
+        values: [50]
+        message: "La descripción debe tener al menos 50 caracteres para historias"
+        severity: "warning"
+
+      - rule: "Criterios de aceptación obligatorios"
+        field: "acceptanceCriteria"
+        condition: "not_empty"
+        message: "Los criterios de aceptación son obligatorios para todas las historias"
+        severity: "error"
+
+      - rule: "Story points requeridos"
+        field: "storyPoints"
+        condition: "required_and_positive"
+        message: "Las historias deben tener story points asignados para planificación"
+        severity: "warning"
+
+      - rule: "Validación de historias regulatorias"
+        field: "cumplimientoRegulatorio"
+        condition: "required_if_type_contains"
+        values: ["regulatorio", "cumplimiento", "normativo"]
+        message: "Historias con contenido regulatorio deben marcar el campo correspondiente"
+        severity: "error"
+
+    # REGLAS PARA HISTORIA TÉCNICA
+    "Historia técnica":  
+      - rule: "Documentación técnica requerida"
+        field: "description"
+        condition: "min_length"
+        values: [100]
+        message: "Las historias técnicas requieren documentación detallada (mínimo 100 caracteres)"
+        severity: "error"
+
+      - rule: "Tipo técnico específico obligatorio"
+        field: "tipoDeHistoriaTecnica"
+        condition: "not_empty"
+        message: "Debe especificar el tipo específico de historia técnica"
+        severity: "error"
+
+      - rule: "Validación arquitectura"
+        field: "tipoDeHistoriaTecnica"
+        condition: "required_approval_if_value"
+        values: ["Arquitectura", "Infraestructura"]
+        message: "Historias de arquitectura e infraestructura requieren aprobación del comité técnico"
+        severity: "warning"
+
+    # REGLAS PARA TAREAS
+    Tarea:
+      - rule: "Estimación obligatoria"
+        field: "remainingWork"
+        condition: "required_and_positive"
+        message: "Las tareas deben tener estimación de trabajo restante en horas"
+        severity: "error"
+
+      - rule: "Tarea debe estar asignada"
+        field: "assignedTo"
+        condition: "not_empty_when_active"
+        message: "Las tareas en progreso deben estar asignadas a un responsable"
+        severity: "warning"
+
+      - rule: "Validación tipo implementación"
+        field: "tipoDeTarea"
+        condition: "required_parent_if_value"
+        values: ["Implementación", "Testing"]
+        message: "Tareas de implementación y testing deben estar vinculadas a una historia"
+        severity: "error"
+
+    # REGLAS PARA BUGS
+    Bug:
+      - rule: "Pasos de reproducción obligatorios"
+        field: "reproSteps"
+        condition: "not_empty"
+        message: "Los pasos para reproducir el bug son obligatorios"
+        severity: "error"
+
+      - rule: "Datos de prueba requeridos"
+        field: "datosPrueba"
+        condition: "not_empty"
+        message: "Debe especificar los datos de prueba utilizados"
+        severity: "error"
+
+      - rule: "ID APM obligatorio"
+        field: "idSolucionAPM"
+        condition: "not_empty"
+        message: "Todos los bugs deben estar asociados a una solución en el APM"
+        severity: "error"
+
+      - rule: "Validación bugs bloqueantes"
+        field: "bloqueante"
+        condition: "required_escalation_if_true"
+        message: "Los bugs bloqueantes requieren escalación inmediata al equipo de liderazgo"
+        severity: "critical"
+
+      - rule: "Severidad acorde al nivel"
+        field: "severity"
+        condition: "matches_bug_level"
+        dependentField: "nivelPrueba"
+        message: "La severidad debe ser acorde al nivel de prueba donde se encontró"
+        severity: "warning"
+
+    # REGLAS PARA CASOS DE PRUEBA
+    "Caso de prueba":
+      - rule: "Especificación del nivel obligatoria"
+        field: "nivelPrueba"
+        condition: "not_empty"
+        message: "Debe especificar el nivel de prueba correspondiente"
+        severity: "error"
+
+      - rule: "Tipo de ejecución requerido"
+        field: "tipoEjecucion"
+        condition: "not_empty"
+        message: "Debe especificar si la ejecución es manual o automatizada"
+        severity: "error"
+
+      - rule: "Validación casos automatizados"
+        field: "tipoEjecucion"
+        condition: "required_tag_if_value"
+        values: ["Automatizada"]
+        tag: "automation"
+        message: "Los casos automatizados deben tener el tag 'automation'"
+        severity: "warning"
+
+    # REGLAS PARA RIESGOS
+    Riesgo:
+      - rule: "Plan de acción obligatorio"
+        field: "planDeAccion"
+        condition: "not_empty"
+        message: "Todo riesgo debe tener un plan de acción definido"
+        severity: "error"
+
+      - rule: "Descripción detallada requerida"
+        field: "description"
+        condition: "min_length"
+        values: [100]
+        message: "Los riesgos requieren descripción detallada del impacto y probabilidad"
+        severity: "error"
+
+      - rule: "Revisión periódica"
+        field: "state"
+        condition: "auto_review_schedule"
+        values: [30] # días
+        message: "Los riesgos abiertos se revisan automáticamente cada 30 días"
+        severity: "info"
+
+    # REGLAS PARA PROYECTOS
+    Proyecto:
+      - rule: "Clasificación por tren obligatoria"
+        field: "trenesYDominios"
+        condition: "not_empty"
+        message: "Todos los proyectos deben estar clasificados por tren o dominio"
+        severity: "error"
+
+      - rule: "Tipo de proyecto requerido"
+        field: "tipoDeProyecto"
+        condition: "not_empty"
+        message: "Debe especificar el tipo de proyecto"
+        severity: "error"
+
+      - rule: "Validación proyectos evolutivos"
+        field: "tipoDeProyecto"
+        condition: "required_baseline_if_value"
+        values: ["Evolutivo", "Mejora"]
+        message: "Proyectos evolutivos requieren línea base establecida"
+        severity: "warning"
+
+# =============================================================================
+# FLUJOS DE TRABAJO (WORKFLOW)
+# =============================================================================
+  workflow:
+    
+    # FLUJO PARA HISTORIAS
+    Historia:
+      states:
+        - "New"
+        - "Planeado"
+        - "En progreso"
+        - "Impedimento"
+        - "Disponible pruebas"
+        - "En pruebas"
+        - "Certificado"
+        - "Cerrado"
+      
+      transitions:
+        "New":
+          - "Planeado"
+          - "Impedimento"
+        "Planeado":
+          - "En progreso"
+          - "Impedimento"
+        "En progreso":
+          - "Impedimento"
+          - "Disponible pruebas"
+        "Impedimento":
+          - "En progreso"
+          - "Planeado"
+        "Disponible pruebas":
+          - "En pruebas"
+          - "En progreso"
+        "En pruebas":
+          - "Certificado"
+          - "En progreso"
+        "Certificado":
+          - "Cerrado"
+        "Cerrado": []
+      
+      approvals:
+        "New -> Planeado":
+          required: ["Product Owner"]
+          conditions: ["storyPoints > 0", "acceptanceCriteria not empty"]
+        "Disponible pruebas -> En pruebas":
+          required: ["QA Lead"]
+          conditions: ["all tasks completed"]
+        "En pruebas -> Certificado":
+          required: ["QA Engineer", "Product Owner"]
+          conditions: ["all test cases passed"]
+        "Certificado -> Cerrado":
+          required: ["Product Owner"]
+          conditions: ["deployed to production"]
+
+    # FLUJO PARA HISTORIA TÉCNICA
+    "Historia técnica":
+      states:
+        - "New"
+        - "Planeado"
+        - "En progreso"
+        - "Impedimento"
+        - "Disponible pruebas"
+        - "En pruebas"
+        - "Certificado"
+        - "Cerrado"
+      
+      transitions:
+        "New":
+          - "Planeado"
+          - "Impedimento"
+        "Planeado":
+          - "En progreso"
+          - "Impedimento"
+        "En progreso":
+          - "Impedimento"
+          - "Disponible pruebas"
+        "Impedimento":
+          - "En progreso"
+          - "Planeado"
+        "Disponible pruebas":
+          - "En pruebas"
+          - "En progreso"
+        "En pruebas":
+          - "Certificado"
+          - "En progreso"
+        "Certificado":
+          - "Cerrado"
+        "Cerrado": []
+      
+      approvals:
+        "New -> Planeado":
+          required: ["Tech Lead", "Architect"]
+          conditions: ["technical design approved"]
+        "En pruebas -> Certificado":
+          required: ["Tech Lead", "QA Engineer"]
+          conditions: ["technical validation passed"]
+
+    # FLUJO PARA BUGS
+    Bug:
+      states:
+        - "New"
+        - "En progreso"
+        - "Reabierto"
+        - "Solucionado"
+        - "Cerrado"
+      
+      transitions:
+        "New":
+          - "En progreso"
+        "En progreso":
+          - "Solucionado"
+        "Solucionado":
+          - "Cerrado"
+          - "Reabierto"
+        "Reabierto":
+          - "En progreso"
+        "Cerrado":
+          - "Reabierto"
+      
+      approvals:
+        "En progreso -> Solucionado":
+          required: ["Developer"]
+          conditions: ["fix implemented", "unit tests passed"]
+        "Solucionado -> Cerrado":
+          required: ["QA Engineer"]
+          conditions: ["verification tests passed"]
+
+    # FLUJO PARA TAREAS
+    Tarea:
+      states:
+        - "New"
+        - "En progreso"
+        - "Impedimento"
+        - "Cerrado"
+      
+      transitions:
+        "New":
+          - "En progreso"
+          - "Impedimento"
+        "En progreso":
+          - "Cerrado"
+          - "Impedimento"
+        "Impedimento":
+          - "En progreso"
+        "Cerrado": []
+      
+      approvals:
+        "En progreso -> Cerrado":
+          required: ["assignedTo"]
+          conditions: ["remainingWork == 0"]
+
+# =============================================================================
+# AUTOMATIZACIÓN
+# =============================================================================
+  automation:
+    
+    # ASIGNACIÓN AUTOMÁTICA
+    autoAssignment:
+      enabled: true
+      rules:
+        - condition: "workItemType == 'Bug' AND nivelPrueba == 'Sistema'"
+          action: "assign_to_team"
+          target: "egv-asegur"
+          priority: "high"
+        
+        - condition: "workItemType == 'Historia técnica' AND tipoDeHistoriaTecnica == 'Arquitectura'"
+          action: "assign_to_lead"
+          target: "architecture_lead"
+          priority: "medium"
+        
+        - condition: "cumplimientoRegulatorio == true"
+          action: "add_tag"
+          target: "regulatory"
+          priority: "high"
+        
+        - condition: "bloqueante == true"
+          action: "send_notification"
+          target: "management_team"
+          priority: "critical"
+
+    # ESCALACIÓN AUTOMÁTICA
+    autoEscalation:
+      enabled: true
+      rules:
+        - condition: "workItemType == 'Bug' AND bloqueante == true AND age > 4 hours"
+          action: "escalate_to_manager"
+          message: "Bug bloqueante sin resolver por más de 4 horas"
+          priority: "critical"
+        
+        - condition: "workItemType == 'Historia' AND cumplimientoRegulatorio == true AND targetDate < 7 days"
+          action: "send_notification"
+          target: "compliance_team"
+          message: "Historia regulatoria próxima a vencer"
+          priority: "high"
+        
+        - condition: "state == 'Impedimento' AND age > 48 hours"
+          action: "escalate_to_team_lead"
+          message: "Impedimento sin resolver por más de 48 horas"
+          priority: "medium"
+
+    # ETIQUETADO AUTOMÁTICO
+    autoTagging:
+      enabled: true
+      rules:
+        - condition: "migracionDatos == true"
+          action: "add_tag"
+          target: "migration"
+        
+        - condition: "cumplimientoRegulatorio == true"
+          action: "add_tag"
+          target: "regulatory;compliance"
+        
+        - condition: "controlAutomatico == true"
+          action: "add_tag"
+          target: "automation;controls"
+        
+        - condition: "workItemType == 'Bug' AND severity == '1 - Critical'"
+          action: "add_tag"
+          target: "critical;hotfix"
+        
+        - condition: "trenesYDominios contains 'Comercial'"
+          action: "add_tag"
+          target: "tren-comercial"
+        
+        - condition: "tipoEjecucion == 'Automatizada'"
+          action: "add_tag"
+          target: "test-automation"
+
+    # VALIDACIÓN EN TIEMPO REAL
+    realTimeValidation:
+      enabled: true
+      rules:
+        - trigger: "on_field_change"
+          field: "migracionDatos"
+          condition: "value == true"
+          action: "require_field"
+          target: "idSolucionAPM"
+          message: "ID de solución APM es obligatorio para migración de datos"
+        
+        - trigger: "on_state_change"
+          fromState: "any"
+          toState: "Cerrado"
+          action: "validate_completion"
+          conditions:
+            - "all child items closed"
+            - "all test cases passed"
+            - "documentation updated"
+        
+        - trigger: "on_work_item_save"
+          condition: "cumplimientoRegulatorio == true"
+          action: "create_audit_log"
+          target: "compliance_audit"
+
+# =============================================================================
+# MÉTRICAS Y KPIs AUTOMÁTICOS
+# =============================================================================
+  metrics:
+    
+    # MÉTRICAS DE CALIDAD
+    qualityMetrics:
+      enabled: true
+      calculations:
+        - name: "Defect Density"
+          formula: "bugs_count / story_points_completed"
+          threshold: 0.15
+          alert_condition: "above_threshold"
+          frequency: "weekly"
+        
+        - name: "Bug Resolution Time"
+          formula: "avg(bug_closed_date - bug_created_date)"
+          threshold: "5 days"
+          alert_condition: "above_threshold"
+          frequency: "daily"
+        
+        - name: "Regulatory Compliance Rate"
+          formula: "(regulatory_stories_completed / regulatory_stories_total) * 100"
+          threshold: 95
+          alert_condition: "below_threshold"
+          frequency: "monthly"
+
+    # MÉTRICAS DE PRODUCTIVIDAD
+    productivityMetrics:
+      enabled: true
+      calculations:
+        - name: "Velocity Trend"
+          formula: "story_points_completed_per_sprint"
+          baseline: "last_3_sprints_average"
+          alert_condition: "deviation_over_20_percent"
+          frequency: "per_sprint"
+        
+        - name: "Cycle Time"
+          formula: "avg(story_done_date - story_started_date)"
+          threshold: "10 days"
+          alert_condition: "above_threshold"
+          frequency: "weekly"
+        
+        - name: "Work Item Age"
+          formula: "avg(current_date - work_item_created_date)"
+          threshold: "30 days"
+          alert_condition: "above_threshold"
+          frequency: "daily"
+
+# =============================================================================
+# INTEGRACIÓN CON SISTEMAS EXTERNOS
+# =============================================================================
+  externalIntegrations:
+    
+    # INTEGRACIÓN CON APM
+    apm:
+      enabled: true
+      syncFields:
+        - "idSolucionAPM"
+        - "state"
+        - "assignedTo"
+      syncFrequency: "hourly"
+      validations:
+        - field: "idSolucionAPM"
+          rule: "must_exist_in_apm"
+          error_action: "block_save"
+
+    # INTEGRACIÓN CON SISTEMA DE CUMPLIMIENTO
+    compliance:
+      enabled: true
+      trackFields:
+        - "cumplimientoRegulatorio"
+        - "state"
+        - "targetDate"
+      auditRequirements:
+        - "full_history_tracking"
+        - "approval_chain_logging"
+        - "field_change_auditing"
+
+    # INTEGRACIÓN CON HERRAMIENTAS DE TESTING
+    testManagement:
+      enabled: true
+      syncCriteria:
+        - "workItemType == 'Caso de prueba'"
+        - "tipoEjecucion == 'Automatizada'"
+      automationTriggers:
+        - event: "state_change_to_ready"
+          action: "trigger_automated_tests"
+        - event: "bug_resolved"
+          action: "trigger_regression_tests"
+
+# =============================================================================
+# CONFIGURACIÓN DE NOTIFICACIONES
+# =============================================================================
+  notifications:
+    
+    # NOTIFICACIONES CRÍTICAS
+    critical:
+      - event: "bug_bloqueante_created"
+        recipients: ["team_lead", "qa_manager", "product_owner"]
+        channel: ["email", "teams", "sms"]
+        template: "critical_bug_alert"
+      
+      - event: "regulatory_deadline_approaching"
+        recipients: ["compliance_team", "project_manager"]
+        channel: ["email", "teams"]
+        template: "regulatory_deadline_warning"
+        trigger_days_before: 7
+
+    # NOTIFICACIONES INFORMATIVAS
+    informational:
+      - event: "story_completed"
+        recipients: ["product_owner", "stakeholders"]
+        channel: ["email"]
+        template: "story_completion_summary"
+      
+      - event: "sprint_metrics_available"
+        recipients: ["scrum_master", "team_lead"]
+        channel: ["teams"]
+        template: "sprint_metrics_report"
+        frequency: "end_of_sprint"
+
+# =============================================================================
+# CONFIGURACIÓN DE REPORTES AUTOMÁTICOS
+# =============================================================================
+  reporting:
+    
+    # REPORTES DIARIOS
+    daily:
+      - name: "Bug Status Report"
+        schedule: "08:00"
+        recipients: ["qa_team", "development_leads"]
+        content:
+          - "open_bugs_by_severity"
+          - "blocked_bugs_count"
+          - "bugs_resolved_yesterday"
+      
+      - name: "Impediments Report"
+        schedule: "09:00"
+        recipients: ["scrum_masters", "team_leads"]
+        content:
+          - "active_impediments"
+          - "impediment_age_analysis"
+          - "resolution_recommendations"
+
+    # REPORTES SEMANALES
+    weekly:
+      - name: "Quality Metrics Dashboard"
+        schedule: "Monday 10:00"
+        recipients: ["qa_manager", "engineering_manager"]
+        content:
+          - "defect_density_trend"
+          - "test_coverage_analysis"
+          - "automation_progress"
+      
+      - name: "Regulatory Compliance Status"
+        schedule: "Friday 16:00"
+        recipients: ["compliance_team", "project_managers"]
+        content:
+          - "regulatory_stories_progress"
+          - "compliance_risks"
+          - "upcoming_deadlines"
+
+    # REPORTES MENSUALES
+    monthly:
+      - name: "Portfolio Health Report"
+        schedule: "First Monday 09:00"
+        recipients: ["portfolio_managers", "executives"]
+        content:
+          - "project_progress_summary"
+          - "risk_assessment"
+          - "resource_utilization"
+          - "quality_trends"

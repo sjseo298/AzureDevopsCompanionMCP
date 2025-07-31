@@ -1,353 +1,346 @@
-# Estructura Organizacional Descubierta Automáticamente
-# Generado el: 2025-01-29T10:30:00Z
-# Actualizado con campos de fecha descubiertos: 2025-07-30T12:15:00Z
-# Organización: Sura Colombia
+# =============================================================================
+# CONFIGURACIÓN ORGANIZACIONAL DESCUBIERTA - SURA COLOMBIA
+# =============================================================================
+# Este archivo contiene la estructura organizacional completa de Azure DevOps
+# descubierta automáticamente mediante las herramientas MCP.
+# 
+# GENERADO AUTOMÁTICAMENTE - NO EDITAR MANUALMENTE
+# Para personalizar la configuración, edite organization-config.yml
+# =============================================================================
 
-discoveryDate: "2025-01-29T10:30:00Z"
-lastUpdated: "2025-07-30T12:15:00Z"
-organizationUrl: "https://dev.azure.com/sura"
-organizationName: "Sura Colombia"
+# =============================================================================
+# CABECERA OBLIGATORIA - REQUERIDA PARA VALIDACIÓN
+# =============================================================================
+discoveryDate: "2025-07-30T12:30:00Z"
+lastUpdated: "2025-07-30T12:30:00Z"
+organizationUrl: "https://dev.azure.com/SuraColombia"
+organizationName: "SuraColombia"
 
-# Resumen del descubrimiento
+# =============================================================================
+# METADATA DE DESCUBRIMIENTO - REQUERIDA PARA ESTADÍSTICAS
+# =============================================================================
 discoveryMetadata:
   totalProjects: 3
-  totalWorkItemTypes: 24
-  customWorkItemTypes: 12
-  standardFieldsFound: 15
+  totalWorkItemTypes: 75
+  customWorkItemTypes: 28
+  standardFieldsFound: 47
+  customFieldsFound: 28
   dateFieldsFound: 8
-  customFieldsFound: 45
-  dateFieldsMissing: 4  # Campos que se descubrieron faltantes durante desarrollo
 
-# Proyectos principales descubiertos
+# =============================================================================
+# PROYECTOS - ESTRUCTURA PRINCIPAL (ARRAY REQUERIDO)
+# =============================================================================
 projects:
+  # PROYECTO PRINCIPAL - GERENCIA DE TECNOLOGÍA
   - id: "gerencia-tecnologia"
     name: "Gerencia_Tecnologia"
-    description: "Proyecto principal de tecnología y desarrollo"
+    description: "Agrupa todos los proyectos de desarrollo"
+    azureProjectId: "985807ad-7ff9-438d-849c-794c9bbc50f4"
     
-    # Equipos descubiertos con análisis de prefijos
+    # EQUIPOS DEL PROYECTO (ARRAY OPCIONAL)
     teams:
-      - name: "do-asegur-arl"
-        description: "Equipo de aseguramiento ARL"
-        prefix: "do-"
-        domain: "asegur"
-        function: "arl"
-      - name: "do-asegur-plan_de_remediacion"
-        description: "Equipo de plan de remediación"
-        prefix: "do-"
-        domain: "asegur"
-        function: "plan_de_remediacion"
-      - name: "egv-qa-automation"
-        description: "Equipo de automatización QA"
-        prefix: "egv-"
-        domain: "qa"
-        function: "automation"
-      - name: "tech-backend-apis"
-        description: "Equipo de desarrollo backend"
-        prefix: "tech-"
-        domain: "backend"
-        function: "apis"
-      - name: "tech-frontend-web"
-        description: "Equipo de desarrollo frontend"
-        prefix: "tech-"
-        domain: "frontend"
-        function: "web"
-    
-    # Análisis de estructura de áreas
+      # EQUIPOS DE ASEGURAMIENTO
+      - name: "egv-asegur-fortalecimiento_practicas_calidad"
+        description: "Fortalecimiento de prácticas de calidad"
+        prefix: "egv-asegur"
+        domain: "aseguramiento"
+        function: "calidad"
+      
+      - name: "egv-asegur-plataformas_dominios-calidad"
+        description: "Plataformas y dominios de calidad"
+        prefix: "egv-asegur"
+        domain: "plataformas"
+        function: "calidad"
+      
+      # EQUIPOS DE DOMINIO OPERATIVO
+      - name: "do-prestacion_distribucion-herramienta"
+        description: "Herramientas de prestación y distribución"
+        prefix: "do"
+        domain: "prestacion_distribucion"
+        function: "herramientas"
+      
+      - name: "do-soluci_corporativas-IntegralidadComisionesARL"
+        description: "Soluciones corporativas de comisiones ARL"
+        prefix: "do"
+        domain: "soluciones_corporativas"
+        function: "comisiones_arl"
+      
+      - name: "do-acceso_clientes-Monitor_Procesos"
+        description: "Monitor de procesos de acceso de clientes"
+        prefix: "do"
+        domain: "acceso_clientes"
+        function: "monitor_procesos"
+      
+      # EQUIPOS DE TECNOLOGÍA
+      - name: "t-mejora_evolutiva-Autonomia"
+        description: "Mejora evolutiva de autonomía"
+        prefix: "t"
+        domain: "mejora_evolutiva"
+        function: "autonomia"
+      
+      - name: "t-arc-nuevo_siis"
+        description: "Arquitectura del nuevo SIIS"
+        prefix: "t-arc"
+        domain: "arquitectura"
+        function: "siis"
+      
+      # EQUIPOS DE INFRAESTRUCTURA
+      - name: "do-infraestructura-kyndryl_devops"
+        description: "DevOps con Kyndryl"
+        prefix: "do-infraestructura"
+        domain: "infraestructura"
+        function: "devops"
+      
+      - name: "do-infraestructura-kyndryl_core"
+        description: "Equipo crossfuncional de Kyndryl para el Core de seguros y de vida"
+        prefix: "do-infraestructura"
+        domain: "infraestructura"  
+        function: "core"
+
+    # ESTRUCTURA DE ÁREAS (ARRAY OPCIONAL)
     areaStructure:
       - "Gerencia_Tecnologia"
-      - "Gerencia_Tecnologia\\do-asegur-arl"
-      - "Gerencia_Tecnologia\\do-asegur-plan_de_remediacion"
-      - "Gerencia_Tecnologia\\egv-aseguramiento-calidad"
-      - "Gerencia_Tecnologia\\tech-desarrollo-backend"
-      - "Gerencia_Tecnologia\\tech-desarrollo-frontend"
-    
-    # Tipos de work items y sus campos personalizados
+      - "Gerencia_Tecnologia\\Aseguramiento"
+      - "Gerencia_Tecnologia\\Desarrollo"
+      - "Gerencia_Tecnologia\\Infraestructura"
+      - "Gerencia_Tecnologia\\Arquitectura"
+
+    # TIPOS DE WORK ITEMS (ARRAY REQUERIDO)
     workItemTypes:
+      # HISTORIA - TIPO PRINCIPAL PERSONALIZADO
       - name: "Historia"
         baseType: "User Story"
-        description: "Historia de usuario estándar"
+        description: "Historia de usuario personalizada para Sura"
+        referenceName: "AgileSura.Historia"
+        
+        # CAMPOS OBLIGATORIOS (ARRAY REQUERIDO)
         requiredFields:
+          - "System.IterationId"
+          - "System.AreaId" 
           - "System.Title"
+          - "System.State"
           - "System.Description"
-          - "Microsoft.VSTS.Common.AcceptanceCriteria"
+          - "System.AcceptanceCriteria"
           - "Custom.TipoDeHistoria"
-          - "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14" # ID Solución APM
-          - "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3" # Migración Datos
-          - "Custom.Lahistoriacorrespondeauncumplimientoregulatorio" # Cumplimiento Regulatorio
-          - "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1" # Control Automático
-        
-        # Campos de fecha relevantes
+          - "Custom.Lahistoriahacepartedeunamigraciondedatos"
+          - "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
+          - "Custom.Lahistoriahaceparteduncontrolautomatico"
+          - "Custom.IDdelasolucionenelAPM"
+
+        # CAMPOS DE FECHA (ARRAY CRÍTICO PARA COMPATIBILIDAD)
         dateFields:
           - "Microsoft.VSTS.Scheduling.StartDate"
-          - "Microsoft.VSTS.Scheduling.FinishDate"
+          - "Microsoft.VSTS.Scheduling.FinishDate" 
           - "Microsoft.VSTS.Scheduling.TargetDate"
           - "Microsoft.VSTS.Scheduling.DueDate"
-        
-        # Campos de métricas relevantes
+
+        # CAMPOS DE MÉTRICAS (ARRAY OPCIONAL)
         metricFields:
           - "Microsoft.VSTS.Scheduling.StoryPoints"
           - "Microsoft.VSTS.Scheduling.RemainingWork"
-          - "Microsoft.VSTS.Scheduling.OriginalEstimate"
           - "Microsoft.VSTS.Common.Priority"
-      
-      - name: "Feature"
-        baseType: "Feature"
-        description: "Característica de producto"
-        requiredFields:
-          - "System.Title"
-          - "System.Description"
-        
-        # Campos de fecha relevantes para Features
-        dateFields:
-          - "Microsoft.VSTS.Scheduling.StartDate"
-          - "Microsoft.VSTS.Scheduling.FinishDate"
-          - "Microsoft.VSTS.Scheduling.TargetDate"
-          - "Microsoft.VSTS.Scheduling.DueDate"
-        
-        # Campos de métricas relevantes para Features
-        metricFields:
-          - "Microsoft.VSTS.Scheduling.StoryPoints"
-          - "Microsoft.VSTS.Common.Priority"
-          - "Microsoft.VSTS.Scheduling.RemainingWork"
 
-# Análisis de campos de fecha - Descubrimiento crítico
-dateFieldsAnalysis:
-  discoveryNote: |
-    Durante el desarrollo se descubrió que varios campos de fecha críticos 
-    no estaban siendo incluidos en las consultas WIQL, causando información 
-    incompleta sobre fechas de planificación.
-  
-  missingFieldsIdentified:
-    - field: "Microsoft.VSTS.Scheduling.StartDate"
-      impact: "HIGH"
-      description: "Fecha de inicio planificada no se mostraba en consultas"
-      
-    - field: "Microsoft.VSTS.Scheduling.FinishDate"
-      impact: "HIGH"
-      description: "Fecha de finalización planificada faltante"
-      
-    - field: "Microsoft.VSTS.Scheduling.TargetDate"
-      impact: "CRITICAL"
-      description: "Fecha objetivo no se incluía, causando Features sin fechas estimadas"
-      
-    - field: "Microsoft.VSTS.Scheduling.DueDate"
-      impact: "MEDIUM"
-      description: "Fecha de vencimiento no visible"
-  
-  standardDateFields:
-    scheduling:
-      - referenceName: "Microsoft.VSTS.Scheduling.StartDate"
-        displayName: "Fecha de inicio"
-        type: "dateTime"
-        description: "Fecha planificada de inicio del trabajo"
-        usage: "Features, Historias, Tareas"
-        
-      - referenceName: "Microsoft.VSTS.Scheduling.FinishDate"
-        displayName: "Fecha de finalización"
-        type: "dateTime"
-        description: "Fecha planificada de finalización del trabajo"
-        usage: "Features, Historias, Tareas"
-        
-      - referenceName: "Microsoft.VSTS.Scheduling.TargetDate"
-        displayName: "Fecha objetivo"
-        type: "dateTime"
-        description: "Fecha objetivo para completar el trabajo"
-        usage: "Features, Épicas"
-        businessCritical: true
-        
-      - referenceName: "Microsoft.VSTS.Scheduling.DueDate"
-        displayName: "Fecha de vencimiento"
-        type: "dateTime"
-        description: "Fecha límite para completar el trabajo"
-        usage: "Bugs, Tareas urgentes"
-        
-    system:
-      - referenceName: "System.CreatedDate"
-        displayName: "Fecha de creación"
-        type: "dateTime"
-        description: "Fecha y hora de creación del work item"
-        usage: "Todos los tipos"
-        
-      - referenceName: "System.ChangedDate"
-        displayName: "Fecha de modificación"
-        type: "dateTime"
-        description: "Fecha y hora de última modificación"
-        usage: "Todos los tipos"
-
-# Configuración de contexto organizacional para consultas WIQL
-wiqlContextConfiguration:
-  defaultFields:
-    basic:
-      - "System.Id"
-      - "System.Title"
-      - "System.State"
-      - "System.WorkItemType"
-      - "System.AssignedTo"
-      - "System.AreaPath"
-      - "System.IterationPath"
-      - "System.CreatedDate"
-      - "System.ChangedDate"
-    
-    withDates:
-      - "Microsoft.VSTS.Scheduling.StartDate"
-      - "Microsoft.VSTS.Scheduling.FinishDate"
-      - "Microsoft.VSTS.Scheduling.TargetDate"
-      - "Microsoft.VSTS.Scheduling.DueDate"
-    
-    withMetrics:
-      - "Microsoft.VSTS.Scheduling.RemainingWork"
-      - "Microsoft.VSTS.Scheduling.OriginalEstimate"
-      - "Microsoft.VSTS.Scheduling.CompletedWork"
-      - "Microsoft.VSTS.Scheduling.StoryPoints"
-      - "Microsoft.VSTS.Common.Priority"
-  
-  fieldEnrichment:
-    enabled: true
-    conservative: true  # Solo agregar campos que existen en la organización
-    fallbackStrategy: "original_query"  # Si falla enriquecida, usar original
-    
-  organizationSpecificFields:
-    features:
-      # Campos específicos de Features que se usan frecuentemente
-      - "Microsoft.VSTS.Scheduling.TargetDate"  # Crítico para planificación
-      - "Microsoft.VSTS.Common.Priority"
-      
-    historias:
-      - "Microsoft.VSTS.Common.AcceptanceCriteria"
-      - "Custom.TipoDeHistoria"
-      - "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"  # ID Solución APM
-        
+        # DEFINICIÓN DE CAMPOS PERSONALIZADOS (ARRAY OPCIONAL)
         fields:
-          - name: "Tipo de Historia"
+          - name: "tipoDeHistoria"
             referenceName: "Custom.TipoDeHistoria"
             type: "picklistString"
             required: true
             allowedValues:
-              - "Historia Funcional"
-              - "Historia de Infraestructura"
-              - "Historia de Configuración"
-              - "Historia de Seguridad"
-              - "Historia de Performance"
-          
-          - name: "ID Solución APM"
-            referenceName: "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"
+              - "Funcional"
+              - "No funcional"
+              - "Técnica"
+              - "Corrección"
+            helpText: "Tipo de historia según su naturaleza"
+
+          - name: "migracionDatos"
+            referenceName: "Custom.Lahistoriahacepartedeunamigraciondedatos"
+            type: "boolean"
+            required: true
+            defaultValue: false
+            helpText: "¿La historia hace parte de una migración de datos?"
+
+          - name: "cumplimientoRegulatorio"
+            referenceName: "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
+            type: "boolean"
+            required: true
+            defaultValue: false
+            helpText: "¿La historia corresponde a un cumplimiento regulatorio?"
+
+          - name: "controlAutomatico"
+            referenceName: "Custom.Lahistoriahaceparteduncontrolautomatico"
+            type: "boolean"
+            required: true
+            defaultValue: false
+            helpText: "¿La historia hace parte de un control automático?"
+
+          - name: "idSolucionAPM"
+            referenceName: "Custom.IDdelasolucionenelAPM"
             type: "string"
             required: true
-            helpText: "Identificador único de la solución en el Application Portfolio Management"
-          
-          - name: "Migración de Datos"
-            referenceName: "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3"
-            type: "picklistString"
-            required: true
-            allowedValues: ["Si", "No"]
-            defaultValue: "No"
-          
-          - name: "Cumplimiento Regulatorio"
-            referenceName: "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
-            type: "picklistString"
-            required: true
-            allowedValues: ["Si", "No"]
-            defaultValue: "No"
-          
-          - name: "Control Automático"
-            referenceName: "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1"
-            type: "picklistString"
-            required: true
-            allowedValues: ["Si", "No"]
-            defaultValue: "No"
-      
+            helpText: "ID de la solución en el APM"
+
+      # HISTORIA TÉCNICA - TIPO PERSONALIZADO
       - name: "Historia técnica"
         baseType: "User Story"
-        description: "Historia técnica para mejoras de arquitectura"
-        requiredFields:
-          - "System.Title"
-          - "System.Description"
-          - "Microsoft.VSTS.Common.AcceptanceCriteria"
-          - "Custom.14858558-3edb-485a-9a52-a38c03c65c62" # Tipo Historia Técnica
-          - "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14" # ID Solución APM
-          - "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3" # Migración Datos
-          - "Custom.Lahistoriacorrespondeauncumplimientoregulatorio" # Cumplimiento Regulatorio
-          - "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1" # Control Automático
+        description: "Historia técnica personalizada para Sura"
+        referenceName: "Custom.7f51ec0f-ff1c-45e6-9ae2-ff1306d78fe4"
         
+        requiredFields:
+          - "System.IterationId"
+          - "System.AreaId"
+          - "System.Title"
+          - "System.State"
+          - "System.Description"
+          - "System.AcceptanceCriteria"
+          - "Custom.Lahistoriahacepartedeunamigraciondedatos"
+          - "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
+          - "Custom.Lahistoriahaceparteduncontrolautomatico"
+          - "Custom.IDdelasolucionenelAPM"
+          - "Custom.TipoDeHistoriaTecnica"
+
+        # CAMPOS DE FECHA (ARRAY CRÍTICO PARA COMPATIBILIDAD)
+        dateFields:
+          - "Microsoft.VSTS.Scheduling.StartDate"
+          - "Microsoft.VSTS.Scheduling.FinishDate"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.DueDate"
+
+        metricFields:
+          - "Microsoft.VSTS.Scheduling.StoryPoints"
+          - "Microsoft.VSTS.Scheduling.RemainingWork"
+          - "Microsoft.VSTS.Common.Priority"
+
         fields:
-          - name: "Tipo de Historia Técnica"
-            referenceName: "Custom.14858558-3edb-485a-9a52-a38c03c65c62"
+          - name: "tipoDeHistoriaTecnica"
+            referenceName: "Custom.TipoDeHistoriaTecnica"
             type: "picklistString"
             required: true
             allowedValues:
               - "Refactoring"
-              - "Optimización"
-              - "Deuda Técnica"
-              - "Actualización Tecnológica"
-              - "Mejora de Arquitectura"
-      
+              - "Configuración"
+              - "Infraestructura"
+              - "Arquitectura"
+              - "Seguridad"
+            helpText: "Tipo específico de historia técnica"
+
+      # TAREA - TIPO PERSONALIZADO
       - name: "Tarea"
         baseType: "Task"
-        description: "Tarea de desarrollo o implementación"
-        requiredFields:
-          - "System.Title"
-          - "Custom.TipoDeTarea"
+        description: "Tarea personalizada para Sura"
+        referenceName: "AgileSura.Tarea"
         
+        requiredFields:
+          - "System.IterationId"
+          - "System.AreaId"
+          - "System.Title"
+          - "System.State"
+          - "Custom.TipoDeTarea"
+
+        # CAMPOS DE FECHA (ARRAY CRÍTICO PARA COMPATIBILIDAD)
+        dateFields:
+          - "Microsoft.VSTS.Scheduling.StartDate"
+          - "Microsoft.VSTS.Scheduling.FinishDate"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.DueDate"
+
+        metricFields:
+          - "Microsoft.VSTS.Scheduling.RemainingWork"
+          - "Microsoft.VSTS.Scheduling.OriginalEstimate"
+          - "Microsoft.VSTS.Common.Priority"
+
         fields:
-          - name: "Tipo de Tarea"
+          - name: "tipoDeTarea"
             referenceName: "Custom.TipoDeTarea"
             type: "picklistString"
             required: true
             allowedValues:
-              - "Desarrollo"
+              - "Análisis"
+              - "Diseño"
+              - "Implementación"
               - "Testing"
               - "Documentación"
-              - "Configuración"
               - "Despliegue"
-              - "Análisis"
-      
+            helpText: "Tipo específico de tarea"
+
+      # SUBTAREA - TIPO PERSONALIZADO
       - name: "Subtarea"
         baseType: "Task"
-        description: "Subtarea de una tarea principal"
-        requiredFields:
-          - "System.Title"
-          - "Custom.TipoDeSubtarea"
+        description: "Subtarea personalizada para Sura"
+        referenceName: "AgileSura.Subtarea"
         
+        requiredFields:
+          - "System.IterationId"
+          - "System.AreaId"
+          - "System.Title"
+          - "System.State"
+          - "Custom.TipoDeSubtarea"
+
+        # CAMPOS DE FECHA (ARRAY CRÍTICO PARA COMPATIBILIDAD)
+        dateFields:
+          - "Microsoft.VSTS.Scheduling.StartDate"
+          - "Microsoft.VSTS.Scheduling.FinishDate"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.DueDate"
+
+        metricFields:
+          - "Microsoft.VSTS.Scheduling.RemainingWork"
+          - "Microsoft.VSTS.Common.Priority"
+
         fields:
-          - name: "Tipo de Subtarea"
+          - name: "tipoDeSubtarea"
             referenceName: "Custom.TipoDeSubtarea"
             type: "picklistString"
             required: true
             allowedValues:
-              - "Implementación"
-              - "Pruebas Unitarias"
-              - "Pruebas Integración"
-              - "Code Review"
-              - "Documentación Técnica"
-      
+              - "Investigación"
+              - "Prototipo"
+              - "Configuración"
+              - "Testing unitario"
+            helpText: "Tipo específico de subtarea"
+
+      # BUG - TIPO ESTÁNDAR CON PERSONALIZACIONES
       - name: "Bug"
         baseType: "Bug"
-        description: "Defecto o error del sistema"
+        description: "Bug personalizado para Sura"
+        referenceName: "Microsoft.VSTS.WorkItemTypes.Bug"
+        
         requiredFields:
+          - "System.IterationId"
+          - "System.AreaId"
           - "System.Title"
+          - "System.State"
           - "System.Description"
           - "Microsoft.VSTS.TCM.ReproSteps"
+          - "Microsoft.VSTS.Common.ValueArea"
+          - "Custom.IDdelasolucionenelAPM"
           - "Custom.DatosDePrueba"
           - "Custom.Bloqueante"
           - "Custom.NivelPrueba"
           - "Custom.Origen"
-          - "Custom.EtapaDescubrimiento"
-          - "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14" # ID Solución APM
-        
+          - "Custom.EtapaDeDescubrimiento"
+
+        # CAMPOS DE FECHA (ARRAY CRÍTICO PARA COMPATIBILIDAD)
+        dateFields:
+          - "Microsoft.VSTS.Scheduling.StartDate"
+          - "Microsoft.VSTS.Scheduling.FinishDate"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.DueDate"
+
+        metricFields:
+          - "Microsoft.VSTS.Common.Priority"
+          - "Microsoft.VSTS.Common.Severity"
+          - "Microsoft.VSTS.Scheduling.Effort"
+
         fields:
-          - name: "Datos de Prueba"
-            referenceName: "Custom.DatosDePrueba"
-            type: "string"
-            required: true
-            helpText: "Datos específicos utilizados durante las pruebas"
-          
-          - name: "Bloqueante"
+          - name: "bloqueante"
             referenceName: "Custom.Bloqueante"
             type: "boolean"
             required: true
             defaultValue: false
-          
-          - name: "Nivel de Prueba"
+            helpText: "¿Es un impedimento para la continuidad de las pruebas?"
+
+          - name: "nivelPrueba"
             referenceName: "Custom.NivelPrueba"
             type: "picklistString"
             required: true
@@ -356,237 +349,418 @@ wiqlContextConfiguration:
               - "Integración"
               - "Sistema"
               - "Aceptación"
-              - "Regresión"
-              - "Performance"
-          
-          - name: "Origen"
+            helpText: "Nivel de la pirámide de estrategia de pruebas"
+
+          - name: "origen"
             referenceName: "Custom.Origen"
             type: "picklistString"
             required: true
             allowedValues:
+              - "Manual"
+              - "Automatizada"
+              - "Exploratoria"
+              - "Regresión"
+            helpText: "Tipo de ejecución del escenario de prueba"
+
+          - name: "etapaDescubrimiento"
+            referenceName: "Custom.EtapaDeDescubrimiento"
+            type: "picklistString"
+            required: true
+            allowedValues:
               - "Desarrollo"
-              - "Testing"
+              - "QA"
+              - "Pre-producción"
               - "Producción"
-              - "Cliente"
-              - "Monitoreo"
-          
-          - name: "Etapa de Descubrimiento"
-            referenceName: "Custom.EtapaDescubrimiento"
+            helpText: "Etapa donde se descubrió el bug"
+
+      # CASO DE PRUEBA - TIPO PERSONALIZADO
+      - name: "Caso de prueba"
+        baseType: "Test Case"
+        description: "Caso de prueba personalizado para Sura"
+        referenceName: "AgileSura-GerenciadeTecnologia.Casodeprueba"
+        
+        requiredFields:
+          - "System.IterationId"
+          - "System.AreaId"
+          - "System.Title"
+          - "System.State"
+          - "Custom.TipoDeEjecucion"
+          - "Custom.Fase"
+          - "Custom.NivelDePrueba"
+
+        # CAMPOS DE FECHA (ARRAY CRÍTICO PARA COMPATIBILIDAD)
+        dateFields:
+          - "Microsoft.VSTS.Scheduling.StartDate"
+          - "Microsoft.VSTS.Scheduling.FinishDate"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.DueDate"
+
+        fields:
+          - name: "tipoEjecucion"
+            referenceName: "Custom.TipoDeEjecucion"
+            type: "picklistString"
+            required: true
+            allowedValues:
+              - "Manual"
+              - "Automatizada"
+              - "Semi-automatizada"
+            helpText: "Tipo de ejecución del caso de prueba"
+
+          - name: "fase"
+            referenceName: "Custom.Fase"
             type: "picklistString"
             required: true
             allowedValues:
               - "Análisis"
-              - "Desarrollo"
-              - "Testing"
-              - "UAT"
-              - "Producción"
+              - "Diseño"
+              - "Ejecución"
+              - "Reporte"
+            helpText: "Fase del caso de prueba"
 
-  - id: "gerencia-tecnologia-egv"
+          - name: "nivelDePrueba"
+            referenceName: "Custom.NivelDePrueba"
+            type: "picklistString"
+            required: true
+            allowedValues:
+              - "Componente"
+              - "Integración"
+              - "Sistema"
+              - "Aceptación"
+            helpText: "Nivel en la pirámide de pruebas"
+
+      # RIESGO - TIPO PERSONALIZADO
+      - name: "Riesgo"
+        baseType: "Issue"
+        description: "Riesgo personalizado para Sura"
+        referenceName: "AgileSura.Riesgo"
+        
+        requiredFields:
+          - "System.IterationId"
+          - "System.AreaId"
+          - "System.Title"
+          - "System.State"
+          - "System.Description"
+          - "Custom.PlanDeAccion"
+
+        # CAMPOS DE FECHA (ARRAY CRÍTICO PARA COMPATIBILIDAD)
+        dateFields:
+          - "Microsoft.VSTS.Scheduling.StartDate"
+          - "Microsoft.VSTS.Scheduling.FinishDate"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.DueDate"
+
+        fields:
+          - name: "planDeAccion"
+            referenceName: "Custom.PlanDeAccion"
+            type: "html"
+            required: true
+            helpText: "Plan de acción para mitigar el riesgo"
+
+      # PROYECTO - TIPO PERSONALIZADO
+      - name: "Proyecto"
+        baseType: "Epic"
+        description: "Proyecto personalizado para Sura"
+        referenceName: "AgileSura.Proyecto"
+        
+        requiredFields:
+          - "System.IterationId"
+          - "System.AreaId"
+          - "System.Title"
+          - "System.State"
+          - "Custom.TipoDeProyecto"
+          - "Custom.TrenesYDominios"
+
+        # CAMPOS DE FECHA (ARRAY CRÍTICO PARA COMPATIBILIDAD)
+        dateFields:
+          - "Microsoft.VSTS.Scheduling.StartDate"
+          - "Microsoft.VSTS.Scheduling.FinishDate"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.DueDate"
+
+        fields:
+          - name: "tipoDeProyecto"
+            referenceName: "Custom.TipoDeProyecto"
+            type: "picklistString"
+            required: true
+            allowedValues:
+              - "Evolutivo"
+              - "Correctivo"
+              - "Nuevo desarrollo"
+              - "Mejora"
+            helpText: "Tipo de proyecto según su naturaleza"
+
+          - name: "trenesYDominios"
+            referenceName: "Custom.TrenesYDominios"
+            type: "picklistString"
+            required: true
+            allowedValues:
+              - "Tren Comercial"
+              - "Tren Post Venta"
+              - "Dominio Transversal"
+              - "Dominio Técnico"
+            helpText: "Clasificación por trenes y dominios organizacionales"
+
+  # PROYECTO DE ASEGURAMIENTO EGV
+  - id: "gerencia-tecnologia-egv-aseguramiento"
     name: "Gerencia_Tecnologia_Egv_Aseguramiento"
-    description: "Proyecto de aseguramiento y calidad EGV"
-    
-    teams:
-      - name: "egv-qa-automation"
-        description: "Equipo de automatización de pruebas"
-        prefix: "egv-"
-        domain: "qa"
-        function: "automation"
-      - name: "egv-qa-manual"
-        description: "Equipo de pruebas manuales"
-        prefix: "egv-"
-        domain: "qa"
-        function: "manual"
-      - name: "egv-security-testing"
-        description: "Equipo de pruebas de seguridad"
-        prefix: "egv-"
-        domain: "security"
-        function: "testing"
+    description: "Agrupa los proyectos de aseguramiento"
+    azureProjectId: "d4897a90-a850-48a6-8dd2-be1a1742067a"
     
     areaStructure:
       - "Gerencia_Tecnologia_Egv_Aseguramiento"
-      - "Gerencia_Tecnologia_Egv_Aseguramiento\\egv-qa-automation"
-      - "Gerencia_Tecnologia_Egv_Aseguramiento\\egv-qa-manual"
-      - "Gerencia_Tecnologia_Egv_Aseguramiento\\egv-security-testing"
-    
-    # Usa los mismos tipos de work items que el proyecto principal
-    workItemTypes: [] # Hereda del proyecto principal
+      - "Gerencia_Tecnologia_Egv_Aseguramiento\\Calidad"
+      - "Gerencia_Tecnologia_Egv_Aseguramiento\\Testing"
 
+    workItemTypes:
+      - name: "Historia"
+        baseType: "User Story"
+        description: "Historia para aseguramiento"
+        referenceName: "AgileSura-Aseguramiento.Historia"
+        
+        requiredFields:
+          - "System.IterationId"
+          - "System.AreaId"
+          - "System.Title"
+          - "System.State"
+          - "System.Description"
+          - "System.AcceptanceCriteria"
+          - "Custom.TipoDeHistoria"
+          - "Custom.Lahistoriahacepartedeunamigraciondedatos"
+          - "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
+          - "Custom.Lahistoriahaceparteduncontrolautomatico"
+          - "Custom.IDdelasolucionenelAPM"
+
+        # CAMPOS DE FECHA (ARRAY CRÍTICO PARA COMPATIBILIDAD)
+        dateFields:
+          - "Microsoft.VSTS.Scheduling.StartDate"
+          - "Microsoft.VSTS.Scheduling.FinishDate"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.DueDate"
+
+      - name: "Historia técnica"
+        baseType: "User Story"
+        description: "Historia técnica para aseguramiento"
+        referenceName: "Custom.d0772f28-1895-4795-b0bc-412528b79113"
+        
+        requiredFields:
+          - "System.IterationId"
+          - "System.AreaId"
+          - "System.Title"
+          - "System.State"
+          - "System.Description"
+          - "System.AcceptanceCriteria"
+          - "Custom.Lahistoriahacepartedeunamigraciondedatos"
+          - "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
+          - "Custom.Lahistoriahaceparteduncontrolautomatico"
+          - "Custom.IDdelasolucionenelAPM"
+          - "Custom.TipoDeHistoriaTecnica"
+
+        # CAMPOS DE FECHA (ARRAY CRÍTICO PARA COMPATIBILIDAD)
+        dateFields:
+          - "Microsoft.VSTS.Scheduling.StartDate"
+          - "Microsoft.VSTS.Scheduling.FinishDate"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.DueDate"
+
+      - name: "Caso de prueba"
+        baseType: "Test Case"
+        description: "Caso de prueba para aseguramiento"
+        referenceName: "AgileSura-Aseguramiento.Casodeprueba"
+        
+        requiredFields:
+          - "System.IterationId"
+          - "System.AreaId"
+          - "System.Title"
+          - "System.State"
+          - "Custom.TipoDeEjecucion"
+
+        # CAMPOS DE FECHA (ARRAY CRÍTICO PARA COMPATIBILIDAD)
+        dateFields:
+          - "Microsoft.VSTS.Scheduling.StartDate"
+          - "Microsoft.VSTS.Scheduling.FinishDate"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.DueDate"
+
+  # PROYECTO DE PORTAFOLIOS
   - id: "portafolios"
     name: "Portafolios"
-    description: "Gestión de portafolio de proyectos"
-    
-    teams:
-      - name: "portfolio-management"
-        description: "Equipo de gestión de portafolio"
-        prefix: "port-"
-        domain: "management"
-        function: "portfolio"
-      - name: "portfolio-analysis"
-        description: "Equipo de análisis de portafolio"
-        prefix: "port-"
-        domain: "analysis"
-        function: "portfolio"
+    description: "Proyecto que agrupara la iniciativas de los portafolios"
+    azureProjectId: "4261b86e-ac42-449b-a360-113821717ccf"
     
     areaStructure:
       - "Portafolios"
-      - "Portafolios\\portfolio-management"
-      - "Portafolios\\portfolio-analysis"
-    
-    workItemTypes: [] # Hereda del proyecto principal
+      - "Portafolios\\Iniciativas"
+      - "Portafolios\\Entregables"
 
-# Patrones de nomenclatura descubiertos
-namingPatterns:
-  teamPrefixes:
-    - prefix: "do-"
-      description: "Equipos de dominio operativo"
-      count: 15
-      examples: ["do-asegur-arl", "do-asegur-plan_de_remediacion"]
-    
-    - prefix: "egv-"
-      description: "Equipos de aseguramiento EGV"
-      count: 8
-      examples: ["egv-qa-automation", "egv-security-testing"]
-    
-    - prefix: "tech-"
-      description: "Equipos de tecnología"
-      count: 12
-      examples: ["tech-backend-apis", "tech-frontend-web"]
-    
-    - prefix: "port-"
-      description: "Equipos de portafolio"
-      count: 3
-      examples: ["portfolio-management", "portfolio-analysis"]
+    workItemTypes:
+      - name: "Historia"
+        baseType: "User Story" 
+        description: "Historia para portafolios"
+        referenceName: "AgileSura-Portafolio.Historia"
+        
+        requiredFields:
+          - "System.IterationId"
+          - "System.AreaId"
+          - "System.Title"
+          - "System.State"
+          - "System.Description"
+          - "System.AcceptanceCriteria"
+          - "Custom.TipoDeHistoria"
+          - "Custom.Lahistoriahacepartedeunamigraciondedatos"
+          - "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
+          - "Custom.Lahistoriahaceparteduncontrolautomatico"
+          - "Custom.IDdelasolucionenelAPM"
 
-  projectPatterns:
-    - pattern: "Gerencia_Tecnologia"
-      description: "Proyecto principal de tecnología"
-      type: "main_technology"
-    
-    - pattern: "Gerencia_Tecnologia_Egv_*"
-      description: "Proyectos especializados de EGV"
-      type: "specialized_egv"
-    
-    - pattern: "Portafolios"
-      description: "Gestión de portafolio"
-      type: "portfolio_management"
+        # CAMPOS DE FECHA (ARRAY CRÍTICO PARA COMPATIBILIDAD)
+        dateFields:
+          - "Microsoft.VSTS.Scheduling.StartDate"
+          - "Microsoft.VSTS.Scheduling.FinishDate"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.DueDate"
 
-  areaPathPatterns:
-    - pattern: "{project}\\{prefix}-{domain}-{function}"
-      description: "Estructura estándar de áreas"
-      examples:
-        - "Gerencia_Tecnologia\\do-asegur-arl"
-        - "Gerencia_Tecnologia\\egv-qa-automation"
+      - name: "Historia técnica"
+        baseType: "User Story"
+        description: "Historia técnica para portafolios"
+        referenceName: "Custom.ca6348b3-2680-47db-ba7b-03750013c15b"
+        
+        requiredFields:
+          - "System.IterationId"
+          - "System.AreaId"
+          - "System.Title"
+          - "System.State"
+          - "System.Description"
+          - "System.AcceptanceCriteria"
+          - "Custom.Lahistoriahacepartedeunamigraciondedatos"
+          - "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
+          - "Custom.Lahistoriahaceparteduncontrolautomatico"
+          - "Custom.IDdelasolucionenelAPM"
+          - "Custom.TipoDeHistoriaTecnica"
 
-# Configuración específica de la organización
+        # CAMPOS DE FECHA (ARRAY CRÍTICO PARA COMPATIBILIDAD)
+        dateFields:
+          - "Microsoft.VSTS.Scheduling.StartDate"
+          - "Microsoft.VSTS.Scheduling.FinishDate"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.DueDate"
+
+      - name: "Entregable"
+        baseType: "Feature"
+        description: "Entregable de portafolio"
+        referenceName: "AgileSura-Portafolio.Entregable"
+        
+        requiredFields:
+          - "System.IterationId"
+          - "System.AreaId"
+          - "System.Title"
+          - "System.State"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.StartDate"
+
+        # CAMPOS DE FECHA (ARRAY CRÍTICO PARA COMPATIBILIDAD)
+        dateFields:
+          - "Microsoft.VSTS.Scheduling.StartDate"
+          - "Microsoft.VSTS.Scheduling.FinishDate"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.DueDate"
+
+      - name: "Entregable de alto nivel"
+        baseType: "Epic"
+        description: "Entregable de alto nivel de portafolio"
+        referenceName: "AgileSura-Portafolio.Entregabledealtonivel"
+        
+        requiredFields:
+          - "System.IterationId"
+          - "System.AreaId"
+          - "System.Title"
+          - "System.State"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.StartDate"
+
+        # CAMPOS DE FECHA (ARRAY CRÍTICO PARA COMPATIBILIDAD)
+        dateFields:
+          - "Microsoft.VSTS.Scheduling.StartDate"
+          - "Microsoft.VSTS.Scheduling.FinishDate"
+          - "Microsoft.VSTS.Scheduling.TargetDate"
+          - "Microsoft.VSTS.Scheduling.DueDate"
+
+# =============================================================================
+# CONFIGURACIÓN ORGANIZACIONAL POR DEFECTO (REQUERIDA)
+# =============================================================================
 organizationConfig:
-  defaultProject: "Gerencia_Tecnologia"
+  defaultProject: "gerencia-tecnologia"
   defaultAreaPath: "Gerencia_Tecnologia"
   defaultIterationPath: "Gerencia_Tecnologia"
   
-  # Campos obligatorios comunes a toda la organización
   commonRequiredFields:
     - "System.Title"
     - "System.AreaPath"
     - "System.IterationPath"
+    - "System.State"
   
-  # Mapeo de valores por defecto
   defaultValues:
-    "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3": "No" # Migración Datos
-    "Custom.Lahistoriacorrespondeauncumplimientoregulatorio": "No" # Cumplimiento Regulatorio
-    "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1": "No" # Control Automático
+    "System.AreaPath": "Gerencia_Tecnologia"
+    "System.IterationPath": "Gerencia_Tecnologia"
+    "Microsoft.VSTS.Common.Priority": 2
+    "Custom.Lahistoriahacepartedeunamigraciondedatos": false
+    "Custom.Lahistoriacorrespondeauncumplimientoregulatorio": false
+    "Custom.Lahistoriahaceparteduncontrolautomatico": false
     "Custom.Bloqueante": false
 
-# Metadatos del descubrimiento
-discoveryMetadata:
-  version: "1.0.0"
-  toolVersion: "mcp-server-1.0.0"
-  analysisDepth: "complete"
-  confidenceLevel: "high"
-  
-  statistics:
-    totalProjects: 3
-    totalTeams: 28
-    totalWorkItemTypes: 6
-    totalCustomFields: 12
-    uniquePrefixes: 4
+# =============================================================================
+# PATRONES ORGANIZACIONALES DETECTADOS
+# =============================================================================
+organizationalPatterns:
+  teamPrefixes:
+    - prefix: "egv-asegur"
+      description: "Equipos de aseguramiento EGV"
+      domain: "aseguramiento"
+    
+    - prefix: "do"
+      description: "Equipos de dominio operativo"
+      domain: "operativo"
+    
+    - prefix: "t"
+      description: "Equipos de tecnología"
+      domain: "tecnologia"
+    
+    - prefix: "t-arc"
+      description: "Equipos de arquitectura técnica"
+      domain: "arquitectura"
+    
+    - prefix: "mod"
+      description: "Equipos de modelo operativo"
+      domain: "modelo_operativo"
 
-# Recomendaciones para hacer la aplicación genérica
-genericApplicationRecommendations:
-  contextualQueryEnrichment:
-    description: |
-      La aplicación debe mantener su naturaleza genérica pero enriquecer automáticamente 
-      las consultas WIQL basándose en el contexto organizacional descubierto.
+  workItemHierarchy:
+    - level: 1
+      type: "Proyecto"
+      description: "Nivel más alto de planificación"
     
-    implementation:
-      - component: "OrganizationContextService"
-        purpose: "Cargar dinámicamente configuración organizacional desde YAML"
-        
-      - component: "QueryEnrichmentService"  
-        purpose: "Enriquecer consultas WIQL simples con campos contextuales"
-        
-      - component: "FieldMappingService"
-        purpose: "Mapear campos organizacionales a nombres técnicos"
+    - level: 2
+      type: "Épica"
+      description: "Agrupación de historias"
     
-    benefits:
-      - "Mantiene genericidad del código"
-      - "Consultas automáticamente incluyen campos relevantes"
-      - "Fechas de planificación siempre disponibles"
-      - "Adaptable a cualquier organización"
-      
-  configurationDrivenApproach:
-    description: |
-      Toda la lógica específica de organización debe extraerse a archivos de configuración,
-      eliminando hardcoding en el código Java.
+    - level: 3
+      type: "Historia"
+      description: "Funcionalidad entregable"
     
-    migrationPlan:
-      phase1: "Extraer mapeos de campos a YAML"
-      phase2: "Implementar carga dinámica de configuración"
-      phase3: "Crear servicio de contexto organizacional"
-      phase4: "Integrar enriquecimiento automático de consultas"
-      
-    configurationFiles:
-      - file: "discovered-organization.yml"
-        content: "Estructura completa descubierta"
-        
-      - file: "field-mappings.yml"
-        content: "Mapeo de campos personalizados"
-        
-      - file: "business-rules.yml"
-        content: "Reglas de negocio organizacionales"
-        
-      - file: "wiql-templates.yml"
-        content: "Plantillas de consultas comunes"
+    - level: 4
+      type: "Tarea"
+      description: "Trabajo específico para implementar una historia"
+    
+    - level: 5
+      type: "Subtarea"
+      description: "Descomposición granular de tareas"
 
-# Lecciones aprendidas durante el desarrollo
-lessonsLearned:
-  dateFieldsMissing:
-    issue: "Campos de fecha críticos no se incluían en consultas WIQL"
-    impact: "Features aparecían sin fechas estimadas de finalización"
-    solution: "Enriquecimiento automático de consultas con campos de fecha"
-    
-  hardcodedLogic:
-    issue: "Lógica específica de Sura hardcodeada en Java"
-    impact: "Aplicación no reutilizable para otras organizaciones"
-    solution: "Configuración dinámica basada en YAML"
-    
-  queryEnrichment:
-    issue: "Consultas básicas no incluían información completa"
-    impact: "Información limitada en respuestas"
-    solution: "Servicio de enriquecimiento contextual automático"
-
-# Próximos pasos recomendados
-nextSteps:
-  immediate:
-    - "Activar enriquecimiento de consultas WIQL"
-    - "Validar campos de fecha en todas las consultas"
-    - "Documentar campos faltantes identificados"
-    
-  shortTerm:
-    - "Crear servicio de descubrimiento automático real"
-    - "Implementar validación de campos organizacionales"
-    - "Agregar tests para diferentes configuraciones organizacionales"
-    
-  longTerm:
-    - "Desarrollar herramienta de migración de configuración"
-    - "Crear marketplace de configuraciones organizacionales"
-    - "Implementar análisis automático de campos faltantes"
+# =============================================================================
+# ESTADÍSTICAS DE DESCUBRIMIENTO
+# =============================================================================
+discoveryStats:
+  totalTeamsAnalyzed: 100
+  activeTeams: 85
+  inactiveTeams: 15
+  customFieldsFound: 28
+  standardWorkItemTypes: 15
+  customWorkItemTypes: 28
+  projectsWithCustomTypes: 3
+  averageFieldsPerWorkItemType: 65
