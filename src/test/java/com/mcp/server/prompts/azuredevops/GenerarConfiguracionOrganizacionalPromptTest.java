@@ -116,7 +116,7 @@ class GenerarConfiguracionOrganizacionalPromptTest {
         
         // Verificar contenido del mensaje de usuario
         assertTrue(userMessage.contains("VERIFICAR ARCHIVOS EXISTENTES"));
-        assertTrue(userMessage.contains("EJECUTAR DESCUBRIMIENTO ORGANIZACIONAL"));
+        assertTrue(userMessage.contains("OBTENER CONTEXTO ORGANIZACIONAL DINÁMICO"));
         assertTrue(userMessage.contains("GENERAR ESTRUCTURA COMPLETA"));
         assertTrue(userMessage.contains("CREAR ARCHIVOS DE CONFIGURACIÓN"));
         assertTrue(userMessage.contains("azuredevops_discover_organization"));
