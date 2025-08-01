@@ -13,24 +13,17 @@ import com.mcp.server.tools.base.McpTool;
 import com.mcp.server.utils.discovery.AzureDevOpsPicklistInvestigator;
 import com.mcp.server.utils.discovery.AzureDevOpsFieldValidator;
 import com.mcp.server.utils.discovery.AzureDevOpsWiqlUtility;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import com.mcp.server.utils.discovery.AzureDevOpsOrganizationInvestigator;
+import com.mcp.server.utils.discovery.OrganizationFieldInvestigation;
+import com.mcp.server.utils.discovery.AzureDevOpsConfigurationGenerator;
+import com.mcp.server.utils.http.AzureDevOpsHttpUtil;
+import com.mcp.server.utils.json.AzureDevOpsJsonParser;
+import com.mcp.server.utils.config.AzureDevOpsConfigUtil;
 
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.Base64;
 import java.util.stream.Collectors;
 
 /**
@@ -38,22 +31,21 @@ import java.util.stream.Collectors;
  * Genera información sobre proyectos, equipos, tipos de work items y campos disponibles.
  * Utiliza configuración desde archivos YML y completa automáticamente valores faltantes.
  */
-@Component
 public class DiscoverOrganizationTool implements McpTool {
-    
-    private static final Logger logger = LoggerFactory.getLogger(DiscoverOrganizationTool.class);
     
     private final AzureDevOpsClient azureDevOpsClient;
     private final OrganizationConfigService configService;
     private final OrganizationalConfigService orgConfigService;
     private final GetWorkItemTypesTool getWorkItemTypesTool;
     
-    // Utilidades centralizadas
+    // Utilidades centralizadas REFACTORIZADAS
+    private final AzureDevOpsOrganizationInvestigator organizationInvestigator;
+    private final AzureDevOpsConfigurationGenerator configurationGenerator;
     private final AzureDevOpsPicklistInvestigator picklistInvestigator;
     private final AzureDevOpsFieldValidator fieldValidator;
     private final AzureDevOpsWiqlUtility wiqlUtility;
+    private final AzureDevOpsHttpUtil httpUtil;
     
-    @Autowired
     public DiscoverOrganizationTool(AzureDevOpsClient azureDevOpsClient, OrganizationConfigService configService, 
                                    OrganizationalConfigService orgConfigService, GetWorkItemTypesTool getWorkItemTypesTool) {
         this.azureDevOpsClient = azureDevOpsClient;
@@ -61,10 +53,27 @@ public class DiscoverOrganizationTool implements McpTool {
         this.orgConfigService = orgConfigService;
         this.getWorkItemTypesTool = getWorkItemTypesTool;
         
-        // Inicializar utilidades centralizadas
+        // Inicializar utilidades especializadas
         this.picklistInvestigator = new AzureDevOpsPicklistInvestigator(azureDevOpsClient);
         this.fieldValidator = new AzureDevOpsFieldValidator(azureDevOpsClient, picklistInvestigator);
         this.wiqlUtility = new AzureDevOpsWiqlUtility(azureDevOpsClient);
+        
+        // Inicializar utilidad HTTP (solo si azureDevOpsClient no es null - para testing)
+        if (azureDevOpsClient != null) {
+            String organization = AzureDevOpsConfigUtil.getOrganization();
+            this.httpUtil = new AzureDevOpsHttpUtil(azureDevOpsClient, organization);
+            
+            // Inicializar investigador organizacional centralizado
+            this.organizationInvestigator = new AzureDevOpsOrganizationInvestigator(azureDevOpsClient, getWorkItemTypesTool);
+            
+            // Inicializar generador de configuración
+            this.configurationGenerator = new AzureDevOpsConfigurationGenerator(organizationInvestigator);
+        } else {
+            // Para testing - inicializar con valores null
+            this.httpUtil = null;
+            this.organizationInvestigator = null;
+            this.configurationGenerator = null;
+        }
     }
     
     @Override
@@ -1161,81 +1170,31 @@ public class DiscoverOrganizationTool implements McpTool {
     }
     
     /**
-     * Análisis detallado de valores de picklist
+     * Análisis detallado de valores de picklist - REFACTORIZADO
      */
     private String analyzePicklistValuesDetailed(String project) {
         StringBuilder analysis = new StringBuilder();
         analysis.append("🔍 Iniciando análisis detallado de valores de picklist para proyecto: ").append(project).append("\n\n");
         
         try {
-            // Obtener información de tipos de work items usando la herramienta existente
-            Map<String, Object> arguments = Map.of(
-                "project", project,
-                "includeExtendedInfo", true,
-                "includeFieldDetails", true
-            );
-            
-            Map<String, Object> result = getWorkItemTypesTool.execute(arguments);
-            
-            if (result.containsKey("isError") && (Boolean) result.get("isError")) {
-                analysis.append("❌ Error obteniendo tipos de work items: ");
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> content = (List<Map<String, Object>>) result.get("content");
-                if (!content.isEmpty()) {
-                    analysis.append(content.get(0).get("text"));
-                }
-                return analysis.toString();
-            }
-            
-            // **INVESTIGACIÓN AUTOMÁTICA USANDO UTILIDADES CENTRALIZADAS**
-            analysis.append("🔧 **INVESTIGACIÓN AUTOMÁTICA DE VALORES DE PICKLIST**\n");
+            // **USAR INVESTIGADOR ORGANIZACIONAL CENTRALIZADO**
+            analysis.append("🔧 **INVESTIGACIÓN USANDO INVESTIGADOR ORGANIZACIONAL**\n");
             analysis.append("====================================================\n");
-            analysis.append("Usando utilidades centralizadas para análisis optimizado\n\n");
+            analysis.append("Utilizando AzureDevOpsOrganizationInvestigator para análisis completo y optimizado\n\n");
             
-            // Investigar campos específicos usando la utilidad centralizada
-            analysis.append("🔹 **Campo: Tipo de Historia (Custom.TipodeHistoria)**\n");
-            String valoresTipoHistoria = investigatePicklistFieldWithUtility(project, "Historia", "Custom.TipodeHistoria");
-            analysis.append(valoresTipoHistoria).append("\n");
+            // Realizar investigación completa de la organización
+            OrganizationFieldInvestigation investigation = organizationInvestigator.performCompleteInvestigation(project);
             
-            // Investigar campo con ID UUID
-            analysis.append("🔹 **Campo: Tipo de Historia Técnica (Custom.14858558-3edb-485a-9a52-a38c03c65c62)**\n");
-            String valoresTipoHistoriaTecnica = investigatePicklistFieldWithUtility(project, "Historia técnica", "Custom.14858558-3edb-485a-9a52-a38c03c65c62");
-            analysis.append(valoresTipoHistoriaTecnica).append("\n");
+            // Generar reporte detallado usando el investigador
+            String detailedReport = organizationInvestigator.generateDetailedReport(investigation);
+            analysis.append(detailedReport);
             
-            // Investigar otros campos problemáticos usando validador
-            analysis.append("🔹 **Validación de Otros Campos Identificados:**\n");
-            List<String> camposProblematicos = List.of(
-                "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3",
-                "Custom.Lahistoriacorrespondeauncumplimientoregulatorio", 
-                "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1",
-                "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"
-            );
-            
-            Map<String, AzureDevOpsFieldValidator.FieldValidationResult> validationResults = 
-                fieldValidator.validateFieldsExistence(project, null, camposProblematicos);
-                
-            for (Map.Entry<String, AzureDevOpsFieldValidator.FieldValidationResult> entry : validationResults.entrySet()) {
-                String campo = entry.getKey();
-                AzureDevOpsFieldValidator.FieldValidationResult validationResult = entry.getValue();
-                
-                analysis.append("   • ").append(campo).append(" - ");
-                analysis.append(validationResult.isValid() ? "✅" : "❌").append(" ");
-                analysis.append(validationResult.message()).append("\n");
-                
-                if (validationResult.isValid()) {
-                    // Obtener valores permitidos usando la utilidad
-                    List<String> allowedValues = picklistInvestigator.getFieldAllowedValues(project, null, campo);
-                    if (!allowedValues.isEmpty()) {
-                        analysis.append("     Valores permitidos: ").append(String.join(", ", allowedValues)).append("\n");
-                    }
-                }
-            }
-            analysis.append("\n");
-            
-            // Análisis de work items existentes usando WIQL centralizado
-            analysis.append("📊 **ANÁLISIS DE WORK ITEMS EXISTENTES (WIQL CENTRALIZADO)**\n");
-            analysis.append("===========================================================\n");
-            analysis.append(analyzeExistingWorkItemsWithUtility(project));
+            // Análisis específico de campos problemáticos conocidos
+            analysis.append("\n� **ANÁLISIS DE CAMPOS PROBLEMÁTICOS ESPECÍFICOS**\n");
+            analysis.append("==================================================\n");
+            AzureDevOpsOrganizationInvestigator.ProblematicFieldsAnalysis problematicAnalysis = 
+                organizationInvestigator.analyzeProblematicFields(project);
+            analysis.append(problematicAnalysis.generateReport());
             
         } catch (Exception e) {
             analysis.append("❌ Error durante el análisis: ").append(e.getMessage()).append("\n");
@@ -1245,35 +1204,40 @@ public class DiscoverOrganizationTool implements McpTool {
     }
     
     /**
-     * Investiga campos de picklist específicos usando las utilidades centralizadas.
+     * Investiga campos de picklist específicos usando el investigador organizacional - REFACTORIZADO.
      */
     private String investigatePicklistFieldWithUtility(String project, String workItemType, String fieldName) {
         StringBuilder investigation = new StringBuilder();
         
         try {
-            // Usar la utilidad centralizada para obtener información del campo
-            AzureDevOpsFieldValidator.FieldTypeInfo typeInfo = fieldValidator.detectFieldType(project, workItemType, fieldName);
+            // Usar el investigador organizacional para análisis específico de campos problemáticos
+            AzureDevOpsOrganizationInvestigator.ProblematicFieldsAnalysis analysis = 
+                organizationInvestigator.analyzeProblematicFields(project);
             
-            investigation.append("   📋 **Tipo detectado:** ").append(typeInfo.type()).append("\n");
-            investigation.append("   📄 **Descripción:** ").append(typeInfo.description()).append("\n");
-            
-            // Obtener valores permitidos usando la utilidad de picklist
-            List<String> allowedValues = picklistInvestigator.getFieldAllowedValues(project, workItemType, fieldName);
-            
-            if (!allowedValues.isEmpty()) {
-                investigation.append("   ✅ **Valores permitidos encontrados (").append(allowedValues.size()).append(" valores):**\n");
-                for (String valor : allowedValues) {
-                    investigation.append("      • ").append(valor).append("\n");
+            // Verificar si el campo está en el análisis de campos problemáticos
+            if (analysis.getValidationResults().containsKey(fieldName)) {
+                AzureDevOpsFieldValidator.FieldValidationResult result = analysis.getValidationResults().get(fieldName);
+                
+                investigation.append("   � **Estado de validación:** ");
+                investigation.append(result.isValid() ? "✅ Válido" : "❌ No válido").append("\n");
+                investigation.append("   📄 **Mensaje:** ").append(result.message()).append("\n");
+                investigation.append("   📋 **Categoría:** ").append(result.category()).append("\n");
+                
+                // Obtener valores si están disponibles
+                if (analysis.getFieldValues().containsKey(fieldName)) {
+                    List<String> values = analysis.getFieldValues().get(fieldName);
+                    investigation.append("   ✅ **Valores encontrados (").append(values.size()).append(" valores):**\n");
+                    for (String valor : values) {
+                        investigation.append("      • ").append(valor).append("\n");
+                    }
+                } else {
+                    investigation.append("   ⚠️  **No se encontraron valores permitidos**\n");
+                    investigation.append("   💡 **Sugerencia:** Verificar configuración del campo o crear work items de muestra\n");
                 }
             } else {
-                investigation.append("   ⚠️  **No se encontraron valores permitidos**\n");
-                investigation.append("   💡 **Sugerencia:** Verificar configuración del campo o crear work items de muestra\n");
+                investigation.append("   ⚠️  **Campo no encontrado en análisis de campos problemáticos**\n");
+                investigation.append("   💡 **Sugerencia:** El campo podría no existir o tener un nombre diferente\n");
             }
-            
-            // Validar si el campo es personalizado válido
-            boolean isValidCustomField = fieldValidator.isValidCustomField(project, workItemType, fieldName);
-            investigation.append("   🔍 **Validación de campo personalizado:** ");
-            investigation.append(isValidCustomField ? "✅ Válido" : "❌ No válido").append("\n");
             
         } catch (Exception e) {
             investigation.append("   ❌ **Error durante investigación:** ").append(e.getMessage()).append("\n");
@@ -1283,51 +1247,50 @@ public class DiscoverOrganizationTool implements McpTool {
     }
     
     /**
-     * Analiza work items existentes usando las utilidades WIQL centralizadas.
+     * Analiza work items existentes usando el investigador organizacional - REFACTORIZADO.
      */
     private String analyzeExistingWorkItemsWithUtility(String project) {
         StringBuilder analysis = new StringBuilder();
         
         try {
-            // Usar WIQL utility para obtener muestra de work items
-            String sampleQuery = wiqlUtility.buildSampleWorkItemsQuery(null, 20);
-            analysis.append("📊 **Consulta WIQL generada:** ").append(sampleQuery).append("\n\n");
+            // Realizar investigación completa de la organización que incluye análisis de work items
+            OrganizationFieldInvestigation investigation = organizationInvestigator.performCompleteInvestigation(project);
             
-            // Validar la consulta antes de ejecutarla
-            AzureDevOpsWiqlUtility.WiqlValidationResult validationResult = wiqlUtility.validateWiqlQuery(sampleQuery);
-            analysis.append("🔍 **Validación de consulta:** ");
-            analysis.append(validationResult.isValid() ? "✅ Válida" : "❌ No válida").append("\n");
+            // Analizar resumen de la investigación
+            OrganizationFieldInvestigation.InvestigationSummary summary = investigation.getSummary();
             
-            if (!validationResult.warnings().isEmpty()) {
-                analysis.append("⚠️  **Advertencias:**\n");
-                for (String warning : validationResult.warnings()) {
-                    analysis.append("   • ").append(warning).append("\n");
+            analysis.append("� **Resumen de investigación organizacional:**\n");
+            analysis.append("   • Tipos de Work Items encontrados: ").append(summary.getTotalWorkItemTypes()).append("\n");
+            analysis.append("   • Total de campos analizados: ").append(summary.getTotalFields()).append("\n");
+            analysis.append("   • Campos personalizados: ").append(summary.getCustomFieldsFound()).append("\n");
+            analysis.append("   • Campos con picklist: ").append(summary.getPicklistFieldsFound()).append("\n\n");
+            
+            // Mostrar tipos de work items encontrados
+            analysis.append("📋 **Tipos de Work Items disponibles:**\n");
+            for (var type : investigation.getWorkItemTypes()) {
+                analysis.append("   • ").append(type.getTypeName());
+                if (type.getDescription() != null) {
+                    analysis.append(" - ").append(type.getDescription());
                 }
+                analysis.append("\n");
             }
             analysis.append("\n");
             
-            if (validationResult.isValid()) {
-                // Ejecutar la consulta usando la utilidad
-                WiqlQueryResult queryResult = wiqlUtility.executeWiqlQuery(project, null, sampleQuery);
-                
-                if (queryResult != null && queryResult.workItems() != null) {
-                    analysis.append("📈 **Resultados encontrados:** ").append(queryResult.workItems().size()).append(" work items\n");
-                    
-                    // Analizar algunos work items como muestra
-                    List<Integer> workItemIds = queryResult.getWorkItemIds();
-                    int maxToAnalyze = Math.min(workItemIds.size(), 5);
-                    
-                    for (int i = 0; i < maxToAnalyze; i++) {
-                        Integer workItemId = workItemIds.get(i);
-                        analysis.append("   • Work Item ID: ").append(workItemId).append("\n");
-                    }
-                    
-                    if (workItemIds.size() > maxToAnalyze) {
-                        analysis.append("   ... y ").append(workItemIds.size() - maxToAnalyze).append(" más\n");
-                    }
-                } else {
-                    analysis.append("⚠️  **No se encontraron work items o hubo error en la consulta**\n");
+            // Mostrar campos personalizados críticos encontrados
+            if (!investigation.getCustomFields().isEmpty()) {
+                analysis.append("🔧 **Campos personalizados críticos encontrados:**\n");
+                int maxFieldsToShow = Math.min(investigation.getCustomFields().size(), 5);
+                for (int i = 0; i < maxFieldsToShow; i++) {
+                    var field = investigation.getCustomFields().get(i);
+                    analysis.append("   • ").append(field.getName());
+                    analysis.append(" (").append(field.getReferenceName()).append(")");
+                    analysis.append(" - Tipo: ").append(field.getType()).append("\n");
                 }
+                if (investigation.getCustomFields().size() > maxFieldsToShow) {
+                    analysis.append("   ... y ").append(investigation.getCustomFields().size() - maxFieldsToShow).append(" más\n");
+                }
+            } else {
+                analysis.append("⚠️  **No se encontraron campos personalizados o hubo error en la consulta**\n");
             }
             
         } catch (Exception e) {
@@ -1827,10 +1790,8 @@ public class DiscoverOrganizationTool implements McpTool {
         List<String> projects = new ArrayList<>();
         
         try {
-            String url = String.format("https://dev.azure.com/%s/_apis/projects?api-version=7.1", 
-                    getOrganizationFromConfig());
-            
-            String response = makeDirectApiRequest(url);
+                String url = String.format("https://dev.azure.com/%s/_apis/projects?api-version=7.1",
+                    azureDevOpsClient.getOrganization());            String response = makeDirectApiRequest(url);
             if (response != null && response.contains("\"value\"")) {
                 projects = parseProjectNames(response);
             }
@@ -2669,7 +2630,7 @@ public class DiscoverOrganizationTool implements McpTool {
             System.out.println("🔄 Ejecutando consulta directa a la API para: " + project);
             
             String url = String.format("https://dev.azure.com/%s/%s/_apis/wit/workitemtypes?api-version=7.1", 
-                    getOrganizationFromConfig(), project);
+                    azureDevOpsClient.getOrganization(), project);
             
             String response = makeDirectApiRequest(url);
             if (response != null) {
@@ -2723,7 +2684,7 @@ public class DiscoverOrganizationTool implements McpTool {
         try {
             String encodedTypeName = java.net.URLEncoder.encode(workItemTypeName, StandardCharsets.UTF_8);
             String url = String.format("https://dev.azure.com/%s/%s/_apis/wit/workitemtypes/%s?api-version=7.1", 
-                    getOrganizationFromConfig(), project, encodedTypeName);
+                    azureDevOpsClient.getOrganization(), project, encodedTypeName);
             
             String response = makeDirectApiRequest(url);
             if (response != null) {
@@ -2821,7 +2782,7 @@ public class DiscoverOrganizationTool implements McpTool {
         try {
             String encodedTypeName = java.net.URLEncoder.encode(workItemTypeName, StandardCharsets.UTF_8);
             String url = String.format("https://dev.azure.com/%s/%s/_apis/wit/workitemtypes/%s?api-version=7.1", 
-                    getOrganizationFromConfig(), project, encodedTypeName);
+                    azureDevOpsClient.getOrganization(), project, encodedTypeName);
             
             String response = makeDirectApiRequest(url);
             if (response != null) {
@@ -3087,7 +3048,7 @@ public class DiscoverOrganizationTool implements McpTool {
                         .collect(Collectors.joining(","));
                 
                 String url = String.format("https://dev.azure.com/%s/%s/_apis/wit/workitems?ids=%s&fields=%s&api-version=7.1", 
-                        getOrganizationFromConfig(), project, idsParam, fieldsParam);
+                        azureDevOpsClient.getOrganization(), project, idsParam, fieldsParam);
                 
                 String response = makeDirectApiRequest(url);
                 if (response != null) {
@@ -3136,7 +3097,7 @@ public class DiscoverOrganizationTool implements McpTool {
         
         try {
             String url = String.format("https://dev.azure.com/%s/%s/_apis/wit/fields?api-version=7.1", 
-                    getOrganizationFromConfig(), project);
+                    azureDevOpsClient.getOrganization(), project);
             
             String response = makeDirectApiRequest(url);
             if (response != null) {
@@ -3216,7 +3177,7 @@ public class DiscoverOrganizationTool implements McpTool {
                 
                 // Buscar picklistId si existe en este campo
                 String fieldBlock = matcher.group(0);
-                String picklistId = extractJsonValue(fieldBlock, "picklistId");
+                String picklistId = AzureDevOpsJsonParser.extractSimpleValue(fieldBlock, "picklistId");
                 if (picklistId != null) {
                     field.put("picklistId", picklistId);
                 }
@@ -3230,16 +3191,10 @@ public class DiscoverOrganizationTool implements McpTool {
         return fields;
     }
     
-    private String extractJsonValue(String json, String key) {
-        Pattern pattern = Pattern.compile("\"" + key + "\"\\s*:\\s*\"([^\"]+)\"");
-        Matcher matcher = pattern.matcher(json);
-        return matcher.find() ? matcher.group(1) : null;
-    }
-    
     private List<String> tryGetPicklistFromProcesses(String picklistId) {
         try {
             String url = String.format("https://dev.azure.com/%s/_apis/work/processes/lists/%s?api-version=7.1", 
-                    getOrganizationFromConfig(), picklistId);
+                    azureDevOpsClient.getOrganization(), picklistId);
             
             String response = makeDirectApiRequest(url);
             if (response != null && response.contains("\"items\"")) {
@@ -3254,7 +3209,7 @@ public class DiscoverOrganizationTool implements McpTool {
     private List<String> tryGetPicklistFromProjectContext(String project, String picklistId) {
         try {
             String url = String.format("https://dev.azure.com/%s/%s/_apis/work/processes/lists/%s?api-version=7.1", 
-                    getOrganizationFromConfig(), project, picklistId);
+                    azureDevOpsClient.getOrganization(), project, picklistId);
             
             String response = makeDirectApiRequest(url);
             if (response != null && response.contains("\"items\"")) {
@@ -3269,7 +3224,7 @@ public class DiscoverOrganizationTool implements McpTool {
     private List<String> tryGetPicklistFromFieldEndpoint(String project, String fieldReferenceName) {
         try {
             String url = String.format("https://dev.azure.com/%s/%s/_apis/wit/fields/%s/allowedValues?api-version=7.1", 
-                    getOrganizationFromConfig(), project, fieldReferenceName);
+                    azureDevOpsClient.getOrganization(), project, fieldReferenceName);
             
             String response = makeDirectApiRequest(url);
             if (response != null && response.contains("\"value\"")) {
@@ -3561,29 +3516,7 @@ public class DiscoverOrganizationTool implements McpTool {
     
     // Métodos auxiliares para obtener configuración
     
-    private String getOrganizationFromConfig() {
-        // Obtener de la variable de entorno directamente
-        String org = System.getenv("AZURE_DEVOPS_ORGANIZATION");
-        if (org != null && !org.isEmpty()) {
-            return org;
-        }
-        
-        // Fallback al config service
-        Map<String, Object> config = configService.getDefaultOrganizationConfig();
-        return (String) config.get("organization");
-    }
-    
-    private String getPersonalAccessTokenFromConfig() {
-        // Obtener de la variable de entorno directamente
-        String pat = System.getenv("AZURE_DEVOPS_PAT");
-        if (pat != null && !pat.isEmpty()) {
-            return pat;
-        }
-        
-        // En una implementación real, esto vendría de configuración segura
-        // Por ahora devolvemos null para usar la configuración del AzureDevOpsClient
-        return null;
-    }
+
     
     /**
      * Documenta los valores válidos para campos obligatorios de un tipo específico de work item
@@ -3702,7 +3635,7 @@ public class DiscoverOrganizationTool implements McpTool {
         try {
             // Intentar obtener desde definición de campo
             String url = String.format("https://dev.azure.com/%s/%s/_apis/wit/fields/%s?api-version=7.1", 
-                    getOrganizationFromConfig(), project, azureFieldName.replace(".", "%2E"));
+                    azureDevOpsClient.getOrganization(), project, azureFieldName.replace(".", "%2E"));
             
             String response = makeDirectApiRequest(url);
             if (response != null) {
@@ -3730,7 +3663,7 @@ public class DiscoverOrganizationTool implements McpTool {
         try {
             String encodedType = java.net.URLEncoder.encode(workItemType, StandardCharsets.UTF_8);
             String url = String.format("https://dev.azure.com/%s/%s/_apis/wit/workitemtypes/%s?api-version=7.1", 
-                    getOrganizationFromConfig(), project, encodedType);
+                    azureDevOpsClient.getOrganization(), project, encodedType);
             
             String response = makeDirectApiRequest(url);
             if (response != null) {
@@ -3968,7 +3901,7 @@ public class DiscoverOrganizationTool implements McpTool {
         try {
             String encodedType = java.net.URLEncoder.encode(workItemType, StandardCharsets.UTF_8);
             String url = String.format("https://dev.azure.com/%s/%s/_apis/wit/workitemtypes/%s?$expand=fields,states,transitions&api-version=7.1", 
-                    getOrganizationFromConfig(), project, encodedType);
+                    azureDevOpsClient.getOrganization(), project, encodedType);
             
             String response = makeDirectApiRequest(url);
             if (response != null) {
@@ -4199,7 +4132,7 @@ public class DiscoverOrganizationTool implements McpTool {
         
         try {
             String url = String.format("https://dev.azure.com/%s/%s/_apis/wit/fields?api-version=7.1", 
-                    getOrganizationFromConfig(), project);
+                    azureDevOpsClient.getOrganization(), project);
             
             String response = makeDirectApiRequest(url);
             if (response != null) {
@@ -4463,7 +4396,7 @@ public class DiscoverOrganizationTool implements McpTool {
             // URL para obtener definición específica del campo
             String encodedFieldName = java.net.URLEncoder.encode(referenceName, StandardCharsets.UTF_8);
             String url = String.format("https://dev.azure.com/%s/%s/_apis/wit/fields/%s?api-version=7.1", 
-                    getOrganizationFromConfig(), project, encodedFieldName);
+                    azureDevOpsClient.getOrganization(), project, encodedFieldName);
             
             String response = makeDirectApiRequest(url);
             if (response != null) {
@@ -4491,7 +4424,7 @@ public class DiscoverOrganizationTool implements McpTool {
             extractFieldProperty(jsonResponse, "description", definition);
             
             // CRÍTICO: Extraer picklistId si existe
-            String picklistId = extractJsonValue(jsonResponse, "picklistId");
+            String picklistId = AzureDevOpsJsonParser.extractSimpleValue(jsonResponse, "picklistId");
             if (picklistId != null && !picklistId.trim().isEmpty()) {
                 definition.put("picklistId", picklistId);
                 
@@ -4527,7 +4460,7 @@ public class DiscoverOrganizationTool implements McpTool {
             // URL para obtener definición específica del campo
             String encodedFieldName = java.net.URLEncoder.encode(referenceName, StandardCharsets.UTF_8);
             String url = String.format("https://dev.azure.com/%s/%s/_apis/wit/fields/%s?api-version=7.1", 
-                    getOrganizationFromConfig(), project, encodedFieldName);
+                    azureDevOpsClient.getOrganization(), project, encodedFieldName);
             
             String response = makeDirectApiRequest(url);
             if (response != null) {
@@ -4536,7 +4469,7 @@ public class DiscoverOrganizationTool implements McpTool {
                 
                 // Si no se encontraron valores directos, buscar en picklistId
                 if (allowedValues.isEmpty()) {
-                    String picklistId = extractJsonValue(response, "picklistId");
+                    String picklistId = AzureDevOpsJsonParser.extractSimpleValue(response, "picklistId");
                     if (picklistId != null && !picklistId.trim().isEmpty()) {
                         allowedValues = getPicklistValues(project, referenceName, picklistId);
                     }
@@ -4567,13 +4500,13 @@ public class DiscoverOrganizationTool implements McpTool {
             
             // Limitar resultados para evitar sobrecarga
             String queryUrl = String.format("https://dev.azure.com/%s/%s/_apis/wit/wiql?$top=50&api-version=7.1", 
-                    getOrganizationFromConfig(), project);
+                    azureDevOpsClient.getOrganization(), project);
             
             String requestBody = String.format("{\"query\":\"%s\"}", wiqlQuery.replace("\"", "\\\""));
             String response = makePostRequest(queryUrl, requestBody);
             
             if (response != null) {
-                List<Integer> workItemIds = extractWorkItemIdsFromWiqlResponse(response);
+                List<Integer> workItemIds = AzureDevOpsJsonParser.extractWorkItemIds(response);
                 
                 // Para cada work item, obtener el valor del campo
                 for (Integer workItemId : workItemIds) {
@@ -4601,7 +4534,7 @@ public class DiscoverOrganizationTool implements McpTool {
     private String getFieldValueFromWorkItem(String project, Integer workItemId, String referenceName) {
         try {
             String url = String.format("https://dev.azure.com/%s/%s/_apis/wit/workitems/%d?fields=%s&api-version=7.1",
-                    getOrganizationFromConfig(), project, workItemId, referenceName);
+                    azureDevOpsClient.getOrganization(), project, workItemId, referenceName);
             
             String response = makeDirectApiRequest(url);
             if (response != null) {
@@ -4661,7 +4594,7 @@ public class DiscoverOrganizationTool implements McpTool {
             String relativeEndpoint = endpoint;
             if (endpoint.startsWith("https://dev.azure.com/")) {
                 // Extraer la parte después de la organización
-                String orgName = getOrganizationFromConfig();
+                String orgName = azureDevOpsClient.getOrganization();
                 String orgPrefix = "https://dev.azure.com/" + orgName;
                 if (endpoint.startsWith(orgPrefix)) {
                     relativeEndpoint = endpoint.substring(orgPrefix.length());
@@ -4680,36 +4613,6 @@ public class DiscoverOrganizationTool implements McpTool {
     }
     
     /**
-     * Extrae los IDs de work items de una respuesta WIQL
-     */
-    private List<Integer> extractWorkItemIdsFromWiqlResponse(String jsonResponse) {
-        List<Integer> workItemIds = new ArrayList<>();
-        
-        try {
-            // Buscar sección "workItems" en la respuesta
-            Pattern workItemsPattern = Pattern.compile("\"workItems\"\\s*:\\s*\\[([^\\]]+)\\]");
-            Matcher workItemsMatcher = workItemsPattern.matcher(jsonResponse);
-            
-            if (workItemsMatcher.find()) {
-                String workItemsSection = workItemsMatcher.group(1);
-                
-                // Extraer cada ID individual
-                Pattern idPattern = Pattern.compile("\"id\"\\s*:\\s*(\\d+)");
-                Matcher idMatcher = idPattern.matcher(workItemsSection);
-                
-                while (idMatcher.find()) {
-                    workItemIds.add(Integer.parseInt(idMatcher.group(1)));
-                }
-            }
-            
-        } catch (Exception e) {
-            System.err.println("Error extrayendo IDs de work items de respuesta WIQL: " + e.getMessage());
-        }
-        
-        return workItemIds;
-    }
-    
-    /**
      * Realiza una petición HTTP GET usando AzureDevOpsClient
      */
     private String makeHttpGetRequest(String url) {
@@ -4718,7 +4621,7 @@ public class DiscoverOrganizationTool implements McpTool {
             String relativeEndpoint = url;
             if (url.startsWith("https://dev.azure.com/")) {
                 // Extraer la parte después de la organización
-                String orgName = getOrganizationFromConfig();
+                String orgName = azureDevOpsClient.getOrganization();
                 String orgPrefix = "https://dev.azure.com/" + orgName;
                 if (url.startsWith(orgPrefix)) {
                     relativeEndpoint = url.substring(orgPrefix.length());
@@ -4840,7 +4743,7 @@ public class DiscoverOrganizationTool implements McpTool {
     private Map<String, Object> findWorkItemAcrossProjects(Integer workItemId) {
         try {
             // Primero, intentar obtener la lista de proyectos
-            String organization = getOrganizationFromConfig();
+            String organization = azureDevOpsClient.getOrganization();
             String url = String.format("https://dev.azure.com/%s/_apis/projects?api-version=6.0", organization);
             String projectsResponse = makeHttpGetRequest(url);
             
@@ -5070,10 +4973,9 @@ public class DiscoverOrganizationTool implements McpTool {
     // MÉTODOS DE INVESTIGACIÓN FINAL
     
     private String performWorkItemTypesInvestigation(String projectName, String teamName, String areaPath, String iterationName) {
-        // Reutilizar funcionalidad existente con contexto ampliado
         StringBuilder investigation = new StringBuilder();
-        investigation.append("🔍 INVESTIGACIÓN: Tipos de Work Items\n");
-        investigation.append("====================================\n\n");
+        investigation.append("🔍 INVESTIGACIÓN CENTRALIZADA: Tipos de Work Items\n");
+        investigation.append("===================================================\n\n");
         investigation.append("📍 Contexto específico:\n");
         investigation.append("   • Proyecto: ").append(projectName).append("\n");
         if (teamName != null) investigation.append("   • Equipo: ").append(teamName).append("\n");
@@ -5081,16 +4983,31 @@ public class DiscoverOrganizationTool implements McpTool {
         if (iterationName != null) investigation.append("   • Iteración: ").append(iterationName).append("\n");
         investigation.append("\n");
         
-        // Usar método existente como base
-        investigation.append(analyzeWorkItemTypesDetailed(projectName));
+        try {
+            // Generar configuración específica para work item types
+            AzureDevOpsConfigurationGenerator.ConfigurationGenerationResult result = 
+                configurationGenerator.generateSpecificConfiguration(projectName, "workitem-types", false);
+            
+            investigation.append("🏗️ **RESULTADO DE GENERACIÓN:**\n");
+            investigation.append("==============================\n");
+            investigation.append(result.generateReport());
+            
+            // Usar método existente como complemento para mostrar detalles
+            investigation.append("\n📋 **DETALLES ADICIONALES:**\n");
+            investigation.append("============================\n");
+            investigation.append(analyzeWorkItemTypesDetailed(projectName));
+        
+        } catch (Exception e) {
+            investigation.append("❌ Error durante investigación: ").append(e.getMessage()).append("\n");
+        }
         
         return investigation.toString();
     }
     
     private String performCustomFieldsInvestigation(String projectName, String teamName, String areaPath, String iterationName) {
         StringBuilder investigation = new StringBuilder();
-        investigation.append("🔍 INVESTIGACIÓN: Campos Personalizados\n");
-        investigation.append("=====================================\n\n");
+        investigation.append("🔍 INVESTIGACIÓN CENTRALIZADA: Campos Personalizados\n");
+        investigation.append("====================================================\n\n");
         investigation.append("📍 Contexto específico:\n");
         investigation.append("   • Proyecto: ").append(projectName).append("\n");
         if (teamName != null) investigation.append("   • Equipo: ").append(teamName).append("\n");
@@ -5098,8 +5015,23 @@ public class DiscoverOrganizationTool implements McpTool {
         if (iterationName != null) investigation.append("   • Iteración: ").append(iterationName).append("\n");
         investigation.append("\n");
         
-        // Usar método existente como base
-        investigation.append(analyzeCustomFieldsDetailed(projectName));
+        try {
+            // Generar configuración específica para campos personalizados
+            AzureDevOpsConfigurationGenerator.ConfigurationGenerationResult result = 
+                configurationGenerator.generateSpecificConfiguration(projectName, "custom-fields", false);
+            
+            investigation.append("🏗️ **RESULTADO DE GENERACIÓN:**\n");
+            investigation.append("==============================\n");
+            investigation.append(result.generateReport());
+            
+            // Usar método existente como complemento
+            investigation.append("\n🔧 **DETALLES ADICIONALES:**\n");
+            investigation.append("============================\n");
+            investigation.append(analyzeCustomFieldsDetailed(projectName));
+        
+        } catch (Exception e) {
+            investigation.append("❌ Error durante investigación: ").append(e.getMessage()).append("\n");
+        }
         
         return investigation.toString();
     }
@@ -5115,33 +5047,65 @@ public class DiscoverOrganizationTool implements McpTool {
         if (iterationName != null) investigation.append("   • Iteración: ").append(iterationName).append("\n");
         investigation.append("\n");
         
-        investigation.append("🔧 **USANDO UTILIDADES CENTRALIZADAS**\n");
-        investigation.append("=====================================\n");
-        investigation.append("✅ AzureDevOpsPicklistInvestigator - Para obtener valores de picklist\n");
-        investigation.append("✅ AzureDevOpsFieldValidator - Para validar campos personalizados\n");
-        investigation.append("✅ AzureDevOpsWiqlUtility - Para consultas WIQL optimizadas\n\n");
+        try {
+            // Generar configuración específica para valores de picklist
+            AzureDevOpsConfigurationGenerator.ConfigurationGenerationResult result = 
+                configurationGenerator.generateSpecificConfiguration(projectName, "picklist-values", false);
+            
+            investigation.append("🏗️ **RESULTADO DE GENERACIÓN:**\n");
+            investigation.append("==============================\n");
+            investigation.append(result.generateReport());
+            
+            // Usar método existente refactorizado como complemento
+            investigation.append("\n📋 **ANÁLISIS DETALLADO DE PICKLIST:**\n");
+            investigation.append("=====================================\n");
+            investigation.append(analyzePicklistValuesDetailed(projectName));
         
-        // Usar método refactorizado con utilidades centralizadas
-        investigation.append(analyzePicklistValuesDetailed(projectName));
+        } catch (Exception e) {
+            investigation.append("❌ Error durante investigación: ").append(e.getMessage()).append("\n");
+        }
         
         return investigation.toString();
     }
     
     private String performFullConfigurationGeneration(String projectName, String teamName, String areaPath, String iterationName, Boolean backupExistingFiles) {
-        StringBuilder generation = new StringBuilder();
-        generation.append("🔍 INVESTIGACIÓN: Configuración Completa\n");
-        generation.append("======================================\n\n");
-        generation.append("📍 Contexto específico:\n");
-        generation.append("   • Proyecto: ").append(projectName).append("\n");
-        if (teamName != null) generation.append("   • Equipo: ").append(teamName).append("\n");
-        if (areaPath != null) generation.append("   • Área: ").append(areaPath).append("\n");
-        if (iterationName != null) generation.append("   • Iteración: ").append(iterationName).append("\n");
-        generation.append("   • Backup: ").append(backupExistingFiles ? "Habilitado" : "Deshabilitado").append("\n");
-        generation.append("\n");
+        StringBuilder investigation = new StringBuilder();
+        investigation.append("🏗️ GENERACIÓN COMPLETA DE CONFIGURACIÓN\n");
+        investigation.append("======================================\n\n");
+        investigation.append("📍 Contexto específico:\n");
+        investigation.append("   • Proyecto: ").append(projectName).append("\n");
+        if (teamName != null) investigation.append("   • Equipo: ").append(teamName).append("\n");
+        if (areaPath != null) investigation.append("   • Área: ").append(areaPath).append("\n");
+        if (iterationName != null) investigation.append("   • Iteración: ").append(iterationName).append("\n");
+        investigation.append("   • Backup: ").append(backupExistingFiles ? "Sí" : "No").append("\n");
+        investigation.append("\n");
         
-        // Usar método existente como base
-        generation.append(generateOrganizationalConfiguration(projectName, backupExistingFiles));
+        try {
+            // Generar configuración completa
+            AzureDevOpsConfigurationGenerator.ConfigurationGenerationResult result = 
+                configurationGenerator.generateCompleteConfiguration(projectName, backupExistingFiles);
+            
+            investigation.append("✅ **CONFIGURACIÓN COMPLETA GENERADA**\n");
+            investigation.append("======================================\n");
+            investigation.append(result.generateReport());
+            
+            if (result.isSuccess()) {
+                investigation.append("\n🎉 **¡PROCESO COMPLETADO EXITOSAMENTE!**\n");
+                investigation.append("========================================\n");
+                investigation.append("La configuración organizacional ha sido generada y está lista para usar.\n");
+                investigation.append("Los archivos YAML contienen toda la información descubierta automáticamente.\n\n");
+                
+                investigation.append("📁 **PRÓXIMOS PASOS:**\n");
+                investigation.append("1. Revisar los archivos generados en el directorio config/\n");
+                investigation.append("2. Ajustar valores según las necesidades específicas de la organización\n");
+                investigation.append("3. Reiniciar el servidor MCP para aplicar la nueva configuración\n");
+                investigation.append("4. Probar la creación de work items con los nuevos parámetros\n");
+            }
         
-        return generation.toString();
+        } catch (Exception e) {
+            investigation.append("❌ Error durante generación completa: ").append(e.getMessage()).append("\n");
+        }
+        
+        return investigation.toString();
     }
 }
