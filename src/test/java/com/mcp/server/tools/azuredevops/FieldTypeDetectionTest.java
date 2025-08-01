@@ -89,6 +89,6 @@ class FieldTypeDetectionTest {
     private DiscoverOrganizationTool createTestInstance() {
         // Para testing, creamos una instancia con dependencias nulas
         // Esto funcionará para métodos que no requieren estas dependencias
-        return new DiscoverOrganizationTool(null, null, null);
+        return new DiscoverOrganizationTool(null, null, null, null);
     }
 }

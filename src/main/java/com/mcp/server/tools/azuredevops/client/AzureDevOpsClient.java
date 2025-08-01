@@ -66,6 +66,15 @@ public class AzureDevOpsClient {
     }
     
     /**
+     * Obtiene la URL base para la organización de Azure DevOps.
+     * 
+     * @return URL base
+     */
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+    
+    /**
      * Lista todos los proyectos disponibles en la organización.
      * 
      * @return lista de proyectos
@@ -558,5 +567,235 @@ public class AzureDevOpsClient {
      */
     public String getOrganization() {
         return organization;
+    }
+    
+    /**
+     * Obtiene la definición completa de un tipo de work item incluyendo campos y valores permitidos.
+     * 
+     * @param project nombre del proyecto
+     * @param workItemTypeName nombre del tipo de work item
+     * @return mapa con la definición completa del tipo
+     * @throws AzureDevOpsException si hay error en la API
+     */
+    public Map<String, Object> getWorkItemTypeDefinition(String project, String workItemTypeName) {
+        logger.debug("Getting work item type definition for {} in project {}", workItemTypeName, project);
+        
+        try {
+            String encodedTypeName = URLEncoder.encode(workItemTypeName, StandardCharsets.UTF_8);
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                    .path("/{project}/_apis/wit/workitemtypes/{type}")
+                    .queryParam("api-version", API_VERSION)
+                    .build(project, encodedTypeName))
+                .retrieve()
+                .bodyToMono(Map.class)
+                .timeout(Duration.ofSeconds(30))
+                .block();
+            
+            logger.debug("Retrieved work item type definition for {}", workItemTypeName);
+            return response != null ? response : new HashMap<>();
+            
+        } catch (WebClientResponseException e) {
+            logger.error("Error getting work item type definition for {} in project {}: {} - {}", 
+                workItemTypeName, project, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new AzureDevOpsException("Failed to get work item type definition: " + e.getMessage(), e);
+        } catch (Exception e) {
+            logger.error("Unexpected error getting work item type definition for {} in project {}", workItemTypeName, project, e);
+            throw new AzureDevOpsException("Unexpected error getting work item type definition", e);
+        }
+    }
+    
+    /**
+     * Obtiene todos los campos disponibles en un proyecto.
+     * 
+     * @param project nombre del proyecto
+     * @return mapa con información de los campos
+     * @throws AzureDevOpsException si hay error en la API
+     */
+    public Map<String, Object> getWorkItemFields(String project) {
+        logger.debug("Getting work item fields for project: {}", project);
+        
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                    .path("/{project}/_apis/wit/fields")
+                    .queryParam("api-version", API_VERSION)
+                    .build(project))
+                .retrieve()
+                .bodyToMono(Map.class)
+                .timeout(Duration.ofSeconds(30))
+                .block();
+            
+            logger.debug("Retrieved work item fields for project {}", project);
+            return response != null ? response : new HashMap<>();
+            
+        } catch (WebClientResponseException e) {
+            logger.error("Error getting work item fields for project {}: {} - {}", 
+                project, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new AzureDevOpsException("Failed to get work item fields: " + e.getMessage(), e);
+        } catch (Exception e) {
+            logger.error("Unexpected error getting work item fields for project {}", project, e);
+            throw new AzureDevOpsException("Unexpected error getting work item fields", e);
+        }
+    }
+    
+    /**
+     * Obtiene valores permitidos para un campo específico.
+     * 
+     * @param project nombre del proyecto
+     * @param fieldName nombre del campo
+     * @return mapa con los valores permitidos
+     * @throws AzureDevOpsException si hay error en la API
+     */
+    public Map<String, Object> getFieldAllowedValues(String project, String fieldName) {
+        logger.debug("Getting allowed values for field {} in project {}", fieldName, project);
+        
+        try {
+            String encodedFieldName = URLEncoder.encode(fieldName, StandardCharsets.UTF_8);
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                    .path("/{project}/_apis/wit/fields/{fieldName}/allowedValues")
+                    .queryParam("api-version", API_VERSION)
+                    .build(project, encodedFieldName))
+                .retrieve()
+                .bodyToMono(Map.class)
+                .timeout(Duration.ofSeconds(30))
+                .block();
+            
+            logger.debug("Retrieved allowed values for field {} in project {}", fieldName, project);
+            return response != null ? response : new HashMap<>();
+            
+        } catch (WebClientResponseException e) {
+            logger.error("Error getting allowed values for field {} in project {}: {} - {}", 
+                fieldName, project, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new AzureDevOpsException("Failed to get field allowed values: " + e.getMessage(), e);
+        } catch (Exception e) {
+            logger.error("Unexpected error getting allowed values for field {} in project {}", fieldName, project, e);
+            throw new AzureDevOpsException("Unexpected error getting field allowed values", e);
+        }
+    }
+    
+    /**
+     * Obtiene información de una lista de procesos (picklist).
+     * 
+     * @param listId ID de la lista
+     * @return mapa con información de la lista
+     * @throws AzureDevOpsException si hay error en la API
+     */
+    public Map<String, Object> getProcessList(String listId) {
+        logger.debug("Getting process list with ID: {}", listId);
+        
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                    .path("/_apis/work/processes/lists/{listId}")
+                    .queryParam("api-version", API_VERSION)
+                    .build(listId))
+                .retrieve()
+                .bodyToMono(Map.class)
+                .timeout(Duration.ofSeconds(30))
+                .block();
+            
+            logger.debug("Retrieved process list with ID: {}", listId);
+            return response != null ? response : new HashMap<>();
+            
+        } catch (WebClientResponseException e) {
+            logger.error("Error getting process list {}: {} - {}", 
+                listId, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new AzureDevOpsException("Failed to get process list: " + e.getMessage(), e);
+        } catch (Exception e) {
+            logger.error("Unexpected error getting process list {}", listId, e);
+            throw new AzureDevOpsException("Unexpected error getting process list", e);
+        }
+    }
+    
+    /**
+     * Obtiene información de una lista de procesos específica de un proyecto.
+     * 
+     * @param project nombre del proyecto
+     * @param listId ID de la lista
+     * @return mapa con información de la lista
+     * @throws AzureDevOpsException si hay error en la API
+     */
+    public Map<String, Object> getProjectProcessList(String project, String listId) {
+        logger.debug("Getting project process list {} for project: {}", listId, project);
+        
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                    .path("/{project}/_apis/work/processes/lists/{listId}")
+                    .queryParam("api-version", API_VERSION)
+                    .build(project, listId))
+                .retrieve()
+                .bodyToMono(Map.class)
+                .timeout(Duration.ofSeconds(30))
+                .block();
+            
+            logger.debug("Retrieved project process list {} for project {}", listId, project);
+            return response != null ? response : new HashMap<>();
+            
+        } catch (WebClientResponseException e) {
+            logger.error("Error getting project process list {} for project {}: {} - {}", 
+                listId, project, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new AzureDevOpsException("Failed to get project process list: " + e.getMessage(), e);
+        } catch (Exception e) {
+            logger.error("Unexpected error getting project process list {} for project {}", listId, project, e);
+            throw new AzureDevOpsException("Unexpected error getting project process list", e);
+        }
+    }
+    
+    /**
+     * Realiza una petición HTTP genérica a la API de Azure DevOps.
+     * Método de utilidad para casos especiales que no están cubiertos por otros métodos.
+     * 
+     * @param path ruta de la API (sin el dominio base)
+     * @param queryParams parámetros de consulta opcionales
+     * @return respuesta como string JSON
+     * @throws AzureDevOpsException si hay error en la petición
+     */
+    public String makeGenericApiRequest(String path, Map<String, String> queryParams) {
+        logger.debug("Making generic API request to path: {}", path);
+        
+        try {
+            var uriBuilder = webClient.get()
+                .uri(uriBuilder2 -> {
+                    var builder = uriBuilder2.path(path);
+                    
+                    if (queryParams != null) {
+                        queryParams.forEach(builder::queryParam);
+                    }
+                    
+                    // Siempre agregar api-version si no está presente
+                    if (queryParams == null || !queryParams.containsKey("api-version")) {
+                        builder.queryParam("api-version", API_VERSION);
+                    }
+                    
+                    return builder.build();
+                });
+            
+            String response = uriBuilder
+                .retrieve()
+                .bodyToMono(String.class)
+                .timeout(Duration.ofSeconds(30))
+                .block();
+            
+            logger.debug("Generic API request completed successfully");
+            return response != null ? response : "{}";
+            
+        } catch (WebClientResponseException e) {
+            logger.error("Error in generic API request to {}: {} - {}", 
+                path, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new AzureDevOpsException("Failed to make generic API request: " + e.getMessage(), e);
+        } catch (Exception e) {
+            logger.error("Unexpected error in generic API request to {}", path, e);
+            throw new AzureDevOpsException("Unexpected error in generic API request", e);
+        }
     }
 }

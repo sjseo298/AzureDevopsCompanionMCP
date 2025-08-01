@@ -70,6 +70,10 @@ public class CreateWorkItemTool implements McpTool {
             "type", "string",
             "description", "Email o nombre del usuario asignado (opcional)"
         ));
+        properties.put("state", Map.of(
+            "type", "string",
+            "description", "Estado del work item (ej: 'New', 'Active', 'Done') (opcional, por defecto 'New')"
+        ));
         properties.put("iterationPath", Map.of(
             "type", "string",
             "description", "Ruta de iteración (ej: 'MyProject\\Sprint 5') (opcional, se obtiene del padre si se proporciona parentId)"
@@ -191,9 +195,13 @@ public class CreateWorkItemTool implements McpTool {
             String title = (String) arguments.get("title");
             String description = (String) arguments.get("description");
             String assignedTo = (String) arguments.get("assignedTo");
+            String state = (String) arguments.get("state");
             String iterationPath = (String) arguments.get("iterationPath");
             String areaPath = (String) arguments.get("areaPath");
             Number parentIdNum = (Number) arguments.get("parentId");
+            
+            // Validar jerarquía de work items según reglas de YOUR_ORGANIZATION
+            validateWorkItemHierarchy(type, parentIdNum);
             
             // Si se proporciona parentId, obtener información del work item padre
             if (parentIdNum != null) {
@@ -265,7 +273,8 @@ public class CreateWorkItemTool implements McpTool {
             String tipoHistoriaTecnica = (String) arguments.get("tipoHistoriaTecnica");
             String tipoTarea = (String) arguments.get("tipoTarea");
             String tipoSubtarea = (String) arguments.get("tipoSubtarea");
-            String idSolucionAPM = (String) arguments.get("idSolucionAPM");
+            Object idSolucionAPMObj = arguments.get("idSolucionAPM");
+            String idSolucionAPM = idSolucionAPMObj != null ? idSolucionAPMObj.toString() : null;
             Boolean migracionDatos = (Boolean) arguments.get("migracionDatos");
             Boolean cumplimientoRegulatorio = (Boolean) arguments.get("cumplimientoRegulatorio");
             Boolean controlAutomatico = (Boolean) arguments.get("controlAutomatico");
@@ -275,6 +284,7 @@ public class CreateWorkItemTool implements McpTool {
             String nivelPrueba = (String) arguments.get("nivelPrueba");
             String origen = (String) arguments.get("origen");
             String etapaDescubrimiento = (String) arguments.get("etapaDescubrimiento");
+            String planAccion = (String) arguments.get("planAccion");
             
             // Campos adicionales
             Number remainingWorkNum = (Number) arguments.get("remainingWork");
@@ -344,6 +354,9 @@ public class CreateWorkItemTool implements McpTool {
             if (assignedTo != null && !assignedTo.trim().isEmpty()) {
                 userProvidedValues.put("System.AssignedTo", assignedTo);
             }
+            if (state != null && !state.trim().isEmpty()) {
+                userProvidedValues.put("System.State", state);
+            }
             if (iterationPath != null && !iterationPath.trim().isEmpty()) {
                 userProvidedValues.put("System.IterationPath", iterationPath);
             }
@@ -356,7 +369,7 @@ public class CreateWorkItemTool implements McpTool {
                 userProvidedValues.put("Microsoft.VSTS.Common.AcceptanceCriteria", acceptanceCriteria);
             }
             if (tipoHistoria != null && !tipoHistoria.trim().isEmpty()) {
-                userProvidedValues.put("Custom.TipoDeHistoria", tipoHistoria);
+                userProvidedValues.put("Custom.TipodeHistoria", tipoHistoria);
             }
             if (tipoHistoriaTecnica != null && !tipoHistoriaTecnica.trim().isEmpty()) {
                 userProvidedValues.put("Custom.14858558-3edb-485a-9a52-a38c03c65c62", tipoHistoriaTecnica);
@@ -396,6 +409,9 @@ public class CreateWorkItemTool implements McpTool {
             }
             if (etapaDescubrimiento != null && !etapaDescubrimiento.trim().isEmpty()) {
                 userProvidedValues.put("Custom.EtapaDescubrimiento", etapaDescubrimiento);
+            }
+            if (planAccion != null && !planAccion.trim().isEmpty()) {
+                userProvidedValues.put("Custom.ec7c5f68-f30c-4658-9759-b864232be281", planAccion);
             }
             
             // Campos opcionales adicionales
@@ -540,6 +556,82 @@ public class CreateWorkItemTool implements McpTool {
                 )),
                 "isError", true
             );
+        }
+    }
+    
+    /**
+     * Valida la jerarquía correcta de work items según las reglas de YOUR_ORGANIZATION.
+     */
+    private void validateWorkItemHierarchy(String type, Number parentIdNum) {
+        if (parentIdNum == null) {
+            // Solo Proyecto puede no tener padre
+            if (!"Proyecto".equals(type)) {
+                throw new IllegalArgumentException("⚠️ Jerarquía incorrecta: " + type + " debe tener un work item padre.\n\n" +
+                    "📋 Jerarquía correcta:\n" +
+                    "Proyecto → Épica → Feature → Historia → Tarea → Subtarea\n\n" +
+                    "💡 Proporciona un 'parentId' válido.");
+            }
+            return;
+        }
+        
+        try {
+            // Obtener información del padre
+            Map<String, Object> parentWorkItem = azureDevOpsClient.getWorkItem(parentIdNum.intValue());
+            @SuppressWarnings("unchecked")
+            Map<String, Object> parentFields = (Map<String, Object>) parentWorkItem.get("fields");
+            String parentType = (String) parentFields.get("System.WorkItemType");
+            
+            // Validar jerarquía según reglas de YOUR_ORGANIZATION
+            boolean validHierarchy = false;
+            String expectedParentType = "";
+            
+            switch (type) {
+                case "Épica":
+                    validHierarchy = "Proyecto".equals(parentType);
+                    expectedParentType = "Proyecto";
+                    break;
+                case "Feature":
+                    validHierarchy = "Épica".equals(parentType);
+                    expectedParentType = "Épica";
+                    break;
+                case "Historia":
+                case "Historia técnica":
+                    validHierarchy = "Feature".equals(parentType);
+                    expectedParentType = "Feature";
+                    break;
+                case "Tarea":
+                    validHierarchy = "Historia".equals(parentType) || "Historia técnica".equals(parentType);
+                    expectedParentType = "Historia o Historia técnica";
+                    break;
+                case "Subtarea":
+                    validHierarchy = "Tarea".equals(parentType);
+                    expectedParentType = "Tarea";
+                    break;
+                case "Bug":
+                    // Bug puede ser hijo de Historia, Feature, o Épica
+                    validHierarchy = "Historia".equals(parentType) || "Historia técnica".equals(parentType) || 
+                                   "Feature".equals(parentType) || "Épica".equals(parentType);
+                    expectedParentType = "Historia, Feature, o Épica";
+                    break;
+                default:
+                    // Para otros tipos, permitir cualquier padre
+                    validHierarchy = true;
+                    break;
+            }
+            
+            if (!validHierarchy) {
+                throw new IllegalArgumentException("❌ Jerarquía incorrecta: " + type + " no puede ser hijo de " + parentType + ".\n\n" +
+                    "📋 Jerarquía correcta para " + type + ":\n" +
+                    "Padre esperado: " + expectedParentType + "\n" +
+                    "Padre actual: " + parentType + "\n\n" +
+                    "🔗 Consulta la documentación en docs/AZURE_DEVOPS_HIERARCHY.md para más detalles.");
+            }
+            
+        } catch (Exception e) {
+            if (e instanceof IllegalArgumentException) {
+                throw e;
+            }
+            throw new RuntimeException("Error validando jerarquía: " + e.getMessage(), e);
         }
     }
 }

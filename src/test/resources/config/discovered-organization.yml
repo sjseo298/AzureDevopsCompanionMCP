@@ -1,10 +1,190 @@
-# Test discovery results
-organization:
-  name: "Test Organization"
-  displayName: "Test Organization"
-  description: "Test configuration"
+# =============================================================================
+# CONFIGURACIÓN ORGANIZACIONAL DESCUBIERTA - SURA COLOMBIA
+# Información real obtenida de Azure DevOps mediante investigación técnica
+# Fecha de descubrimiento: 2025-07-31
+# =============================================================================
 
-projects: []
-workItemTypes: {}
-customFields: {}
-metadata: {}
+organization:
+  name: "YOUR_ORGANIZATION"
+  displayName: "YOUR_ORGANIZATION Colombia"
+  description: "Configuración organizacional de Azure DevOps para YOUR_ORGANIZATION Colombia"
+  url: "https://dev.azure.com/YOUR_ORGANIZATION"
+
+projects:
+  - name: "Gerencia_Tecnologia"
+    displayName: "Gerencia de Tecnología"
+    description: "Proyecto principal de Gerencia de Tecnología"
+    id: "985807ad-7ff9-438d-849c-794c9bbc50f4"
+    state: "wellFormed"
+
+workItemTypes:
+  # TIPOS FUNCIONALES (VALIDADOS)
+  epica:
+    referenceName: "Custom.46f6eede-0b66-4fa8-93db-e783f3be205c"
+    displayName: "Épica"
+    states: ["New", "En progreso", "Impedimento", "Cerrado"]
+    requiredFields: ["title", "state"]
+    status: "✅ FUNCIONAL"
+    
+  feature:
+    referenceName: "Microsoft.VSTS.WorkItemTypes.Feature"
+    displayName: "Feature"
+    states: ["New", "En progreso", "Impedimento", "Certificado", "Cerrado"]
+    requiredFields: ["title", "state"]
+    status: "✅ FUNCIONAL"
+    
+  proyecto:
+    referenceName: "AgileYOUR_ORGANIZATION.Proyecto"
+    displayName: "Proyecto"
+    states: ["New", "En progreso", "Cerrado"]
+    requiredFields: ["title", "state", "tipoProyecto", "trenesYDominios"]
+    status: "⚠️ REQUIERE INVESTIGACIÓN DE CAMPOS"
+  
+  # TIPOS CON CAMPOS DE PICKLIST PROBLEMÁTICOS
+  historia:
+    referenceName: "AgileYOUR_ORGANIZATION.Historia"
+    displayName: "Historia"
+    states: ["New", "Planeado", "En progreso", "Impedimento", "Disponible pruebas", "En pruebas", "Certificado", "Cerrado"]
+    requiredFields: 
+      - "title"
+      - "description" 
+      - "acceptanceCriteria"
+      - "state"
+      - "tipoHistoria"
+      - "migracionDatos"
+      - "cumplimientoRegulatorio" 
+      - "controlAutomatico"
+      - "idSolucionAPM"
+    status: "❌ BLOQUEADO - Valores de picklist desconocidos"
+    
+  historiaTecnica:
+    referenceName: "Custom.7f51ec0f-ff1c-45e6-9ae2-ff1306d78fe4"
+    displayName: "Historia técnica"
+    states: ["New", "Planeado", "En progreso", "Impedimento", "Disponible pruebas", "En pruebas", "Certificado", "Cerrado"]
+    requiredFields:
+      - "title"
+      - "description"
+      - "acceptanceCriteria" 
+      - "state"
+      - "tipoHistoriaTecnica"
+      - "migracionDatos"
+      - "cumplimientoRegulatorio"
+      - "controlAutomatico"
+      - "idSolucionAPM"
+    status: "❌ BLOQUEADO - Valores de picklist desconocidos"
+    
+  tarea:
+    referenceName: "AgileYOUR_ORGANIZATION.Tarea"
+    displayName: "Tarea"
+    states: ["New", "En progreso", "Impedimento", "Cerrado"]
+    requiredFields: ["title", "state", "tipoTarea"]
+    status: "⚠️ REQUIERE INVESTIGACIÓN DE CAMPOS"
+    
+  subtarea:
+    referenceName: "AgileYOUR_ORGANIZATION.Subtarea"
+    displayName: "Subtarea"
+    states: ["New", "En progreso", "Impedimento", "Cerrado"]
+    requiredFields: ["title", "state", "tipoSubtarea"]
+    status: "⚠️ REQUIERE INVESTIGACIÓN DE CAMPOS"
+    
+  riesgo:
+    referenceName: "AgileYOUR_ORGANIZATION.Riesgo"
+    displayName: "Riesgo"
+    states: ["New", "En progreso", "Impedimento", "Cerrado"]
+    requiredFields: ["title", "description", "planAccion", "state"]
+    status: "⚠️ REQUIERE CORRECCIÓN DE NOMBRES TÉCNICOS"
+    technicalFieldName: "Custom.ec7c5f68-f30c-4658-9759-b864232be281"
+    
+  bug:
+    referenceName: "Microsoft.VSTS.WorkItemTypes.Bug"
+    displayName: "Bug"
+    states: ["New", "En progreso", "Reabierto", "Solucionado", "Cerrado"]
+    requiredFields:
+      - "title"
+      - "description"
+      - "reproSteps"
+      - "state"
+      - "idSolucionAPM"
+      - "bloqueante"
+      - "nivelPrueba"
+      - "origen"
+      - "etapaDescubrimiento"
+    status: "❌ BLOQUEADO - Múltiples campos con valores desconocidos"
+
+customFields:
+  # CAMPOS IDENTIFICADOS CON NOMBRES TÉCNICOS EXACTOS
+  tipoHistoria:
+    technicalName: "Custom.TipodeHistoria"
+    displayName: "Tipo de Historia"
+    type: "picklistString"
+    required: true
+    status: "❌ VALORES DESCONOCIDOS"
+    testedValues: ["Funcional", "Técnica", "Desarrollo", "User Story", "Historia de Usuario", "Negocio", "Normal"]
+    
+  tipoHistoriaTecnica:
+    technicalName: "Custom.14858558-3edb-485a-9a52-a38c03c65c62"
+    displayName: "Tipo de Historia Técnica"
+    type: "picklistString"
+    required: true
+    status: "❌ VALORES DESCONOCIDOS"
+    testedValues: ["Backend", "Remediación"]
+    
+  migracionDatos:
+    technicalName: "Custom.78e00118-cbf0-42f1-bee1-269ea2a2dba3"
+    displayName: "La historia hace parte de una migración de datos"
+    type: "boolean"
+    required: true
+    status: "✅ FUNCIONAL"
+    validValues: ["Si", "No"]
+    
+  cumplimientoRegulatorio:
+    technicalName: "Custom.Lahistoriacorrespondeauncumplimientoregulatorio"
+    displayName: "La historia corresponde a un cumplimiento regulatorio"
+    type: "boolean"
+    required: true
+    status: "✅ FUNCIONAL"
+    validValues: ["Si", "No"]
+    
+  controlAutomatico:
+    technicalName: "Custom.5480ef11-38bf-4233-a94b-3fdd32107eb1"
+    displayName: "La historia hace parte de un control automático o control de aplicación"
+    type: "boolean"
+    required: true
+    status: "✅ FUNCIONAL"
+    validValues: ["Si", "No"]
+    
+  idSolucionAPM:
+    technicalName: "Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"
+    displayName: "ID de la solución en el APM"
+    type: "string"
+    required: true
+    status: "⚠️ TIPO DE DATOS PROBLEMÁTICO"
+    notes: "Genera InvalidType error - posible tipo numérico o formato específico requerido"
+    
+  planAccion:
+    technicalName: "Custom.ec7c5f68-f30c-4658-9759-b864232be281"
+    displayName: "Plan de acción"
+    type: "html"
+    required: true
+    status: "⚠️ REQUIERE CORRECCIÓN EN CÓDIGO"
+
+hierarchy:
+  validated:
+    - "Proyecto → Épica → Feature → Historia/Historia técnica → Tarea → Subtarea"
+  working:
+    - "Proyecto (#869848) → Épica (#870057, #870112) → Feature (#870058, #870113)"
+  blocked:
+    - "Historia (valores de picklist desconocidos)"
+    - "Historia técnica (valores de picklist desconocidos)"
+    - "Tarea (requiere Historia padre válida)"
+
+metadata:
+  discoveryDate: "2025-07-31"
+  discoveryMethod: "API investigation + error analysis"
+  completionStatus: "60% - Jerarquía básica funcional, campos de picklist bloqueados"
+  nextSteps:
+    - "Investigar valores válidos para Custom.TipodeHistoria"
+    - "Investigar valores válidos para Custom.14858558-3edb-485a-9a52-a38c03c65c62"
+    - "Resolver problema de tipo de datos para Custom.9fcf5e7b-aac8-44a0-9476-653d3ea45e14"
+    - "Corregir nombres técnicos de campos en código Java"
+    - "Completar testing de todos los tipos de work items"

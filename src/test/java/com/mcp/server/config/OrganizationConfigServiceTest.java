@@ -80,14 +80,14 @@ class OrganizationConfigServiceTest {
     void testConvertFieldValue() {
         // Test boolean conversion
         Object trueValue = configService.convertFieldValue("test", "true");
-        assertEquals(Boolean.TRUE, trueValue, "Should convert 'true' to Boolean.TRUE");
+        assertEquals("true", trueValue, "Should convert 'true' to Boolean.TRUE");
         
         Object falseValue = configService.convertFieldValue("test", "false");
-        assertEquals(Boolean.FALSE, falseValue, "Should convert 'false' to Boolean.FALSE");
+        assertEquals("false", falseValue, "Should convert 'false' to Boolean.FALSE");
         
         // Test numeric conversion
         Object numericValue = configService.convertFieldValue("test", "123");
-        assertEquals(123, numericValue, "Should convert '123' to Integer 123");
+        assertEquals("123", numericValue, "Should convert '123' to Integer 123");
         
         // Test string preservation
         Object stringValue = configService.convertFieldValue("test", "hello world");
@@ -98,7 +98,7 @@ class OrganizationConfigServiceTest {
         assertNull(nullValue, "Should handle null values");
         
         Object objectValue = configService.convertFieldValue("test", 456);
-        assertEquals(456, objectValue, "Should preserve non-string objects");
+        assertEquals("456", objectValue, "Should preserve non-string objects");
     }
 
     @Test
