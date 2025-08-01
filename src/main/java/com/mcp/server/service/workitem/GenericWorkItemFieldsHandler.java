@@ -20,16 +20,20 @@ public class GenericWorkItemFieldsHandler {
         this.configService = configService;
     }
     
-    /**
-     * Procesa los campos de un work item según la configuración organizacional.
+        /**
+     * Procesa campos de work item aplicando configuración organizacional.
      */
     public Map<String, Object> processWorkItemFields(String workItemType, Map<String, Object> inputFields) {
+        System.out.println("DEBUG GenericWorkItemFieldsHandler: processWorkItemFields called with workItemType=" + workItemType);
+        System.out.println("DEBUG GenericWorkItemFieldsHandler: inputFields=" + inputFields);
+        
         Map<String, Object> processedFields = new HashMap<>();
         
-        // Procesar cada campo de entrada
         for (Map.Entry<String, Object> entry : inputFields.entrySet()) {
             String fieldName = entry.getKey();
             Object fieldValue = entry.getValue();
+            
+            System.out.println("DEBUG GenericWorkItemFieldsHandler: Processing field=" + fieldName + ", value=" + fieldValue + " (type: " + (fieldValue != null ? fieldValue.getClass().getSimpleName() : "null") + ")");
             
             // Buscar mapeo para este campo
             Map<String, Object> fieldMapping = configService.getFieldMapping(fieldName);
@@ -39,6 +43,8 @@ public class GenericWorkItemFieldsHandler {
                 String azureFieldName = (String) fieldMapping.get("azureFieldName");
                 Object convertedValue = configService.convertFieldValue(fieldName, fieldValue);
                 
+                System.out.println("DEBUG GenericWorkItemFieldsHandler: Field mapped. azureFieldName=" + azureFieldName + ", convertedValue=" + convertedValue + " (type: " + (convertedValue != null ? convertedValue.getClass().getSimpleName() : "null") + ")");
+                
                 if (azureFieldName != null) {
                     processedFields.put(azureFieldName, convertedValue);
                 } else {
@@ -46,13 +52,15 @@ public class GenericWorkItemFieldsHandler {
                 }
             } else {
                 // Campo no mapeado - usar tal como está
+                System.out.println("DEBUG GenericWorkItemFieldsHandler: Field not mapped, using as-is");
                 processedFields.put(fieldName, fieldValue);
             }
         }
         
-        // Agregar campos requeridos con valores por defecto si no están presentes
+        // Agregar campos requeridos con valores por defecto
         addRequiredFields(workItemType, processedFields);
         
+        System.out.println("DEBUG GenericWorkItemFieldsHandler: Final processedFields=" + processedFields);
         return processedFields;
     }
     
@@ -60,22 +68,40 @@ public class GenericWorkItemFieldsHandler {
      * Agrega campos requeridos con valores por defecto si no están presentes.
      */
     private void addRequiredFields(String workItemType, Map<String, Object> fields) {
+        System.out.println("DEBUG GenericWorkItemFieldsHandler: addRequiredFields called with workItemType=" + workItemType);
+        
         List<String> requiredFields = configService.getRequiredFieldsForWorkItemType(workItemType);
+        System.out.println("DEBUG GenericWorkItemFieldsHandler: requiredFields=" + requiredFields);
         
         for (String requiredField : requiredFields) {
+            System.out.println("DEBUG GenericWorkItemFieldsHandler: Processing required field=" + requiredField);
+            
             Map<String, Object> fieldMapping = configService.getFieldMapping(requiredField);
+            System.out.println("DEBUG GenericWorkItemFieldsHandler: fieldMapping=" + fieldMapping);
             
             if (!fieldMapping.isEmpty()) {
                 String azureFieldName = (String) fieldMapping.get("azureFieldName");
                 Object defaultValue = fieldMapping.get("defaultValue");
                 
+                System.out.println("DEBUG GenericWorkItemFieldsHandler: azureFieldName=" + azureFieldName + ", defaultValue=" + defaultValue + " (type: " + (defaultValue != null ? defaultValue.getClass().getSimpleName() : "null") + ")");
+                
                 String targetFieldName = azureFieldName != null ? azureFieldName : requiredField;
                 
                 if (!fields.containsKey(targetFieldName) && defaultValue != null) {
-                    fields.put(targetFieldName, defaultValue);
+                    System.out.println("DEBUG GenericWorkItemFieldsHandler: Adding default value for field=" + targetFieldName);
+                    // Aplicar conversión de tipo al valor por defecto
+                    Object convertedDefaultValue = configService.convertFieldValue(requiredField, defaultValue);
+                    System.out.println("DEBUG GenericWorkItemFieldsHandler: convertedDefaultValue=" + convertedDefaultValue + " (type: " + (convertedDefaultValue != null ? convertedDefaultValue.getClass().getSimpleName() : "null") + ")");
+                    fields.put(targetFieldName, convertedDefaultValue);
+                } else {
+                    System.out.println("DEBUG GenericWorkItemFieldsHandler: Field already exists or no default value. fields.containsKey=" + fields.containsKey(targetFieldName) + ", defaultValue=" + defaultValue);
                 }
+            } else {
+                System.out.println("DEBUG GenericWorkItemFieldsHandler: No fieldMapping found for required field=" + requiredField);
             }
         }
+        
+        System.out.println("DEBUG GenericWorkItemFieldsHandler: Final fields after addRequiredFields=" + fields);
     }
     
     /**
@@ -122,6 +148,71 @@ public class GenericWorkItemFieldsHandler {
         return configService.getAllowedValues(fieldName);
     }
     
+    /**
+     * Obtiene todos los campos disponibles con sus detalles para el schema dinámico.
+     */
+    public Map<String, Object> getAvailableFieldsWithDetails() {
+        Map<String, Object> fieldsWithDetails = new HashMap<>();
+        
+        // Obtener todos los mapeos de campos desde la configuración
+        Map<String, Object> allFieldMappings = configService.getAllFieldMappings();
+        
+        for (Map.Entry<String, Object> entry : allFieldMappings.entrySet()) {
+            String fieldName = entry.getKey();
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> fieldConfig = (Map<String, Object>) entry.getValue();
+            
+            // Crear la definición del campo para el schema
+            Map<String, Object> fieldDefinition = new HashMap<>();
+            
+            // Determinar el tipo del campo
+            String fieldType = (String) fieldConfig.getOrDefault("type", "string");
+            if ("boolean".equals(fieldType)) {
+                fieldDefinition.put("type", "boolean");
+            } else if ("integer".equals(fieldType) || "number".equals(fieldType)) {
+                fieldDefinition.put("type", "number");
+            } else {
+                fieldDefinition.put("type", "string");
+            }
+            
+            // Construir la descripción dinámicamente
+            StringBuilder description = new StringBuilder();
+            String helpText = (String) fieldConfig.get("helpText");
+            if (helpText != null && !helpText.isEmpty()) {
+                description.append(helpText);
+            }
+            
+            // Agregar información sobre si es requerido
+            Boolean required = (Boolean) fieldConfig.get("required");
+            if (Boolean.TRUE.equals(required)) {
+                if (description.length() > 0) {
+                    description.append(" ");
+                }
+                description.append("(Obligatorio)");
+            }
+            
+            // Agregar valores permitidos si existen
+            List<String> allowedValues = getAllowedValues(fieldName);
+            if (!allowedValues.isEmpty()) {
+                if (description.length() > 0) {
+                    description.append(". ");
+                }
+                description.append("Valores permitidos: ").append(String.join(", ", allowedValues));
+            }
+            
+            if (description.length() > 0) {
+                fieldDefinition.put("description", description.toString());
+            } else {
+                fieldDefinition.put("description", fieldName);
+            }
+            
+            fieldsWithDetails.put(fieldName, fieldDefinition);
+        }
+        
+        return fieldsWithDetails;
+    }
+
     /**
      * Verifica si un campo es requerido para un tipo de work item específico.
      */

@@ -129,27 +129,103 @@ public class OrganizationConfigService {
     
     /**
      * Convierte un valor de campo según la configuración.
+     * IMPORTANTE: Azure DevOps API requiere que todos los valores sean Strings,
+     * por lo que convertimos a String después de validar el tipo.
      */
     public Object convertFieldValue(String fieldName, Object value) {
-        // Por ahora, conversión básica - se puede extender
-        if (value instanceof String) {
-            String stringValue = (String) value;
-            
-            // Conversiones comunes
-            if ("true".equalsIgnoreCase(stringValue) || "false".equalsIgnoreCase(stringValue)) {
-                return Boolean.parseBoolean(stringValue);
-            }
-            
-            // Intentar conversión numérica
-            try {
-                return Integer.parseInt(stringValue);
-            } catch (NumberFormatException e) {
-                // Mantener como string
-                return value;
-            }
+        System.out.println("DEBUG: convertFieldValue called with fieldName=" + fieldName + ", value=" + value + " (type: " + (value != null ? value.getClass().getSimpleName() : "null") + ")");
+        
+        if (value == null) {
+            return null;
         }
         
-        return value;
+        // Obtener información del mapeo de campo para determinar el tipo esperado
+        Map<String, Object> fieldMapping = getFieldMapping(fieldName);
+        String expectedType = (String) fieldMapping.get("type");
+        
+        System.out.println("DEBUG: expectedType=" + expectedType + " for field=" + fieldName);
+        
+        // Si no hay mapeo o tipo definido, devolver como String
+        if (expectedType == null) {
+            String result = value.toString();
+            System.out.println("DEBUG: No expectedType, returning toString(): " + result);
+            return result;
+        }
+        
+        // Conversiones seguras basadas en el tipo esperado, pero siempre devolviendo String
+        switch (expectedType.toLowerCase()) {
+            case "boolean":
+                boolean boolValue;
+                if (value instanceof String) {
+                    boolValue = Boolean.parseBoolean((String) value);
+                } else if (value instanceof Boolean) {
+                    boolValue = (Boolean) value;
+                } else {
+                    boolValue = value != null && !value.toString().isEmpty() && !"0".equals(value.toString());
+                }
+                String boolResult = String.valueOf(boolValue);
+                System.out.println("DEBUG: Boolean conversion result: " + boolResult);
+                return boolResult;
+                
+            case "integer":
+            case "number":
+                if (value instanceof Number) {
+                    String intResult = String.valueOf(((Number) value).intValue());
+                    System.out.println("DEBUG: Integer conversion result: " + intResult);
+                    return intResult;
+                } else if (value instanceof String) {
+                    try {
+                        int intValue = Integer.parseInt((String) value);
+                        String intResult = String.valueOf(intValue);
+                        System.out.println("DEBUG: String to Integer conversion result: " + intResult);
+                        return intResult;
+                    } catch (NumberFormatException e) {
+                        String fallbackResult = value.toString();
+                        System.out.println("DEBUG: Integer parse failed, fallback result: " + fallbackResult);
+                        return fallbackResult;
+                    }
+                }
+                String intFallbackResult = value.toString();
+                System.out.println("DEBUG: Integer fallback result: " + intFallbackResult);
+                return intFallbackResult;
+                
+            case "double":
+                if (value instanceof Number) {
+                    String doubleResult = String.valueOf(((Number) value).doubleValue());
+                    System.out.println("DEBUG: Double conversion result: " + doubleResult);
+                    return doubleResult;
+                } else if (value instanceof String) {
+                    try {
+                        double doubleValue = Double.parseDouble((String) value);
+                        String doubleResult = String.valueOf(doubleValue);
+                        System.out.println("DEBUG: String to Double conversion result: " + doubleResult);
+                        return doubleResult;
+                    } catch (NumberFormatException e) {
+                        String fallbackResult = value.toString();
+                        System.out.println("DEBUG: Double parse failed, fallback result: " + fallbackResult);
+                        return fallbackResult;
+                    }
+                }
+                String doubleFallbackResult = value.toString();
+                System.out.println("DEBUG: Double fallback result: " + doubleFallbackResult);
+                return doubleFallbackResult;
+                
+            case "string":
+            case "html":
+            case "pickliststring":
+            case "datetime":
+            case "identity":
+                // Para todos los tipos de texto, convertir a String
+                String stringResult = value.toString();
+                System.out.println("DEBUG: String conversion result: " + stringResult);
+                return stringResult;
+                
+            default:
+                // Para tipos desconocidos, convertir a String
+                String defaultResult = value.toString();
+                System.out.println("DEBUG: Default conversion result: " + defaultResult);
+                return defaultResult;
+        }
     }
     
     /**
@@ -169,9 +245,9 @@ public class OrganizationConfigService {
             case "bug":
                 return List.of("title", "description", "reproSteps", "state");
             case "feature":
-                return List.of("title", "description", "state");
+                return List.of("title");  // Feature solo requiere título
             default:
-                return List.of("title", "state");
+                return List.of("title");  // Campos mínimos para tipos desconocidos
         }
     }
     
@@ -229,9 +305,16 @@ public class OrganizationConfigService {
                         // Si es una lista estática
                         if (allowedValuesObj instanceof List<?>) {
                             @SuppressWarnings("unchecked")
-                            List<String> staticValues = (List<String>) allowedValuesObj;
+                            List<?> rawValues = (List<?>) allowedValuesObj;
                             List<String> result = new ArrayList<>();
-                            result.addAll(staticValues);
+                            
+                            // Convertir todos los valores a String para evitar problemas de casting
+                            for (Object value : rawValues) {
+                                if (value != null) {
+                                    result.add(value.toString());
+                                }
+                            }
+                            
                             return result;
                         }
                     }
@@ -382,5 +465,23 @@ public class OrganizationConfigService {
         List<String> requiredFields = getRequiredFieldsForWorkItemType(workItemType);
         return requiredFields.stream()
             .anyMatch(field -> field.equalsIgnoreCase(fieldName));
+    }
+    
+    /**
+     * Obtiene todos los mapeos de campos desde la configuración organizacional.
+     */
+    public Map<String, Object> getAllFieldMappings() {
+        try {
+            Map<String, Object> config = contextService.getFieldMappingConfig();
+            if (config != null && config.containsKey("fieldMappings")) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> fieldMappings = (Map<String, Object>) config.get("fieldMappings");
+                return fieldMappings != null ? fieldMappings : new HashMap<>();
+            }
+        } catch (Exception e) {
+            System.err.println("Error obteniendo mapeos de campos: " + e.getMessage());
+        }
+        
+        return new HashMap<>();
     }
 }
