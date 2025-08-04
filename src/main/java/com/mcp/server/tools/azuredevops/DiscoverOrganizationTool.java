@@ -51,6 +51,9 @@ public class DiscoverOrganizationTool implements McpTool {
     
     // Analizador de campos refactorizado (incluye gestión de picklists)
     private final com.mcp.server.utils.field.FieldAnalyzer fieldAnalyzer;
+    
+    // Gestor de tipos de work items refactorizado
+    private final com.mcp.server.utils.workitemtype.WorkItemTypeManager workItemTypeManager;
 
     public DiscoverOrganizationTool(
             AzureDevOpsClient azureDevOpsClient,
@@ -82,12 +85,16 @@ public class DiscoverOrganizationTool implements McpTool {
             
             // Inicializar analizador de campos (que ahora incluye gestión de picklists)
             this.fieldAnalyzer = new com.mcp.server.utils.field.FieldAnalyzer(azureDevOpsClient, httpUtil, picklistInvestigator, organizationInvestigator);
+            
+            // Inicializar gestor de tipos de work items
+            this.workItemTypeManager = new com.mcp.server.utils.workitemtype.WorkItemTypeManager(azureDevOpsClient, configService, getWorkItemTypesTool, configurationGenerator);
         } else {
             // Para testing - inicializar con valores null
             this.httpUtil = null;
             this.organizationInvestigator = null;
             this.configurationGenerator = null;
             this.fieldAnalyzer = null;
+            this.workItemTypeManager = null;
         }
     }
     
@@ -1142,36 +1149,13 @@ public class DiscoverOrganizationTool implements McpTool {
     /**
      * Análisis detallado de tipos de work items
      */
+    /**
+     * Análisis detallado de tipos de work items - REFACTORIZADO
+     * @deprecated Usar workItemTypeManager.analyzeWorkItemTypesDetailed() en su lugar
+     */
+    @Deprecated
     private String analyzeWorkItemTypesDetailed(String project) {
-        StringBuilder analysis = new StringBuilder();
-        
-        try {
-            Map<String, Object> workItemTypesResponse = azureDevOpsClient.getWorkItemTypes(project);
-            Object valueObj = workItemTypesResponse.get("value");
-            
-            if (valueObj instanceof List<?>) {
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> workItemTypes = (List<Map<String, Object>>) valueObj;
-                
-                if (!workItemTypes.isEmpty()) {
-                    analysis.append("Encontrados ").append(workItemTypes.size()).append(" tipos de work items:\n\n");
-                    
-                    for (Map<String, Object> type : workItemTypes) {
-                        String typeName = (String) type.get("name");
-                        analysis.append("• **").append(typeName).append("**\n");
-                    }
-                } else {
-                    analysis.append("❌ No se encontraron tipos de work items en el proyecto.\n");
-                }
-            } else {
-                analysis.append("❌ Respuesta inesperada de la API.\n");
-            }
-            
-        } catch (Exception e) {
-            analysis.append("❌ Error analizando tipos: ").append(e.getMessage()).append("\n");
-        }
-        
-        return analysis.toString();
+        return workItemTypeManager.analyzeWorkItemTypesDetailed(project);
     }
     
     /**
@@ -1817,120 +1801,13 @@ public class DiscoverOrganizationTool implements McpTool {
         return projectNames;
     }
     
+    /**
+     * Análisis de tipos de work items - REFACTORIZADO
+     * @deprecated Usar workItemTypeManager.analyzeWorkItemTypes() en su lugar
+     */
+    @Deprecated
     private String analyzeWorkItemTypes(String project) {
-        StringBuilder analysis = new StringBuilder();
-        analysis.append("📋 Tipos de Work Items\n");
-        analysis.append("----------------------\n");
-        
-        try {
-            // Obtener tipos de work items disponibles dinámicamente
-            List<String> availableTypes = getAvailableWorkItemTypes(project);
-            
-            analysis.append("Tipos encontrados en el proyecto: ").append(availableTypes.size()).append("\n\n");
-            
-            for (String type : availableTypes) {
-                analysis.append("• ").append(type);
-                
-                // Mostrar campos requeridos para este tipo si están configurados
-                try {
-                    List<String> requiredFields = configService.getRequiredFieldsForWorkItemType(type);
-                    if (!requiredFields.isEmpty()) {
-                        analysis.append(" (Campos requeridos: ");
-                        analysis.append(String.join(", ", requiredFields));
-                        analysis.append(")");
-                    }
-                } catch (Exception e) {
-                    // Si no hay configuración para este tipo, continuar
-                }
-                analysis.append("\n");
-                
-                // NUEVO: Documentar valores válidos para campos obligatorios
-                analysis.append(documentValidValuesForRequiredFields(project, type));
-            }
-            
-            analysis.append("\n");
-            
-            // NUEVO: Agregar análisis jerárquico específico para el proyecto
-            analysis.append("🏗️ **ANÁLISIS JERÁRQUICO**\n");
-            analysis.append("========================\n");
-            
-            try {
-                Map<String, Object> hierarchyData = analyzeWorkItemHierarchies(project);
-                
-                if (hierarchyData.containsKey("error")) {
-                    analysis.append("⚠️ ").append(hierarchyData.get("error")).append("\n");
-                } else if (hierarchyData.containsKey("message")) {
-                    analysis.append("ℹ️ ").append(hierarchyData.get("message")).append("\n");
-                } else {
-                    // Mostrar estadísticas del análisis jerárquico
-                    if (hierarchyData.containsKey("totalChildWorkItems")) {
-                        int totalChildren = (Integer) hierarchyData.get("totalChildWorkItems");
-                        analysis.append("📊 **Total work items hijos encontrados:** ").append(totalChildren).append("\n\n");
-                    }
-                    
-                    if (hierarchyData.containsKey("parentChildRelations")) {
-                        @SuppressWarnings("unchecked")
-                        Map<String, Set<String>> relations = (Map<String, Set<String>>) hierarchyData.get("parentChildRelations");
-                        
-                        if (!relations.isEmpty()) {
-                            analysis.append("🔗 **Relaciones Padre-Hijo detectadas:**\n");
-                            for (Map.Entry<String, Set<String>> relation : relations.entrySet()) {
-                                analysis.append("   • **").append(relation.getKey()).append("** puede tener hijos de tipo:\n");
-                                for (String childType : relation.getValue()) {
-                                    analysis.append("     - ").append(childType).append("\n");
-                                }
-                            }
-                            analysis.append("\n");
-                        }
-                    }
-                    
-                    if (hierarchyData.containsKey("mostCommonChildTypes")) {
-                        @SuppressWarnings("unchecked")
-                        List<Map.Entry<String, Integer>> commonTypes = (List<Map.Entry<String, Integer>>) hierarchyData.get("mostCommonChildTypes");
-                        
-                        if (!commonTypes.isEmpty()) {
-                            analysis.append("📈 **Tipos de subtareas más utilizados:**\n");
-                            for (Map.Entry<String, Integer> entry : commonTypes) {
-                                analysis.append("   • **").append(entry.getKey()).append("**: ").append(entry.getValue()).append(" instancias\n");
-                            }
-                            analysis.append("\n");
-                        }
-                    }
-                    
-                    if (hierarchyData.containsKey("detailedStatistics")) {
-                        @SuppressWarnings("unchecked")
-                        Map<String, Map<String, Integer>> detailedStats = (Map<String, Map<String, Integer>>) hierarchyData.get("detailedStatistics");
-                        
-                        if (!detailedStats.isEmpty()) {
-                            analysis.append("🎯 **Estadísticas detalladas por tipo padre:**\n");
-                            for (Map.Entry<String, Map<String, Integer>> parentEntry : detailedStats.entrySet()) {
-                                String parentType = parentEntry.getKey();
-                                Map<String, Integer> childStats = parentEntry.getValue();
-                                
-                                analysis.append("   📁 **").append(parentType).append(":**\n");
-                                for (Map.Entry<String, Integer> childEntry : childStats.entrySet()) {
-                                    analysis.append("     - ").append(childEntry.getKey()).append(": ").append(childEntry.getValue()).append(" casos\n");
-                                }
-                            }
-                            analysis.append("\n");
-                        }
-                    }
-                }
-                
-                analysis.append("💡 **Interpretación de Resultados:**\n");
-                analysis.append("• Los tipos listados arriba representan los patrones de subtareas reales utilizados en su organización\n");
-                analysis.append("• Esta información es crucial para configurar correctamente los campos 'TipoSubtarea' en su organización\n");
-                analysis.append("• Los tipos con mayor número de instancias son los más adoptados por los equipos\n\n");
-                
-            } catch (Exception e) {
-                analysis.append("❌ Error en análisis jerárquico: ").append(e.getMessage()).append("\n\n");
-            }
-            
-        } catch (Exception e) {
-            analysis.append("❌ Error obteniendo tipos de work items: ").append(e.getMessage()).append("\n\n");
-        }
-        
-        return analysis.toString();
+        return workItemTypeManager.analyzeWorkItemTypes(project);
     }
     
     /**
@@ -2410,59 +2287,13 @@ public class DiscoverOrganizationTool implements McpTool {
      * Obtiene todos los tipos de work items disponibles en el proyecto usando GetWorkItemTypesTool
      * Esta implementación garantiza consistencia con la herramienta especializada que ya funciona
      */
+    /**
+     * Obtiene tipos de work items disponibles - REFACTORIZADO
+     * @deprecated Usar workItemTypeManager.getAvailableWorkItemTypes() en su lugar
+     */
+    @Deprecated
     private List<String> getAvailableWorkItemTypes(String project) {
-        List<String> workItemTypes = new ArrayList<>();
-        
-        try {
-            System.out.println("🔍 Obteniendo tipos de work items usando GetWorkItemTypesTool...");
-            
-            // Usar GetWorkItemTypesTool que ya sabemos que funciona perfectamente
-            Map<String, Object> arguments = Map.of(
-                "project", project,
-                "includeExtendedInfo", false  // Solo necesitamos los nombres
-            );
-            
-            Map<String, Object> result = getWorkItemTypesTool.execute(arguments);
-            
-            if (result.containsKey("content")) {
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> content = (List<Map<String, Object>>) result.get("content");
-                if (!content.isEmpty() && content.get(0).containsKey("text")) {
-                    String response = (String) content.get(0).get("text");
-                    
-                    // Extraer nombres de tipos de la respuesta
-                    List<String> extractedTypes = extractWorkItemTypeNames(response);
-                    
-                    // NUEVO: Aplicar validación mejorada para garantizar detección completa
-                    Set<String> validatedTypes = validateAndEnhanceTypeDetection(response, new HashSet<>(extractedTypes));
-                    workItemTypes = new ArrayList<>(validatedTypes);
-                    
-                    System.out.println("✅ Encontrados " + workItemTypes.size() + " tipos de work items");
-                    System.out.println("📋 Tipos finales: " + String.join(", ", workItemTypes));
-                }
-            }
-            
-            if (workItemTypes.isEmpty()) {
-                System.err.println("⚠️ No se pudieron obtener tipos de work items del proyecto: " + project);
-                System.err.println("   Intentando método de fallback...");
-                
-                // NUEVO: método de fallback - consulta directa a la API
-                workItemTypes = getWorkItemTypesDirectFromApi(project);
-                
-                if (workItemTypes.isEmpty()) {
-                    System.err.println("   ❌ Método de fallback también falló");
-                    System.err.println("   Verifique la conectividad y permisos de acceso al proyecto");
-                } else {
-                    System.out.println("   ✅ Método de fallback exitoso: " + workItemTypes.size() + " tipos encontrados");
-                }
-            }
-            
-        } catch (Exception e) {
-            System.err.println("Error obteniendo tipos de work items: " + e.getMessage());
-            e.printStackTrace();
-        }
-        
-        return workItemTypes;
+        return workItemTypeManager.getAvailableWorkItemTypes(project);
     }
     
     /**
@@ -4782,36 +4613,13 @@ public class DiscoverOrganizationTool implements McpTool {
     
     // MÉTODOS DE INVESTIGACIÓN FINAL
     
+    /**
+     * Investigación de tipos de work items - REFACTORIZADO
+     * @deprecated Usar workItemTypeManager.performWorkItemTypesInvestigation() en su lugar
+     */
+    @Deprecated
     private String performWorkItemTypesInvestigation(String projectName, String teamName, String areaPath, String iterationName) {
-        StringBuilder investigation = new StringBuilder();
-        investigation.append("🔍 INVESTIGACIÓN CENTRALIZADA: Tipos de Work Items\n");
-        investigation.append("===================================================\n\n");
-        investigation.append("📍 Contexto específico:\n");
-        investigation.append("   • Proyecto: ").append(projectName).append("\n");
-        if (teamName != null) investigation.append("   • Equipo: ").append(teamName).append("\n");
-        if (areaPath != null) investigation.append("   • Área: ").append(areaPath).append("\n");
-        if (iterationName != null) investigation.append("   • Iteración: ").append(iterationName).append("\n");
-        investigation.append("\n");
-        
-        try {
-            // Generar configuración específica para work item types
-            AzureDevOpsConfigurationGenerator.ConfigurationGenerationResult result = 
-                configurationGenerator.generateSpecificConfiguration(projectName, "workitem-types", false);
-            
-            investigation.append("🏗️ **RESULTADO DE GENERACIÓN:**\n");
-            investigation.append("==============================\n");
-            investigation.append(result.generateReport());
-            
-            // Usar método existente como complemento para mostrar detalles
-            investigation.append("\n📋 **DETALLES ADICIONALES:**\n");
-            investigation.append("============================\n");
-            investigation.append(analyzeWorkItemTypesDetailed(projectName));
-        
-        } catch (Exception e) {
-            investigation.append("❌ Error durante investigación: ").append(e.getMessage()).append("\n");
-        }
-        
-        return investigation.toString();
+        return workItemTypeManager.performWorkItemTypesInvestigation(projectName, teamName, areaPath, iterationName);
     }
     
     private String performCustomFieldsInvestigation(String projectName, String teamName, String areaPath, String iterationName) {
