@@ -46,26 +46,35 @@ public class DiscoverOrganizationTool implements McpTool {
     private final AzureDevOpsWiqlUtility wiqlUtility;
     private final AzureDevOpsHttpUtil httpUtil;
     
-    public DiscoverOrganizationTool(AzureDevOpsClient azureDevOpsClient, OrganizationConfigService configService, 
-                                   OrganizationalConfigService orgConfigService, GetWorkItemTypesTool getWorkItemTypesTool) {
+    // Procesador de work items refactorizado (inyectado por Spring)
+    private final com.mcp.server.utils.workitem.WorkItemProcessor workItemProcessor;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public DiscoverOrganizationTool(
+            AzureDevOpsClient azureDevOpsClient,
+            OrganizationConfigService configService,
+            OrganizationalConfigService orgConfigService,
+            GetWorkItemTypesTool getWorkItemTypesTool,
+            com.mcp.server.utils.workitem.WorkItemProcessor workItemProcessor) {
         this.azureDevOpsClient = azureDevOpsClient;
         this.configService = configService;
         this.orgConfigService = orgConfigService;
         this.getWorkItemTypesTool = getWorkItemTypesTool;
-        
+        this.workItemProcessor = workItemProcessor;
+
         // Inicializar utilidades especializadas
         this.picklistInvestigator = new AzureDevOpsPicklistInvestigator(azureDevOpsClient);
         this.fieldValidator = new AzureDevOpsFieldValidator(azureDevOpsClient, picklistInvestigator);
         this.wiqlUtility = new AzureDevOpsWiqlUtility(azureDevOpsClient);
-        
+
         // Inicializar utilidad HTTP (solo si azureDevOpsClient no es null - para testing)
         if (azureDevOpsClient != null) {
             String organization = AzureDevOpsConfigUtil.getOrganization();
             this.httpUtil = new AzureDevOpsHttpUtil(azureDevOpsClient, organization);
-            
+
             // Inicializar investigador organizacional centralizado
             this.organizationInvestigator = new AzureDevOpsOrganizationInvestigator(azureDevOpsClient, getWorkItemTypesTool);
-            
+
             // Inicializar generador de configuración
             this.configurationGenerator = new AzureDevOpsConfigurationGenerator(organizationInvestigator);
         } else {
@@ -4615,6 +4624,10 @@ public class DiscoverOrganizationTool implements McpTool {
     /**
      * Realiza una petición HTTP GET usando AzureDevOpsClient
      */
+    /**
+     * @deprecated Reemplazado por WorkItemProcessor
+     */
+    @Deprecated
     private String makeHttpGetRequest(String url) {
         try {
             // Extraer el endpoint relativo de la URL completa
@@ -4639,145 +4652,36 @@ public class DiscoverOrganizationTool implements McpTool {
     /**
      * Procesa un work item de referencia para extraer información de contexto organizacional
      */
+    /**
+     * Obtiene el procesador de work items para uso en otras partes de la herramienta.
+     * 
+     * @return Instancia del procesador de work items
+     */
+    protected com.mcp.server.utils.workitem.WorkItemProcessor getWorkItemProcessor() {
+        return this.workItemProcessor;
+    }
+    
+    /**
+     * @deprecated Reemplazado por {@link com.mcp.server.utils.workitem.WorkItemProcessor#procesarWorkItemReferencia(String)}
+     */
+    @Deprecated
     private Map<String, Object> procesarWorkItemReferencia(String workItemReferencia) {
-        try {
-            // Extraer ID del work item
-            Integer workItemId = extractWorkItemIdFromReference(workItemReferencia);
-            if (workItemId == null) {
-                System.err.println("No se pudo extraer ID válido del work item de referencia: " + workItemReferencia);
-                return null;
-            }
-            
-            // Buscar el proyecto del work item - intentar con proyectos conocidos
-            Map<String, Object> workItemDetails = findWorkItemAcrossProjects(workItemId);
-            if (workItemDetails == null) {
-                System.err.println("No se pudo encontrar el work item " + workItemId + " en ningún proyecto accesible");
-                return null;
-            }
-            
-            @SuppressWarnings("unchecked")
-            Map<String, Object> fields = (Map<String, Object>) workItemDetails.get("fields");
-            
-            if (fields != null) {
-                String areaPath = (String) fields.get("System.AreaPath");
-                String project = null;
-                String team = null;
-                
-                // Extraer proyecto del área path
-                if (areaPath != null && !areaPath.trim().isEmpty()) {
-                    String[] pathParts = areaPath.split("\\\\");
-                    if (pathParts.length > 0) {
-                        project = pathParts[0];
-                    }
-                    
-                    // El equipo puede estar en el segundo nivel del área path
-                    if (pathParts.length > 1) {
-                        team = pathParts[1];
-                    }
-                }
-                
-                Map<String, Object> result = new HashMap<>();
-                result.put("workItemId", workItemId);
-                result.put("project", project);
-                result.put("areaPath", areaPath);
-                result.put("team", team);
-                result.put("iterationPath", fields.get("System.IterationPath"));
-                result.put("workItemType", fields.get("System.WorkItemType"));
-                
-                System.out.println("Work item de referencia procesado exitosamente: ID=" + workItemId + 
-                                 ", Proyecto=" + project + ", Área=" + areaPath);
-                
-                return result;
-            }
-            
-        } catch (Exception e) {
-            System.err.println("Error procesando work item de referencia " + workItemReferencia + ": " + e.getMessage());
-        }
-        
-        return null;
+        // Delegar a la nueva clase refactorizada
+        return workItemProcessor.procesarWorkItemReferencia(workItemReferencia);
     }
     
     /**
      * Extrae el ID del work item de una URL o texto de referencia
      */
     private Integer extractWorkItemIdFromReference(String reference) {
-        if (reference == null || reference.trim().isEmpty()) {
-            return null;
-        }
-        
-        reference = reference.trim();
-        
-        // Si es solo un número, devolverlo directamente
-        try {
-            return Integer.parseInt(reference);
-        } catch (NumberFormatException e) {
-            // No es un número simple, intentar extraer de URL
-        }
-        
-        // Patrones para URLs de Azure DevOps
-        String[] patterns = {
-            "/_workitems/edit/(\\d+)",  // https://dev.azure.com/org/project/_workitems/edit/12345
-            "/workitems/(\\d+)",        // https://dev.azure.com/org/project/_workitems/12345  
-            "workItemId=(\\d+)",        // Query parameter
-            "#(\\d+)"                   // Referencia simple como #12345
-        };
-        
-        for (String pattern : patterns) {
-            Pattern p = Pattern.compile(pattern);
-            Matcher m = p.matcher(reference);
-            if (m.find()) {
-                try {
-                    return Integer.parseInt(m.group(1));
-                } catch (NumberFormatException e) {
-                    // Continuar con el siguiente patrón
-                }
-            }
-        }
-        
-        return null;
+        return workItemProcessor.extractWorkItemIdFromReference(reference);
     }
     
     /**
      * Busca un work item específico a través de múltiples proyectos
      */
     private Map<String, Object> findWorkItemAcrossProjects(Integer workItemId) {
-        try {
-            // Primero, intentar obtener la lista de proyectos
-            String organization = azureDevOpsClient.getOrganization();
-            String url = String.format("https://dev.azure.com/%s/_apis/projects?api-version=6.0", organization);
-            String projectsResponse = makeHttpGetRequest(url);
-            
-            if (projectsResponse != null) {
-                // Extraer nombres de proyectos de la respuesta
-                List<String> projectNames = extractProjectNames(projectsResponse);
-                
-                // Intentar encontrar el work item en cada proyecto
-                for (String projectName : projectNames) {
-                    try {
-                        String workItemUrl = String.format(
-                            "https://dev.azure.com/%s/%s/_apis/wit/workitems/%d?api-version=6.0",
-                            organization, projectName, workItemId
-                        );
-                        
-                        String workItemResponse = makeHttpGetRequest(workItemUrl);
-                        if (workItemResponse != null && !workItemResponse.contains("does not exist")) {
-                            // Parsear respuesta JSON básica
-                            Map<String, Object> workItem = parseWorkItemResponse(workItemResponse);
-                            if (workItem != null) {
-                                return workItem;
-                            }
-                        }
-                    } catch (Exception e) {
-                        // Continuar con el siguiente proyecto
-                        System.out.println("Work item " + workItemId + " no encontrado en proyecto " + projectName + ": " + e.getMessage());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Error buscando work item " + workItemId + " a través de proyectos: " + e.getMessage());
-        }
-        
-        return null;
+        return workItemProcessor.findWorkItemAcrossProjects(workItemId);
     }
     
     /**
@@ -4808,51 +4712,14 @@ public class DiscoverOrganizationTool implements McpTool {
      * Parsea la respuesta JSON de un work item de forma básica
      */
     private Map<String, Object> parseWorkItemResponse(String jsonResponse) {
-        try {
-            Map<String, Object> result = new HashMap<>();
-            
-            // Extraer campos usando regex (parsing básico)
-            Pattern fieldsPattern = Pattern.compile("\"fields\"\\s*:\\s*\\{([^}]+(?:\\{[^}]*\\}[^}]*)*)\\}");
-            Matcher fieldsMatcher = fieldsPattern.matcher(jsonResponse);
-            
-            if (fieldsMatcher.find()) {
-                String fieldsSection = fieldsMatcher.group(1);
-                Map<String, Object> fields = parseFieldsSection(fieldsSection);
-                result.put("fields", fields);
-                return result;
-            }
-        } catch (Exception e) {
-            System.err.println("Error parseando respuesta de work item: " + e.getMessage());
-        }
-        
-        return null;
+        return workItemProcessor.parseWorkItemResponse(jsonResponse);
     }
     
     /**
      * Parsea la sección de campos del JSON
      */
     private Map<String, Object> parseFieldsSection(String fieldsSection) {
-        Map<String, Object> fields = new HashMap<>();
-        
-        try {
-            // Patrones para diferentes tipos de campos
-            Pattern stringFieldPattern = Pattern.compile("\"([^\"]+)\"\\s*:\\s*\"([^\"]*(?:\\\\.[^\"]*)*?)\"");
-            Matcher stringMatcher = stringFieldPattern.matcher(fieldsSection);
-            
-            while (stringMatcher.find()) {
-                String fieldName = stringMatcher.group(1);
-                String fieldValue = stringMatcher.group(2);
-                
-                // Solo procesar campos del sistema relevantes
-                if (fieldName.startsWith("System.")) {
-                    fields.put(fieldName, fieldValue);
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Error parseando sección de campos: " + e.getMessage());
-        }
-        
-        return fields;
+        return workItemProcessor.parseFieldsSection(fieldsSection);
     }
 
     /**

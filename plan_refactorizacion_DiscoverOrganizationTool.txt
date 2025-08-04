@@ -1,0 +1,501 @@
+# PLAN DE REFACTORIZACIÓN PARA DISCOVERORGANIZATIONTOOL
+## Documento de Planificación y Seguimiento
+
+## OBJETIVO
+Refactorizar la clase DiscoverOrganizationTool dividiéndola en múltiples clases más pequeñas y cohesivas, 
+cada una con una responsabilidad bien definida, siguiendo los principios SOLID y reutilizando las clases 
+existentes del codebase siempre que sea posible.
+
+## ESTADO GENERAL DEL PROYECTO
+[ ] No iniciado
+[ ] En análisis inicial
+[X] En implementación
+[ ] En pruebas
+[ ] Completado
+
+Fecha de inicio: 01/08/2025
+Fecha de finalización prevista: ________________
+Fecha de finalización real: ________________
+
+## PROBLEMAS IDENTIFICADOS
+1. Clase excesivamente grande (~5100 líneas)
+2. Múltiples responsabilidades mezcladas
+3. Baja cohesión entre métodos
+4. Dificultad para mantenimiento y testing
+5. Duplicación de código
+
+## BLOQUES FUNCIONALES IDENTIFICADOS Y ESTADO DE IMPLEMENTACIÓN
+
+A continuación se listan las clases a implementar, con sus respectivos métodos y estado de implementación:
+
+### 1. WorkItemProcessor
+**Responsabilidad**: Procesamiento y manejo de work items
+**Estado**: [ ] No iniciado [ ] En implementación [X] Completado [ ] Probado
+**Clase existente relacionada**: Ninguna identificada
+**Desarrollador asignado**: Equipo MCP
+**Fecha de inicio**: 01/08/2025
+**Fecha de finalización**: 01/08/2025
+
+**Métodos a migrar**:
+- [X] extractFieldValuesFromWorkItems
+- [X] parseFieldValuesFromBatch
+- [X] getWorkItemAsJson
+- [X] extractFieldFromJson
+- [X] getFieldValueFromWorkItem
+- [X] extractFieldValueFromWorkItemResponse
+- [X] extractUniqueFieldValuesFromExistingWorkItems
+- [X] procesarWorkItemReferencia
+- [X] parseWorkItemResponse
+- [X] parseFieldsSection
+
+**Notas de implementación**:
+Se ha implementado la clase WorkItemProcessor en el paquete com.mcp.server.utils.workitem. Esta clase
+encapsula toda la funcionalidad relacionada con el procesamiento de work items que antes estaba
+dispersa en DiscoverOrganizationTool. Se ha actualizado DiscoverOrganizationTool para usar esta
+nueva clase, y se han marcado los métodos antiguos como @Deprecated para facilitar la migración
+gradual. Se creó un esqueleto de pruebas unitarias que deberá completarse en la fase de pruebas.
+________________________________________________________________________________
+
+### 2. FieldAnalyzer
+**Responsabilidad**: Análisis y procesamiento de campos (fields)
+**Estado**: [ ] No iniciado [ ] En implementación [ ] Completado [ ] Probado
+**Clase existente relacionada**: AzureDevOpsFieldValidator (parcial)
+**Desarrollador asignado**: ________________
+**Fecha de inicio**: ________________
+**Fecha de finalización**: ________________
+
+**Métodos a migrar**:
+- [ ] getAllProjectFields
+- [ ] parseProjectFields
+- [ ] getFieldAllowedValues
+- [ ] getCompleteFieldDefinition
+- [ ] parseCompleteFieldDefinition
+- [ ] getFieldDefinitionAllowedValues
+- [ ] determineFieldType
+- [ ] isLikelyPicklistField
+- [ ] extractFieldProperty
+- [ ] parseAllowedValuesFromString
+- [ ] parseFieldAllowedValues
+- [ ] getAllProjectFieldsDetailed
+- [ ] parseProjectFieldsResponse
+- [ ] parseProjectFieldData
+
+**Notas de implementación**:
+________________________________________________________________________________
+________________________________________________________________________________
+
+### 3. PicklistManager
+**Responsabilidad**: Gestión de picklists y sus valores
+**Estado**: [ ] No iniciado [ ] En implementación [ ] Completado [ ] Probado
+**Clase existente relacionada**: AzureDevOpsPicklistInvestigator (potencial reutilización)
+**Desarrollador asignado**: ________________
+**Fecha de inicio**: ________________
+**Fecha de finalización**: ________________
+
+**Métodos a migrar**:
+- [ ] getPicklistValues
+- [ ] tryGetPicklistFromProcesses
+- [ ] tryGetPicklistFromProjectContext
+- [ ] tryGetPicklistFromFieldEndpoint
+- [ ] extractArrayValues
+- [ ] analyzePicklistValuesDetailed
+
+**Notas de implementación**:
+________________________________________________________________________________
+________________________________________________________________________________
+
+### 4. WorkItemTypeManager
+**Responsabilidad**: Gestión de tipos de work items
+**Estado**: [ ] No iniciado [ ] En implementación [ ] Completado [ ] Probado
+**Clase existente relacionada**: Ninguna identificada
+**Desarrollador asignado**: ________________
+**Fecha de inicio**: ________________
+**Fecha de finalización**: ________________
+
+**Métodos a migrar**:
+- [ ] getCompleteWorkItemTypeDefinition
+- [ ] parseWorkItemTypeDefinitionResponse
+- [ ] getRequiredFieldsForType
+- [ ] getAllFieldsForType
+- [ ] getWorkItemStateValues
+- [ ] parseWorkItemStates
+- [ ] analyzeWorkItemTypesDetailed
+- [ ] documentValidValuesForRequiredFields
+- [ ] parseFieldDefinitions
+- [ ] parseIndividualField
+- [ ] parseStates
+
+**Notas de implementación**:
+________________________________________________________________________________
+________________________________________________________________________________
+
+### 5. WorkItemHierarchyAnalyzer
+**Responsabilidad**: Análisis de jerarquías de work items
+**Estado**: [ ] No iniciado [ ] En implementación [ ] Completado [ ] Probado
+**Clase existente relacionada**: Ninguna identificada
+**Desarrollador asignado**: ________________
+**Fecha de inicio**: ________________
+**Fecha de finalización**: ________________
+
+**Métodos a migrar**:
+- [ ] analyzeWorkItemHierarchies
+- [ ] generateSubtaskPatternsDocumentation
+- [ ] findWorkItemAcrossProjects
+- [ ] analyzeHierarchyPatterns
+- [ ] extractWorkItemIdFromReference
+- [ ] extractProjectNames
+
+**Notas de implementación**:
+________________________________________________________________________________
+________________________________________________________________________________
+
+### 6. InteractiveNavigator
+**Responsabilidad**: Navegación interactiva por la jerarquía
+**Estado**: [ ] No iniciado [ ] En implementación [ ] Completado [ ] Probado
+**Clase existente relacionada**: Ninguna identificada
+**Desarrollador asignado**: ________________
+**Fecha de inicio**: ________________
+**Fecha de finalización**: ________________
+
+**Métodos a migrar**:
+- [ ] getTeamContextSummary
+- [ ] getIterationSummary
+- [ ] analyzeWorkItemDistribution
+- [ ] analyzeCustomFieldsUsage
+- [ ] analyzeTeamActivity
+- [ ] analyzeFieldValues
+- [ ] analyzeIterationWorkload
+- [ ] analyzeTeamVelocity
+- [ ] analyzeAreaSpecificFields
+- [ ] analyzeWorkflowPatterns
+- [ ] analyzeBacklogHealth
+- [ ] analyzeSprintPatterns
+- [ ] analyzeFieldUsageStats
+
+**Notas de implementación**:
+________________________________________________________________________________
+________________________________________________________________________________
+
+### 7. ConfigurationGenerator
+**Responsabilidad**: Generación de configuración y archivos YAML
+**Estado**: [ ] No iniciado [ ] En implementación [ ] Completado [ ] Probado
+**Clase existente relacionada**: AzureDevOpsConfigurationGenerator (potencial reutilización)
+**Desarrollador asignado**: ________________
+**Fecha de inicio**: ________________
+**Fecha de finalización**: ________________
+
+**Métodos a migrar**:
+- [ ] performConfigurationBackup
+- [ ] performWorkItemTypesInvestigation
+- [ ] performCustomFieldsInvestigation
+- [ ] performPicklistValuesInvestigation
+- [ ] performFullConfigurationGeneration
+- [ ] analyzeWorkItemTypesWithCompleteFieldDocumentation
+
+**Notas de implementación**:
+________________________________________________________________________________
+________________________________________________________________________________
+
+### 8. Utilidades HTTP (AzureDevOpsHttpUtil)
+**Responsabilidad**: Comunicación HTTP con Azure DevOps API
+**Estado**: [X] No iniciado [ ] En implementación [ ] Completado [X] Reutilización
+**Clase existente relacionada**: AzureDevOpsHttpUtil (reutilización completa)
+**Desarrollador asignado**: ________________
+**Fecha de inicio**: ________________
+**Fecha de finalización**: ________________
+
+**Métodos a reutilizar o migrar**:
+- [X] makeDirectApiRequest (ya existente en AzureDevOpsHttpUtil)
+- [X] makePostRequest (ya existente en AzureDevOpsHttpUtil)
+- [X] makeHttpGetRequest (ya existente en AzureDevOpsHttpUtil)
+
+**Notas de implementación**:
+Se reutilizará la clase existente AzureDevOpsHttpUtil en lugar de crear una nueva.
+________________________________________________________________________________
+
+## PLAN DE IMPLEMENTACIÓN Y SEGUIMIENTO
+
+### Fase 1: Preparación
+**Estado**: [ ] No iniciado [ ] En progreso [ ] Completado
+**Responsable**: ________________
+**Fecha inicio**: ________________
+**Fecha fin**: ________________
+
+**Tareas**:
+- [ ] Crear una rama específica para esta refactorización
+- [ ] Actualizar las pruebas unitarias existentes para asegurar cobertura
+- [ ] Documentar el comportamiento actual como referencia
+- [ ] Hacer una copia de seguridad de la clase original
+- [ ] Analizar las clases existentes que pueden reutilizarse
+
+**Notas**:
+________________________________________________________________________________
+________________________________________________________________________________
+
+### Fase 2: Análisis de clases existentes en codebase
+**Estado**: [ ] No iniciado [ ] En progreso [ ] Completado
+**Responsable**: ________________
+**Fecha inicio**: ________________
+**Fecha fin**: ________________
+
+**Tareas**:
+- [ ] Analizar AzureDevOpsHttpUtil
+- [ ] Analizar AzureDevOpsJsonParser
+- [ ] Analizar AzureDevOpsConfigUtil
+- [ ] Analizar AzureDevOpsOrganizationInvestigator
+- [ ] Analizar AzureDevOpsPicklistInvestigator
+- [ ] Analizar AzureDevOpsFieldValidator
+- [ ] Analizar AzureDevOpsWiqlUtility
+- [ ] Analizar AzureDevOpsConfigurationGenerator
+- [ ] Analizar clases de modelo existentes
+- [ ] Analizar ConfigurationBackupUtil
+- [ ] Documentar qué funcionalidad puede reutilizarse
+
+**Notas**:
+________________________________________________________________________________
+________________________________________________________________________________
+
+### Fase 3: Creación de nuevas clases
+**Estado**: [ ] No iniciado [X] En progreso [ ] Completado
+**Responsable**: Equipo MCP
+**Fecha inicio**: 01/08/2025
+**Fecha fin**: ________________
+
+**Tareas**:
+- [X] Crear estructuras de paquetes necesarias
+- [X] Implementar o reutilizar AzureDevOpsHttpUtil
+- [X] Implementar WorkItemProcessor
+- [ ] Implementar/extender FieldAnalyzer
+- [ ] Implementar/extender PicklistManager
+- [ ] Implementar WorkItemTypeManager
+- [ ] Implementar WorkItemHierarchyAnalyzer
+- [ ] Implementar InteractiveNavigator
+- [ ] Implementar/extender ConfigurationGenerator
+- [ ] Crear pruebas unitarias para cada clase
+
+**Notas**:
+________________________________________________________________________________
+________________________________________________________________________________
+
+### Fase 4: Refactorización de DiscoverOrganizationTool
+**Estado**: [ ] No iniciado [ ] En progreso [ ] Completado
+**Responsable**: ________________
+**Fecha inicio**: ________________
+**Fecha fin**: ________________
+
+**Tareas**:
+- [ ] Modificar constructor para inicializar todas las clases
+- [ ] Refactorizar método execute para delegar
+- [ ] Eliminar métodos migrados
+- [ ] Verificar implementación de interfaz McpTool
+- [ ] Adaptar referencias internas
+
+**Notas**:
+________________________________________________________________________________
+________________________________________________________________________________
+
+### Fase 5: Pruebas y Validación
+**Estado**: [ ] No iniciado [ ] En progreso [ ] Completado
+**Responsable**: ________________
+**Fecha inicio**: ________________
+**Fecha fin**: ________________
+
+**Tareas**:
+- [ ] Ejecutar pruebas unitarias nuevas y existentes
+- [ ] Realizar pruebas de integración
+- [ ] Validar comportamiento completo
+- [ ] Verificar cobertura de código
+- [ ] Corregir problemas identificados
+
+**Notas**:
+________________________________________________________________________________
+________________________________________________________________________________
+
+### Fase 6: Documentación y Finalización
+**Estado**: [ ] No iniciado [ ] En progreso [ ] Completado
+**Responsable**: ________________
+**Fecha inicio**: ________________
+**Fecha fin**: ________________
+
+**Tareas**:
+- [ ] Actualizar documentación de todas las clases
+- [ ] Revisar código para calidad y coherencia
+- [ ] Realizar revisión de código con el equipo
+- [ ] Fusionar rama de refactorización con rama principal
+
+**Notas**:
+________________________________________________________________________________
+________________________________________________________________________________
+
+## PLANTILLAS PARA IMPLEMENTACIÓN
+
+### Plantilla para cada nueva clase
+```java
+package com.mcp.server.tools.azuredevops.[subpaquete];
+
+import com.mcp.server.tools.azuredevops.client.AzureDevOpsClient;
+// Importar utilidades existentes
+import com.mcp.server.utils.http.AzureDevOpsHttpUtil;
+import com.mcp.server.utils.json.AzureDevOpsJsonParser;
+// Otros imports necesarios
+
+/**
+ * [Descripción de la clase]
+ */
+public class [NombreClase] {
+    
+    // Dependencias
+    private final AzureDevOpsClient azureDevOpsClient;
+    // Utilidades existentes como dependencias
+    private final AzureDevOpsHttpUtil httpUtil;
+    // Otras dependencias
+    
+    /**
+     * Constructor con todas las dependencias necesarias
+     */
+    public [NombreClase](AzureDevOpsClient azureDevOpsClient, AzureDevOpsHttpUtil httpUtil /*, otras dependencias */) {
+        this.azureDevOpsClient = azureDevOpsClient;
+        this.httpUtil = httpUtil;
+        // Inicializar otras dependencias
+    }
+    
+    // Métodos migrados desde DiscoverOrganizationTool
+}
+```
+
+### Plantilla para extensión de clase existente
+```java
+package com.mcp.server.utils.[paquete_existente];
+
+// Imports necesarios
+
+/**
+ * Extensión de [ClaseExistente] con funcionalidades adicionales
+ * migradas desde DiscoverOrganizationTool.
+ */
+public class [ClaseExistente]Extended extends [ClaseExistente] {
+    
+    // Dependencias adicionales si son necesarias
+    
+    /**
+     * Constructor con todas las dependencias necesarias
+     */
+    public [ClaseExistente]Extended(/* parámetros del constructor padre */, /* dependencias adicionales */) {
+        super(/* parámetros para constructor padre */);
+        // Inicializar dependencias adicionales
+    }
+    
+    // Métodos adicionales migrados desde DiscoverOrganizationTool
+}
+```
+
+## CONSIDERACIONES IMPORTANTES
+
+1. Reutilizar las clases existentes siempre que sea posible:
+   - AzureDevOpsHttpUtil en lugar de crear AzureDevOpsHttpClient
+   - AzureDevOpsJsonParser para todo el parseo de respuestas JSON
+   - AzureDevOpsConfigUtil para acceso a configuración
+   - AzureDevOpsPicklistInvestigator para gestión de picklists
+   - AzureDevOpsFieldValidator para validación de campos
+   - ConfigurationBackupUtil para backups de configuración
+
+2. Extender clases existentes cuando sea necesario en lugar de duplicar código
+3. Mantener compatibilidad con el código existente
+4. Minimizar el impacto en otras partes del sistema
+5. Priorizar la testabilidad de las nuevas clases
+6. Asegurar que las dependencias entre clases sean claras y mínimas
+7. Documentar adecuadamente las responsabilidades de cada clase
+8. Considerar la posibilidad de crear interfaces para facilitar el mockeo en pruebas
+
+## MÉTRICAS DE ÉXITO Y SEGUIMIENTO
+
+### Métricas de Éxito
+- [ ] Reducción del tamaño de DiscoverOrganizationTool en al menos un 80%
+- [ ] Todas las pruebas unitarias pasan
+- [ ] Mantenimiento de la funcionalidad completa
+- [ ] Cada nueva clase tiene menos de 300 líneas
+- [ ] Cobertura de código de al menos 80% para todas las clases nuevas
+- [ ] No hay métodos con más de 50 líneas de código
+- [ ] Reutilización efectiva de al menos 50% de las clases existentes identificadas
+- [ ] Reducción de duplicación de código en al menos un 70%
+- [ ] Clara separación de responsabilidades entre componentes nuevos y existentes
+
+### Seguimiento de Métricas
+| Métrica | Valor Inicial | Valor Actual | Objetivo | Estado |
+|---------|---------------|--------------|----------|--------|
+| Tamaño DiscoverOrganizationTool | ~5100 líneas | ~4900 líneas | <1020 líneas | [ ] |
+| Pruebas que pasan | ? / ? | | 100% | [ ] |
+| Clases nuevas <300 líneas | N/A | 1/8 | 100% | [ ] |
+| Cobertura de código | ? % | | ≥80% | [ ] |
+| Métodos <50 líneas | ? % | | 100% | [ ] |
+| Reutilización de clases | 0% | 12.5% | ≥50% | [ ] |
+| Reducción duplicación | 0% | ~10% | ≥70% | [ ] |
+
+## CALENDARIO Y PROGRESO
+
+### Calendario Propuesto
+| Fase | Duración Estimada | Fecha Inicio | Fecha Fin | Estado |
+|------|-------------------|--------------|-----------|--------|
+| 1. Preparación | 1 día | | | [ ] |
+| 2. Análisis de clases | 1-2 días | | | [ ] |
+| 3. Creación/extensión | 3-5 días | | | [ ] |
+| 4. Refactorización | 1-2 días | | | [ ] |
+| 5. Pruebas | 2-3 días | | | [ ] |
+| 6. Documentación | 1 día | | | [ ] |
+| **TOTAL** | **9-14 días** | | | |
+
+### Progreso General
+- [ ] 0% - No iniciado
+- [ ] 10% - Análisis inicial y plan de refactorización
+- [X] 25% - Fase 1 y 2 completadas, primera clase implementada
+- [ ] 50% - Fase 3 completada
+- [ ] 75% - Fase 4 completada
+- [ ] 90% - Fase 5 completada
+- [ ] 100% - Proyecto completado
+
+## RIESGOS Y MITIGACIÓN
+
+| Riesgo | Probabilidad | Impacto | Estrategia de Mitigación | Estado |
+|--------|--------------|---------|--------------------------|--------|
+| Introducir errores durante la refactorización | Media | Alto | Pruebas exhaustivas y refactorización incremental | [ ] Mitigado |
+| Dependencias circulares entre las clases nuevas y existentes | Media | Medio | Diseño cuidadoso de la arquitectura y uso de interfaces | [ ] Mitigado |
+| Comportamiento diferente después de la refactorización | Baja | Alto | Documentar comportamiento actual y validar con pruebas | [ ] Mitigado |
+| Incompatibilidad con las clases existentes | Media | Medio | Verificar firmas de métodos y comportamientos esperados | [ ] Mitigado |
+| Tiempo de refactorización mayor al estimado | Alta | Bajo | Enfoque incremental, priorizando bloques críticos | [ ] Mitigado |
+
+## REGISTRO DE DECISIONES
+
+| Fecha | Decisión | Justificación | Alternativas Consideradas |
+|-------|----------|---------------|---------------------------|
+| 01/08/2025 | Usar paquete utils.workitem para WorkItemProcessor | Mejor organización y alineación con la estructura existente | Colocar en tools.azuredevops |
+| 01/08/2025 | Implementar método makePostRequest en WorkItemProcessor | AzureDevOpsHttpUtil no tiene este método | Extender AzureDevOpsHttpUtil |
+| 01/08/2025 | Dejar métodos antiguos como @Deprecated | Facilita migración gradual | Eliminar métodos inmediatamente |
+
+## REGISTRO DE PROBLEMAS
+
+| ID | Fecha | Problema | Impacto | Solución | Estado |
+|----|-------|----------|---------|----------|--------|
+| 1 | 01/08/2025 | AzureDevOpsHttpUtil no tiene método makePostRequest | Imposibilidad de usar directamente la clase | Implementar método en WorkItemProcessor | [X] Resuelto |
+| 2 | 01/08/2025 | Dependencias para pruebas unitarias no disponibles | No se pueden ejecutar pruebas unitarias | Se agregó Mockito en build.gradle | [X] Resuelto |
+|    |       |          |         |          | [ ] Resuelto |
+
+## PRÓXIMAS REUNIONES DE REVISIÓN
+
+| Fecha | Hora | Participantes | Objetivos | Completada |
+|-------|------|---------------|-----------|------------|
+|       |      |               |           | [ ] |
+|       |      |               |           | [ ] |
+|       |      |               |           | [ ] |
+
+## NOTAS GENERALES Y COMENTARIOS ADICIONALES
+
+01/08/2025 - Implementación exitosa de la primera clase refactorizada (WorkItemProcessor).
+Se logró migrar toda la funcionalidad relacionada con procesamiento de work items a la nueva
+clase y se actualizó DiscoverOrganizationTool para utilizarla. Se encontraron algunos
+problemas con las dependencias para pruebas unitarias, pero se solucionaron añadiendo Mockito
+al archivo build.gradle. Se ha marcado como primera milestone completada.
+
+La siguiente clase a implementar será FieldAnalyzer, que manejará todo lo relacionado con
+el análisis y procesamiento de campos de Azure DevOps.
+________________________________________________________________________________
+________________________________________________________________________________
