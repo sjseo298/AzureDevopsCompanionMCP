@@ -87,8 +87,9 @@ class FieldTypeDetectionTest {
      * Nota: Algunos métodos pueden fallar si requieren dependencias reales
      */
     private DiscoverOrganizationTool createTestInstance() {
-        // Para testing, creamos una instancia con dependencias nulas
-        // Esto funcionará para métodos que no requieren estas dependencias
-        return new DiscoverOrganizationTool(null, null, null, null);
+        // Para testing, creamos una instancia con dependencias nulas o mocks
+        // Solo para métodos que no requieren dependencias reales
+        com.mcp.server.utils.workitem.WorkItemProcessor dummyProcessor = null;
+        return new DiscoverOrganizationTool(null, null, null, null, dummyProcessor);
     }
 }
