@@ -19,7 +19,6 @@ import com.mcp.server.utils.discovery.AzureDevOpsConfigurationGenerator;
 import com.mcp.server.utils.http.AzureDevOpsHttpUtil;
 import com.mcp.server.utils.json.AzureDevOpsJsonParser;
 import com.mcp.server.utils.config.AzureDevOpsConfigUtil;
-import com.mcp.server.utils.picklist.PicklistManager;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -50,11 +49,8 @@ public class DiscoverOrganizationTool implements McpTool {
     // Procesador de work items refactorizado (inyectado por Spring)
     private final com.mcp.server.utils.workitem.WorkItemProcessor workItemProcessor;
     
-    // Analizador de campos refactorizado
+    // Analizador de campos refactorizado (incluye gestión de picklists)
     private final com.mcp.server.utils.field.FieldAnalyzer fieldAnalyzer;
-    
-    // Gestor de picklists refactorizado
-    private final PicklistManager picklistManager;
 
     public DiscoverOrganizationTool(
             AzureDevOpsClient azureDevOpsClient,
@@ -84,18 +80,14 @@ public class DiscoverOrganizationTool implements McpTool {
             // Inicializar generador de configuración
             this.configurationGenerator = new AzureDevOpsConfigurationGenerator(organizationInvestigator);
             
-            // Inicializar analizador de campos
-            this.fieldAnalyzer = new com.mcp.server.utils.field.FieldAnalyzer(azureDevOpsClient, httpUtil, picklistInvestigator);
-            
-            // Inicializar gestor de picklists
-            this.picklistManager = new PicklistManager(azureDevOpsClient, httpUtil, picklistInvestigator, organizationInvestigator);
+            // Inicializar analizador de campos (que ahora incluye gestión de picklists)
+            this.fieldAnalyzer = new com.mcp.server.utils.field.FieldAnalyzer(azureDevOpsClient, httpUtil, picklistInvestigator, organizationInvestigator);
         } else {
             // Para testing - inicializar con valores null
             this.httpUtil = null;
             this.organizationInvestigator = null;
             this.configurationGenerator = null;
             this.fieldAnalyzer = null;
-            this.picklistManager = null;
         }
     }
     
@@ -1196,13 +1188,13 @@ public class DiscoverOrganizationTool implements McpTool {
      * Análisis detallado de valores de picklist - REFACTORIZADO
      */
     /**
-     * Análisis detallado de valores de picklist - REFACTORIZADO para usar PicklistManager
-     * @deprecated Migrado a PicklistManager para mejor organización del código
+     * Análisis detallado de valores de picklist - REFACTORIZADO para usar FieldAnalyzer
+     * @deprecated Migrado a FieldAnalyzer.analyzePicklistValuesDetailed() para mejor organización del código
      */
     @Deprecated
     private String analyzePicklistValuesDetailed(String project) {
-        // REFACTORIZADO: Delegar al gestor especializado
-        return picklistManager.analyzePicklistValuesDetailed(project);
+        // REFACTORIZADO: Delegar al analizador de campos que incluye gestión de picklists
+        return fieldAnalyzer.analyzePicklistValuesDetailed(project);
     }
     
     /**
@@ -3103,12 +3095,12 @@ public class DiscoverOrganizationTool implements McpTool {
     
     /**
      * Obtiene valores de picklist usando múltiples estrategias de endpoints
-     * @deprecated Migrado a PicklistManager para mejor organización del código
+     * @deprecated Migrado a FieldAnalyzer.getPicklistValues() para mejor organización del código
      */
     @Deprecated
     private List<String> getPicklistValues(String project, String fieldReferenceName, String picklistId) {
-        // REFACTORIZADO: Delegar al gestor especializado
-        return picklistManager.getPicklistValues(project, fieldReferenceName, picklistId);
+        // REFACTORIZADO: Delegar al analizador de campos que incluye gestión de picklists
+        return fieldAnalyzer.getPicklistValues(project, fieldReferenceName, picklistId);
     }
     
     // Métodos auxiliares para investigación avanzada
@@ -3184,35 +3176,35 @@ public class DiscoverOrganizationTool implements McpTool {
     }
     
     /**
-     * @deprecated Migrado a PicklistManager.tryGetPicklistFromProcesses()
+     * @deprecated Migrado a FieldAnalyzer.tryGetPicklistFromProcesses()
      */
     @Deprecated
     private List<String> tryGetPicklistFromProcesses(String picklistId) {
-        return picklistManager.tryGetPicklistFromProcesses(picklistId);
+        return fieldAnalyzer.tryGetPicklistFromProcesses(picklistId);
     }
     
     /**
-     * @deprecated Migrado a PicklistManager.tryGetPicklistFromProjectContext()
+     * @deprecated Migrado a FieldAnalyzer.tryGetPicklistFromProjectContext()
      */
     @Deprecated
     private List<String> tryGetPicklistFromProjectContext(String project, String picklistId) {
-        return picklistManager.tryGetPicklistFromProjectContext(project, picklistId);
+        return fieldAnalyzer.tryGetPicklistFromProjectContext(project, picklistId);
     }
     
     /**
-     * @deprecated Migrado a PicklistManager.tryGetPicklistFromFieldEndpoint()
+     * @deprecated Migrado a FieldAnalyzer.tryGetPicklistFromFieldEndpoint()
      */
     @Deprecated
     private List<String> tryGetPicklistFromFieldEndpoint(String project, String fieldReferenceName) {
-        return picklistManager.tryGetPicklistFromFieldEndpoint(project, fieldReferenceName);
+        return fieldAnalyzer.tryGetPicklistFromFieldEndpoint(project, fieldReferenceName);
     }
     
     /**
-     * @deprecated Migrado a PicklistManager.extractArrayValues()
+     * @deprecated Migrado a FieldAnalyzer.extractArrayValues()
      */
     @Deprecated
     private List<String> extractArrayValues(String json, String arrayKey) {
-        return picklistManager.extractArrayValues(json, arrayKey);
+        return fieldAnalyzer.extractArrayValues(json, arrayKey);
     }
     
     /**

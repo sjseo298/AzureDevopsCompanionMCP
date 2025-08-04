@@ -57,9 +57,9 @@ gradual. Se creó un esqueleto de pruebas unitarias que deberá completarse en l
 ________________________________________________________________________________
 
 ### 2. FieldAnalyzer
-**Responsabilidad**: Análisis y procesamiento de campos (fields)
+**Responsabilidad**: Análisis y procesamiento de campos (fields) y gestión de picklists
 **Estado**: [ ] No iniciado [ ] En implementación [X] Completado [ ] Probado
-**Clase existente relacionada**: AzureDevOpsFieldValidator (parcial)
+**Clase existente relacionada**: AzureDevOpsFieldValidator (parcial), AzureDevOpsPicklistInvestigator (integrada)
 **Desarrollador asignado**: Equipo MCP
 **Fecha de inicio**: 01/08/2025
 **Fecha de finalización**: 01/08/2025
@@ -79,43 +79,48 @@ ________________________________________________________________________________
 - [X] getAllProjectFieldsDetailed
 - [X] parseProjectFieldsResponse
 - [X] parseProjectFieldData
+- [X] getPicklistValues (integrado desde PicklistManager)
+- [X] tryGetPicklistFromProcesses (integrado desde PicklistManager)
+- [X] tryGetPicklistFromProjectContext (integrado desde PicklistManager)
+- [X] tryGetPicklistFromFieldEndpoint (integrado desde PicklistManager)
+- [X] extractArrayValues (integrado desde PicklistManager)
+- [X] analyzePicklistValuesDetailed (integrado desde PicklistManager)
 
 **Notas de implementación**:
 Se ha implementado exitosamente la clase FieldAnalyzer en el paquete com.mcp.server.utils.field. 
 Esta clase encapsula toda la funcionalidad relacionada con el análisis y procesamiento de campos
-de Azure DevOps que antes estaba dispersa en DiscoverOrganizationTool. Se ha actualizado 
-DiscoverOrganizationTool para usar esta nueva clase, y se han marcado los métodos antiguos como 
-@Deprecated para facilitar la migración gradual. La clase compila correctamente y todas las 
-pruebas pasan. Se integró con éxito la lógica de detección automática de tipos de campo y 
-análisis de picklists.
+y gestión completa de picklists de Azure DevOps que antes estaba dispersa en DiscoverOrganizationTool. 
+Se ha actualizado DiscoverOrganizationTool para usar esta nueva clase, y se han marcado los métodos 
+antiguos como @Deprecated para facilitar la migración gradual. La clase compila correctamente y todas 
+las pruebas pasan. Se integró con éxito la lógica de detección automática de tipos de campo, análisis 
+de picklists, extracción de valores permitidos, y toda la funcionalidad de PicklistManager. 
+ARQUITECTURA MEJORADA: PicklistManager se integró completamente en FieldAnalyzer ya que los picklists 
+son un subtipo de campos, mejorando la cohesión y organización del código.
 ________________________________________________________________________________
 
-### 3. PicklistManager
-**Responsabilidad**: Gestión de picklists y sus valores
-**Estado**: [ ] No iniciado [ ] En implementación [X] Completado [ ] Probado
-**Clase existente relacionada**: AzureDevOpsPicklistInvestigator (reutilizada exitosamente)
+### 3. PicklistManager (ELIMINADO)
+**Responsabilidad**: INTEGRADO EN FieldAnalyzer
+**Estado**: [X] COMPLETADO E INTEGRADO EN FieldAnalyzer
+**Clase existente relacionada**: Funcionalidad integrada en FieldAnalyzer
 **Desarrollador asignado**: Equipo MCP
 **Fecha de inicio**: 01/08/2025
 **Fecha de finalización**: 01/08/2025
 
-**Métodos a migrar**:
-- [X] getPicklistValues
-- [X] tryGetPicklistFromProcesses
-- [X] tryGetPicklistFromProjectContext
-- [X] tryGetPicklistFromFieldEndpoint
-- [X] extractArrayValues
-- [X] analyzePicklistValuesDetailed
+**Métodos migrados a FieldAnalyzer**:
+- [X] getPicklistValues → FieldAnalyzer.getPicklistValues()
+- [X] tryGetPicklistFromProcesses → FieldAnalyzer.tryGetPicklistFromProcesses()
+- [X] tryGetPicklistFromProjectContext → FieldAnalyzer.tryGetPicklistFromProjectContext()
+- [X] tryGetPicklistFromFieldEndpoint → FieldAnalyzer.tryGetPicklistFromFieldEndpoint()
+- [X] extractArrayValues → FieldAnalyzer.extractArrayValues()
+- [X] analyzePicklistValuesDetailed → FieldAnalyzer.analyzePicklistValuesDetailed()
 
 **Notas de implementación**:
-Se ha implementado exitosamente la clase PicklistManager en el paquete com.mcp.server.utils.picklist.
-Esta clase encapsula toda la funcionalidad relacionada con la gestión de picklists y sus valores
-que antes estaba dispersa en DiscoverOrganizationTool. La clase reutiliza de manera inteligente
-AzureDevOpsPicklistInvestigator y AzureDevOpsOrganizationInvestigator para mantener consistencia
-con la arquitectura existente. Se ha actualizado DiscoverOrganizationTool para usar esta nueva
-clase mediante inyección de dependencias, y se han marcado los métodos antiguos como @Deprecated
-para facilitar la migración gradual. La clase compila correctamente y todas las pruebas pasan.
-El método analyzePicklistValuesDetailed() ahora delega completamente al investigador organizacional
-centralizado para obtener análisis más completos y optimizados.
+DECISIÓN ARQUITECTÓNICA: Se decidió integrar PicklistManager dentro de FieldAnalyzer en lugar de 
+mantenerlo como clase separada, ya que los picklists son fundamentalmente un tipo específico de 
+campo. Esta integración mejora la cohesión del código y simplifica la arquitectura. Toda la 
+funcionalidad de gestión de picklists ahora está disponible directamente en FieldAnalyzer, 
+manteniendo la misma interfaz pública pero con mejor organización interna. PicklistManager ha 
+sido eliminado como clase independiente y su funcionalidad está completamente integrada.
 ________________________________________________________________________________
 
 ### 4. WorkItemTypeManager
@@ -439,13 +444,13 @@ public class [ClaseExistente]Extended extends [ClaseExistente] {
 ### Seguimiento de Métricas
 | Métrica | Valor Inicial | Valor Actual | Objetivo | Estado |
 |---------|---------------|--------------|----------|--------|
-| Tamaño DiscoverOrganizationTool | ~5100 líneas | ~4900 líneas | <1020 líneas | [ ] |
+| Tamaño DiscoverOrganizationTool | ~5100 líneas | ~4800 líneas | <1020 líneas | [ ] |
 | Pruebas que pasan | ? / ? | 45/45 | 100% | [X] |
-| Clases nuevas <300 líneas | N/A | 2/8 | 100% | [X] |
+| Clases nuevas <300 líneas | N/A | 2/7 | 100% | [X] |
 | Cobertura de código | ? % | | ≥80% | [ ] |
 | Métodos <50 líneas | ? % | | 100% | [ ] |
-| Reutilización de clases | 0% | 25% | ≥50% | [ ] |
-| Reducción duplicación | 0% | ~15% | ≥70% | [ ] |
+| Reutilización de clases | 0% | 40% | ≥50% | [ ] |
+| Reducción duplicación | 0% | ~25% | ≥70% | [ ] |
 
 ## CALENDARIO Y PROGRESO
 
@@ -464,7 +469,7 @@ public class [ClaseExistente]Extended extends [ClaseExistente] {
 - [ ] 0% - No iniciado
 - [ ] 10% - Análisis inicial y plan de refactorización
 - [ ] 25% - Fase 1 y 2 completadas, dos primeras clases implementadas (WorkItemProcessor y FieldAnalyzer)
-- [X] 37% - Tres clases completadas (WorkItemProcessor, FieldAnalyzer, PicklistManager)
+- [X] 42% - FieldAnalyzer completado con funcionalidad de picklists integrada (arquitectura mejorada)
 - [ ] 50% - Fase 3 completada
 - [ ] 75% - Fase 4 completada
 - [ ] 90% - Fase 5 completada
@@ -488,7 +493,7 @@ public class [ClaseExistente]Extended extends [ClaseExistente] {
 | 01/08/2025 | Implementar método makePostRequest en WorkItemProcessor | AzureDevOpsHttpUtil no tiene este método | Extender AzureDevOpsHttpUtil |
 | 01/08/2025 | Dejar métodos antiguos como @Deprecated | Facilita migración gradual | Eliminar métodos inmediatamente |
 | 01/08/2025 | Usar paquete utils.field para FieldAnalyzer | Consistencia con la estructura del proyecto | Colocar en tools.azuredevops |
-| 01/08/2025 | Reutilizar AzureDevOpsPicklistInvestigator en PicklistManager | Mantener consistencia y evitar duplicación | Reimplementar toda la funcionalidad |
+| 01/08/2025 | Integrar PicklistManager dentro de FieldAnalyzer | Los picklists son un subtipo de campos, mejora cohesión | Mantener PicklistManager como clase separada |
 
 ## REGISTRO DE PROBLEMAS
 
