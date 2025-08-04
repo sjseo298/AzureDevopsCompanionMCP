@@ -19,6 +19,7 @@ import com.mcp.server.utils.discovery.AzureDevOpsConfigurationGenerator;
 import com.mcp.server.utils.http.AzureDevOpsHttpUtil;
 import com.mcp.server.utils.json.AzureDevOpsJsonParser;
 import com.mcp.server.utils.config.AzureDevOpsConfigUtil;
+import com.mcp.server.utils.picklist.PicklistManager;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -51,6 +52,9 @@ public class DiscoverOrganizationTool implements McpTool {
     
     // Analizador de campos refactorizado
     private final com.mcp.server.utils.field.FieldAnalyzer fieldAnalyzer;
+    
+    // Gestor de picklists refactorizado
+    private final PicklistManager picklistManager;
 
     public DiscoverOrganizationTool(
             AzureDevOpsClient azureDevOpsClient,
@@ -82,12 +86,16 @@ public class DiscoverOrganizationTool implements McpTool {
             
             // Inicializar analizador de campos
             this.fieldAnalyzer = new com.mcp.server.utils.field.FieldAnalyzer(azureDevOpsClient, httpUtil, picklistInvestigator);
+            
+            // Inicializar gestor de picklists
+            this.picklistManager = new PicklistManager(azureDevOpsClient, httpUtil, picklistInvestigator, organizationInvestigator);
         } else {
             // Para testing - inicializar con valores null
             this.httpUtil = null;
             this.organizationInvestigator = null;
             this.configurationGenerator = null;
             this.fieldAnalyzer = null;
+            this.picklistManager = null;
         }
     }
     
@@ -1187,35 +1195,14 @@ public class DiscoverOrganizationTool implements McpTool {
     /**
      * Análisis detallado de valores de picklist - REFACTORIZADO
      */
+    /**
+     * Análisis detallado de valores de picklist - REFACTORIZADO para usar PicklistManager
+     * @deprecated Migrado a PicklistManager para mejor organización del código
+     */
+    @Deprecated
     private String analyzePicklistValuesDetailed(String project) {
-        StringBuilder analysis = new StringBuilder();
-        analysis.append("🔍 Iniciando análisis detallado de valores de picklist para proyecto: ").append(project).append("\n\n");
-        
-        try {
-            // **USAR INVESTIGADOR ORGANIZACIONAL CENTRALIZADO**
-            analysis.append("🔧 **INVESTIGACIÓN USANDO INVESTIGADOR ORGANIZACIONAL**\n");
-            analysis.append("====================================================\n");
-            analysis.append("Utilizando AzureDevOpsOrganizationInvestigator para análisis completo y optimizado\n\n");
-            
-            // Realizar investigación completa de la organización
-            OrganizationFieldInvestigation investigation = organizationInvestigator.performCompleteInvestigation(project);
-            
-            // Generar reporte detallado usando el investigador
-            String detailedReport = organizationInvestigator.generateDetailedReport(investigation);
-            analysis.append(detailedReport);
-            
-            // Análisis específico de campos problemáticos conocidos
-            analysis.append("\n� **ANÁLISIS DE CAMPOS PROBLEMÁTICOS ESPECÍFICOS**\n");
-            analysis.append("==================================================\n");
-            AzureDevOpsOrganizationInvestigator.ProblematicFieldsAnalysis problematicAnalysis = 
-                organizationInvestigator.analyzeProblematicFields(project);
-            analysis.append(problematicAnalysis.generateReport());
-            
-        } catch (Exception e) {
-            analysis.append("❌ Error durante el análisis: ").append(e.getMessage()).append("\n");
-        }
-        
-        return analysis.toString();
+        // REFACTORIZADO: Delegar al gestor especializado
+        return picklistManager.analyzePicklistValuesDetailed(project);
     }
     
     /**
@@ -3116,10 +3103,12 @@ public class DiscoverOrganizationTool implements McpTool {
     
     /**
      * Obtiene valores de picklist usando múltiples estrategias de endpoints
+     * @deprecated Migrado a PicklistManager para mejor organización del código
      */
+    @Deprecated
     private List<String> getPicklistValues(String project, String fieldReferenceName, String picklistId) {
-        // ✅ REFACTORIZADO: Usar utilidad centralizada en lugar de implementación duplicada
-        return picklistInvestigator.getPicklistValues(project, fieldReferenceName, picklistId);
+        // REFACTORIZADO: Delegar al gestor especializado
+        return picklistManager.getPicklistValues(project, fieldReferenceName, picklistId);
     }
     
     // Métodos auxiliares para investigación avanzada
@@ -3194,68 +3183,36 @@ public class DiscoverOrganizationTool implements McpTool {
         return fields;
     }
     
+    /**
+     * @deprecated Migrado a PicklistManager.tryGetPicklistFromProcesses()
+     */
+    @Deprecated
     private List<String> tryGetPicklistFromProcesses(String picklistId) {
-        try {
-            String url = String.format("https://dev.azure.com/%s/_apis/work/processes/lists/%s?api-version=7.1", 
-                    azureDevOpsClient.getOrganization(), picklistId);
-            
-            String response = makeDirectApiRequest(url);
-            if (response != null && response.contains("\"items\"")) {
-                return extractArrayValues(response, "items");
-            }
-        } catch (Exception e) {
-            // Continuar silenciosamente a la siguiente estrategia
-        }
-        return Collections.emptyList();
+        return picklistManager.tryGetPicklistFromProcesses(picklistId);
     }
     
+    /**
+     * @deprecated Migrado a PicklistManager.tryGetPicklistFromProjectContext()
+     */
+    @Deprecated
     private List<String> tryGetPicklistFromProjectContext(String project, String picklistId) {
-        try {
-            String url = String.format("https://dev.azure.com/%s/%s/_apis/work/processes/lists/%s?api-version=7.1", 
-                    azureDevOpsClient.getOrganization(), project, picklistId);
-            
-            String response = makeDirectApiRequest(url);
-            if (response != null && response.contains("\"items\"")) {
-                return extractArrayValues(response, "items");
-            }
-        } catch (Exception e) {
-            // Continuar silenciosamente a la siguiente estrategia
-        }
-        return Collections.emptyList();
+        return picklistManager.tryGetPicklistFromProjectContext(project, picklistId);
     }
     
+    /**
+     * @deprecated Migrado a PicklistManager.tryGetPicklistFromFieldEndpoint()
+     */
+    @Deprecated
     private List<String> tryGetPicklistFromFieldEndpoint(String project, String fieldReferenceName) {
-        try {
-            String url = String.format("https://dev.azure.com/%s/%s/_apis/wit/fields/%s/allowedValues?api-version=7.1", 
-                    azureDevOpsClient.getOrganization(), project, fieldReferenceName);
-            
-            String response = makeDirectApiRequest(url);
-            if (response != null && response.contains("\"value\"")) {
-                return extractArrayValues(response, "value");
-            }
-        } catch (Exception e) {
-            // Continuar silenciosamente
-        }
-        return Collections.emptyList();
+        return picklistManager.tryGetPicklistFromFieldEndpoint(project, fieldReferenceName);
     }
     
+    /**
+     * @deprecated Migrado a PicklistManager.extractArrayValues()
+     */
+    @Deprecated
     private List<String> extractArrayValues(String json, String arrayKey) {
-        List<String> values = new ArrayList<>();
-        
-        Pattern arrayPattern = Pattern.compile("\"" + arrayKey + "\"\\s*:\\s*\\[([^\\]]+)\\]");
-        Matcher arrayMatcher = arrayPattern.matcher(json);
-        
-        if (arrayMatcher.find()) {
-            String arrayContent = arrayMatcher.group(1);
-            Pattern valuePattern = Pattern.compile("\"([^\"]+)\"");
-            Matcher valueMatcher = valuePattern.matcher(arrayContent);
-            
-            while (valueMatcher.find()) {
-                values.add(valueMatcher.group(1));
-            }
-        }
-        
-        return values;
+        return picklistManager.extractArrayValues(json, arrayKey);
     }
     
     /**
