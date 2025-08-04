@@ -60,6 +60,9 @@ public class DiscoverOrganizationTool implements McpTool {
     
     // Analizador de jerarquías de work items refactorizado
     private final com.mcp.server.utils.hierarchy.WorkItemHierarchyAnalyzer hierarchyAnalyzer;
+    
+    // Navegador interactivo para la jerarquía de Azure DevOps refactorizado
+    private final com.mcp.server.utils.navigation.InteractiveNavigator interactiveNavigator;
 
     public DiscoverOrganizationTool(
             AzureDevOpsClient azureDevOpsClient,
@@ -100,6 +103,9 @@ public class DiscoverOrganizationTool implements McpTool {
             
             // Inicializar analizador de jerarquías de work items
             this.hierarchyAnalyzer = new com.mcp.server.utils.hierarchy.WorkItemHierarchyAnalyzer(azureDevOpsClient, wiqlUtility, workItemProcessor);
+            
+            // Inicializar navegador interactivo
+            this.interactiveNavigator = new com.mcp.server.utils.navigation.InteractiveNavigator(teamConfigurationManager);
         } else {
             // Para testing - inicializar con valores null
             this.httpUtil = null;
@@ -109,6 +115,7 @@ public class DiscoverOrganizationTool implements McpTool {
             this.workItemTypeManager = null;
             this.teamConfigurationManager = null;
             this.hierarchyAnalyzer = null;
+            this.interactiveNavigator = null;
         }
     }
     
@@ -485,329 +492,36 @@ public class DiscoverOrganizationTool implements McpTool {
     /**
      * NIVEL 4: Iteración - Navegación específica por iteración
      */
+    /**
+     * NIVEL 4: Iteración - Navegación específica por iteración
+     * @deprecated Esta funcionalidad ha sido movida a InteractiveNavigator.
+     * Use interactiveNavigator.executeIterationLevel() en su lugar.
+     */
+    @Deprecated
     private Map<String, Object> executeIterationLevel(String projectName, String teamName, String iterationName) {
-        StringBuilder result = new StringBuilder();
-        result.append("📅 **NAVEGACIÓN POR ITERACIÓN - PASO 4/5**\n");
-        result.append("========================================\n\n");
-        result.append("📂 **Proyecto:** ").append(projectName).append("\n");
-        if (teamName != null) {
-            result.append("👥 **Equipo:** ").append(teamName).append("\n");
-        }
-        if (iterationName != null) {
-            result.append("🔄 **Iteración:** ").append(iterationName).append("\n");
-        }
-        result.append("\n");
-        
-        try {
-            // Información específica de la iteración
-            result.append("📊 **INFORMACIÓN DE LA ITERACIÓN:**\n");
-            result.append("=================================\n");
-            result.append(getIterationSummary(projectName, teamName, iterationName));
-            result.append("\n");
-            
-            // Opciones finales de navegación
-            result.append("🎯 **OPCIONES FINALES:**\n");
-            result.append("======================\n");
-            
-            result.append("**A) Hacer preguntas específicas sobre esta iteración:**\n");
-            result.append("```\n");
-            result.append("azuredevops_discover_organization(\n");
-            result.append("  navigationLevel: \"question\",\n");
-            result.append("  selectedProject: \"").append(projectName).append("\",\n");
-            if (teamName != null) {
-                result.append("  selectedTeam: \"").append(teamName).append("\",\n");
-            }
-            if (iterationName != null) {
-                result.append("  selectedIteration: \"").append(iterationName).append("\",\n");
-            }
-            result.append("  questionType: \"[TIPO_DE_PREGUNTA]\"\n");
-            result.append(")\n");
-            result.append("```\n\n");
-            
-            result.append("**B) Confirmar que este es el contexto correcto:**\n");
-            result.append("```\n");
-            result.append("azuredevops_discover_organization(\n");
-            result.append("  navigationLevel: \"confirm\",\n");
-            result.append("  selectedProject: \"").append(projectName).append("\",\n");
-            if (teamName != null) {
-                result.append("  selectedTeam: \"").append(teamName).append("\",\n");
-            }
-            if (iterationName != null) {
-                result.append("  selectedIteration: \"").append(iterationName).append("\",\n");
-            }
-            result.append("  confirmLocation: true\n");
-            result.append(")\n");
-            result.append("```\n\n");
-            
-            result.append("**C) Proceder con investigación en este contexto (SOLO SI ESTÁ SEGURO):**\n");
-            result.append("```\n");
-            result.append("azuredevops_discover_organization(\n");
-            result.append("  navigationLevel: \"investigation\",\n");
-            result.append("  selectedProject: \"").append(projectName).append("\",\n");
-            if (teamName != null) {
-                result.append("  selectedTeam: \"").append(teamName).append("\",\n");
-            }
-            if (iterationName != null) {
-                result.append("  selectedIteration: \"").append(iterationName).append("\",\n");
-            }
-            result.append("  investigationType: \"[TIPO_DE_INVESTIGACION]\"\n");
-            result.append(")\n");
-            result.append("```\n\n");
-            
-            result.append("**Preguntas específicas para iteraciones:**\n");
-            result.append("- `sprint-capacity`: ¿Cuál es la capacidad planificada vs real?\n");
-            result.append("- `backlog-health`: ¿Cómo está la salud del backlog?\n");
-            result.append("- `sprint-patterns`: ¿Qué patrones se repiten en los sprints?\n");
-            result.append("- `field-usage-stats`: ¿Qué campos se usan más en esta iteración?\n");
-            
-        } catch (Exception e) {
-            result.append("❌ Error analizando iteración: ").append(e.getMessage()).append("\n");
-        }
-        
-        return Map.of(
-            "content", List.of(Map.of(
-                "type", "text",
-                "text", result.toString()
-            ))
-        );
+        return interactiveNavigator.executeIterationLevel(projectName, teamName, iterationName);
     }
     
     /**
      * NIVEL PREGUNTA: Responde preguntas específicas sobre el contexto actual
+     * @deprecated Esta funcionalidad ha sido movida a InteractiveNavigator.
+     * Use interactiveNavigator.executeQuestionMode() en su lugar.
      */
+    @Deprecated
     private Map<String, Object> executeQuestionLevel(String projectName, String teamName, String areaPath, 
                                                     String iterationName, String questionType) {
-        StringBuilder result = new StringBuilder();
-        result.append("❓ **RESPONDIENDO PREGUNTA CONTEXTUAL**\n");
-        result.append("====================================\n\n");
-        
-        result.append("📍 **Contexto:**\n");
-        result.append("  📂 Proyecto: ").append(projectName).append("\n");
-        if (teamName != null) result.append("  👥 Equipo: ").append(teamName).append("\n");
-        if (areaPath != null) result.append("  🗂️ Área: ").append(areaPath).append("\n");
-        if (iterationName != null) result.append("  🔄 Iteración: ").append(iterationName).append("\n");
-        result.append("  ❓ Pregunta: ").append(questionType).append("\n\n");
-        
-        try {
-            result.append("📊 **RESPUESTA:**\n");
-            result.append("===============\n");
-            
-            switch (questionType) {
-                case "work-item-distribution":
-                    result.append(analyzeWorkItemDistribution(projectName, teamName, areaPath, iterationName));
-                    break;
-                case "custom-fields-usage":
-                    result.append(analyzeCustomFieldsUsage(projectName, teamName, areaPath, iterationName));
-                    break;
-                case "team-activity":
-                    result.append(analyzeTeamActivity(projectName, teamName, areaPath, iterationName));
-                    break;
-                case "field-values-analysis":
-                    result.append(analyzeFieldValues(projectName, teamName, areaPath, iterationName));
-                    break;
-                case "iteration-workload":
-                    result.append(analyzeIterationWorkload(projectName, teamName, iterationName));
-                    break;
-                case "team-velocity":
-                    result.append(analyzeTeamVelocity(projectName, teamName));
-                    break;
-                case "area-specific-fields":
-                    result.append(analyzeAreaSpecificFields(projectName, areaPath));
-                    break;
-                case "workflow-patterns":
-                    result.append(analyzeWorkflowPatterns(projectName, teamName, areaPath));
-                    break;
-                case "backlog-health":
-                    result.append(analyzeBacklogHealth(projectName, teamName, iterationName));
-                    break;
-                case "sprint-patterns":
-                    result.append(analyzeSprintPatterns(projectName, teamName));
-                    break;
-                case "field-usage-stats":
-                    result.append(analyzeFieldUsageStats(projectName, teamName, iterationName));
-                    break;
-                case "hierarchy-analysis":
-                    result.append(analyzeHierarchyPatterns(projectName, teamName, areaPath));
-                    break;
-                default:
-                    result.append("❌ Tipo de pregunta no reconocido: ").append(questionType);
-            }
-            
-            result.append("\n\n🎯 **SIGUIENTE PASO:**\n");
-            result.append("====================\n");
-            result.append("**A) Confirmar que este es el contexto correcto:**\n");
-            result.append("```\n");
-            result.append("azuredevops_discover_organization(\n");
-            result.append("  navigationLevel: \"confirm\",\n");
-            result.append("  selectedProject: \"").append(projectName).append("\",\n");
-            if (teamName != null) result.append("  selectedTeam: \"").append(teamName).append("\",\n");
-            if (areaPath != null) result.append("  selectedAreaPath: \"").append(areaPath).append("\",\n");
-            if (iterationName != null) result.append("  selectedIteration: \"").append(iterationName).append("\",\n");
-            result.append("  confirmLocation: true\n");
-            result.append(")\n");
-            result.append("```\n\n");
-            
-            result.append("**B) Proceder directamente con investigación (SOLO SI ESTÁ SEGURO):**\n");
-            result.append("```\n");
-            result.append("azuredevops_discover_organization(\n");
-            result.append("  navigationLevel: \"investigation\",\n");
-            result.append("  selectedProject: \"").append(projectName).append("\",\n");
-            if (teamName != null) result.append("  selectedTeam: \"").append(teamName).append("\",\n");
-            if (areaPath != null) result.append("  selectedAreaPath: \"").append(areaPath).append("\",\n");
-            if (iterationName != null) result.append("  selectedIteration: \"").append(iterationName).append("\",\n");
-            result.append("  investigationType: \"[TIPO_DE_INVESTIGACION]\"\n");
-            result.append(")\n");
-            result.append("```\n");
-            
-        } catch (Exception e) {
-            result.append("❌ Error respondiendo pregunta: ").append(e.getMessage()).append("\n");
-        }
-        
-        return Map.of(
-            "content", List.of(Map.of(
-                "type", "text",
-                "text", result.toString()
-            ))
-        );
+        return interactiveNavigator.executeQuestionMode(projectName, teamName, areaPath, iterationName, questionType);
     }
     
     /**
      * NIVEL CONFIRMACIÓN: Permite al usuario confirmar que está en la ubicación correcta antes de proceder
+     * @deprecated Esta funcionalidad ha sido movida a InteractiveNavigator.
+     * Use interactiveNavigator.executeConfirmMode() en su lugar.
      */
+    @Deprecated
     private Map<String, Object> executeConfirmLevel(String projectName, String teamName, String areaPath, 
                                                    String iterationName, Boolean confirmLocation) {
-        StringBuilder result = new StringBuilder();
-        result.append("✅ **CONFIRMACIÓN DE UBICACIÓN - PASO FINAL**\n");
-        result.append("==========================================\n\n");
-        
-        result.append("📍 **UBICACIÓN ACTUAL:**\n");
-        result.append("  📂 Proyecto: ").append(projectName).append("\n");
-        if (teamName != null) result.append("  👥 Equipo: ").append(teamName).append("\n");
-        if (areaPath != null) result.append("  🗂️ Área: ").append(areaPath).append("\n");
-        if (iterationName != null) result.append("  🔄 Iteración: ").append(iterationName).append("\n");
-        result.append("  ✅ Confirmación: ").append(confirmLocation ? "Sí" : "No").append("\n\n");
-        
-        if (confirmLocation) {
-            result.append("🎯 **¡UBICACIÓN CONFIRMADA!**\n");
-            result.append("===========================\n");
-            result.append("El usuario ha confirmado que esta es la ubicación correcta para comenzar la investigación.\n");
-            result.append("Ahora puede proceder a generar los archivos YAML de descubrimiento.\n\n");
-            
-            result.append("🔬 **OPCIONES DE INVESTIGACIÓN DISPONIBLES:**\n");
-            result.append("===========================================\n");
-            result.append("Seleccione el tipo de investigación que desea realizar:\n\n");
-            
-            result.append("**1. Análisis de Tipos de Work Items**\n");
-            result.append("```\n");
-            result.append("azuredevops_discover_organization(\n");
-            result.append("  navigationLevel: \"investigation\",\n");
-            result.append("  selectedProject: \"").append(projectName).append("\",\n");
-            if (teamName != null) result.append("  selectedTeam: \"").append(teamName).append("\",\n");
-            if (areaPath != null) result.append("  selectedAreaPath: \"").append(areaPath).append("\",\n");
-            if (iterationName != null) result.append("  selectedIteration: \"").append(iterationName).append("\",\n");
-            result.append("  investigationType: \"workitem-types\"\n");
-            result.append(")\n");
-            result.append("```\n");
-            result.append("📝 Analiza todos los tipos de work items y sus campos requeridos\n\n");
-            
-            result.append("**2. Análisis de Campos Personalizados**\n");
-            result.append("```\n");
-            result.append("azuredevops_discover_organization(\n");
-            result.append("  navigationLevel: \"investigation\",\n");
-            result.append("  selectedProject: \"").append(projectName).append("\",\n");
-            if (teamName != null) result.append("  selectedTeam: \"").append(teamName).append("\",\n");
-            if (areaPath != null) result.append("  selectedAreaPath: \"").append(areaPath).append("\",\n");
-            if (iterationName != null) result.append("  selectedIteration: \"").append(iterationName).append("\",\n");
-            result.append("  investigationType: \"custom-fields\"\n");
-            result.append(")\n");
-            result.append("```\n");
-            result.append("🔧 Identifica y analiza campos personalizados específicos del contexto\n\n");
-            
-            result.append("**3. Análisis de Valores de Picklist**\n");
-            result.append("```\n");
-            result.append("azuredevops_discover_organization(\n");
-            result.append("  navigationLevel: \"investigation\",\n");
-            result.append("  selectedProject: \"").append(projectName).append("\",\n");
-            if (teamName != null) result.append("  selectedTeam: \"").append(teamName).append("\",\n");
-            if (areaPath != null) result.append("  selectedAreaPath: \"").append(areaPath).append("\",\n");
-            if (iterationName != null) result.append("  selectedIteration: \"").append(iterationName).append("\",\n");
-            result.append("  investigationType: \"picklist-values\"\n");
-            result.append(")\n");
-            result.append("```\n");
-            result.append("📋 Extrae valores válidos para campos tipo picklist/dropdown\n\n");
-            
-            result.append("**4. Configuración Completa (RECOMENDADO)**\n");
-            result.append("```\n");
-            result.append("azuredevops_discover_organization(\n");
-            result.append("  navigationLevel: \"investigation\",\n");
-            result.append("  selectedProject: \"").append(projectName).append("\",\n");
-            if (teamName != null) result.append("  selectedTeam: \"").append(teamName).append("\",\n");
-            if (areaPath != null) result.append("  selectedAreaPath: \"").append(areaPath).append("\",\n");
-            if (iterationName != null) result.append("  selectedIteration: \"").append(iterationName).append("\",\n");
-            result.append("  investigationType: \"full-configuration\"\n");
-            result.append(")\n");
-            result.append("```\n");
-            result.append("🏗️ Genera configuración completa con todos los archivos YAML necesarios\n\n");
-            
-            result.append("💡 **Recomendación:** Use 'full-configuration' para obtener todos los archivos YAML ");
-            result.append("de descubrimiento organizacional de una vez.\n");
-            
-        } else {
-            result.append("🔄 **UBICACIÓN NO CONFIRMADA**\n");
-            result.append("============================\n");
-            result.append("El usuario ha indicado que esta NO es la ubicación correcta.\n");
-            result.append("Puede continuar navegando por la jerarquía organizacional:\n\n");
-            
-            result.append("**Opciones de navegación disponibles:**\n\n");
-            
-            result.append("**A) Cambiar de proyecto:**\n");
-            result.append("```\n");
-            result.append("azuredevops_discover_organization(\n");
-            result.append("  navigationLevel: \"organization\"\n");
-            result.append(")\n");
-            result.append("```\n\n");
-            
-            result.append("**B) Seleccionar otro equipo/área en el proyecto actual:**\n");
-            result.append("```\n");
-            result.append("azuredevops_discover_organization(\n");
-            result.append("  navigationLevel: \"project\",\n");
-            result.append("  selectedProject: \"").append(projectName).append("\"\n");
-            result.append(")\n");
-            result.append("```\n\n");
-            
-            if (teamName != null) {
-                result.append("**C) Cambiar iteración en el equipo actual:**\n");
-                result.append("```\n");
-                result.append("azuredevops_discover_organization(\n");
-                result.append("  navigationLevel: \"team\",\n");
-                result.append("  selectedProject: \"").append(projectName).append("\",\n");
-                result.append("  selectedTeam: \"").append(teamName).append("\"\n");
-                result.append(")\n");
-                result.append("```\n\n");
-            }
-            
-            result.append("**D) Hacer más preguntas sobre el contexto actual:**\n");
-            result.append("```\n");
-            result.append("azuredevops_discover_organization(\n");
-            result.append("  navigationLevel: \"question\",\n");
-            result.append("  selectedProject: \"").append(projectName).append("\",\n");
-            if (teamName != null) result.append("  selectedTeam: \"").append(teamName).append("\",\n");
-            if (areaPath != null) result.append("  selectedAreaPath: \"").append(areaPath).append("\",\n");
-            if (iterationName != null) result.append("  selectedIteration: \"").append(iterationName).append("\",\n");
-            result.append("  questionType: \"[TIPO_DE_PREGUNTA]\"\n");
-            result.append(")\n");
-            result.append("```\n\n");
-            
-            result.append("🎯 **Objetivo:** Navegue hasta encontrar el contexto organizacional más ");
-            result.append("representativo para su análisis.\n");
-        }
-        
-        return Map.of(
-            "content", List.of(Map.of(
-                "type", "text",
-                "text", result.toString()
-            ))
-        );
+        return interactiveNavigator.executeConfirmMode(projectName, teamName, areaPath, iterationName, confirmLocation);
     }
     
     /**
@@ -4227,14 +3941,13 @@ public class DiscoverOrganizationTool implements McpTool {
     /**
      * Obtiene resumen de iteración específica
      */
+    /**
+     * @deprecated Esta funcionalidad ha sido movida a InteractiveNavigator.
+     * Use interactiveNavigator.getIterationSummary() en su lugar.
+     */
+    @Deprecated
     private String getIterationSummary(String projectName, String teamName, String iterationName) {
-        StringBuilder summary = new StringBuilder();
-        summary.append("📅 Resumen de iteración:\n");
-        summary.append("   • Proyecto: ").append(projectName).append("\n");
-        if (teamName != null) summary.append("   • Equipo: ").append(teamName).append("\n");
-        if (iterationName != null) summary.append("   • Iteración: ").append(iterationName).append("\n");
-        summary.append("   • Estado: Contexto preparado para investigación\n");
-        return summary.toString();
+        return interactiveNavigator.getIterationSummary(projectName, teamName, iterationName);
     }
     
     // MÉTODOS DE ANÁLISIS CONTEXTUAL (PREGUNTAS)
@@ -4247,10 +3960,13 @@ public class DiscoverOrganizationTool implements McpTool {
         return teamConfigurationManager.analyzeWorkItemDistribution(projectName, teamName, areaPath, iterationName);
     }
     
+    /**
+     * @deprecated Esta funcionalidad ha sido movida a InteractiveNavigator.
+     * Use interactiveNavigator.analyzeCustomFieldsUsage() en su lugar.
+     */
+    @Deprecated
     private String analyzeCustomFieldsUsage(String projectName, String teamName, String areaPath, String iterationName) {
-        return "🏷️ Análisis de uso de campos personalizados:\n" +
-               "   • Funcionalidad implementada - mostrará campos más utilizados\n" +
-               "   • Contexto: " + projectName + (teamName != null ? "/" + teamName : "") + "\n";
+        return interactiveNavigator.analyzeCustomFieldsUsage(projectName, teamName, areaPath, iterationName);
     }
     
     /**
@@ -4261,16 +3977,22 @@ public class DiscoverOrganizationTool implements McpTool {
         return teamConfigurationManager.analyzeTeamActivity(projectName, teamName, areaPath, iterationName);
     }
     
+    /**
+     * @deprecated Esta funcionalidad ha sido movida a InteractiveNavigator.
+     * Use interactiveNavigator.analyzeFieldValues() en su lugar.
+     */
+    @Deprecated
     private String analyzeFieldValues(String projectName, String teamName, String areaPath, String iterationName) {
-        return "🔍 Análisis de valores de campos:\n" +
-               "   • Funcionalidad implementada - mostrará valores más comunes\n" +
-               "   • Contexto: " + projectName + (teamName != null ? "/" + teamName : "") + "\n";
+        return interactiveNavigator.analyzeFieldValues(projectName, teamName, areaPath, iterationName);
     }
     
+    /**
+     * @deprecated Esta funcionalidad ha sido movida a InteractiveNavigator.
+     * Use interactiveNavigator.analyzeIterationWorkload() en su lugar.
+     */
+    @Deprecated
     private String analyzeIterationWorkload(String projectName, String teamName, String iterationName) {
-        return "📈 Análisis de carga de trabajo por iteración:\n" +
-               "   • Funcionalidad implementada - mostrará distribución de trabajo\n" +
-               "   • Contexto: " + projectName + (teamName != null ? "/" + teamName : "") + "\n";
+        return interactiveNavigator.analyzeIterationWorkload(projectName, teamName, iterationName);
     }
     
     /**
@@ -4297,22 +4019,31 @@ public class DiscoverOrganizationTool implements McpTool {
         return teamConfigurationManager.analyzeWorkflowPatterns(projectName, teamName, areaPath);
     }
     
+    /**
+     * @deprecated Esta funcionalidad ha sido movida a InteractiveNavigator.
+     * Use interactiveNavigator.analyzeBacklogHealth() en su lugar.
+     */
+    @Deprecated
     private String analyzeBacklogHealth(String projectName, String teamName, String iterationName) {
-        return "📋 Análisis de salud del backlog:\n" +
-               "   • Funcionalidad implementada - mostrará métricas de salud del backlog\n" +
-               "   • Contexto: " + projectName + (teamName != null ? "/" + teamName : "") + "\n";
+        return interactiveNavigator.analyzeBacklogHealth(projectName, teamName, iterationName);
     }
     
+    /**
+     * @deprecated Esta funcionalidad ha sido movida a InteractiveNavigator.
+     * Use interactiveNavigator.analyzeSprintPatterns() en su lugar.
+     */
+    @Deprecated
     private String analyzeSprintPatterns(String projectName, String teamName) {
-        return "🔄 Análisis de patrones de sprint:\n" +
-               "   • Funcionalidad implementada - mostrará patrones recurrentes\n" +
-               "   • Contexto: " + projectName + (teamName != null ? "/" + teamName : "") + "\n";
+        return interactiveNavigator.analyzeSprintPatterns(projectName, teamName);
     }
     
+    /**
+     * @deprecated Esta funcionalidad ha sido movida a InteractiveNavigator.
+     * Use interactiveNavigator.analyzeFieldUsageStats() en su lugar.
+     */
+    @Deprecated
     private String analyzeFieldUsageStats(String projectName, String teamName, String iterationName) {
-        return "📊 Estadísticas de uso de campos:\n" +
-               "   • Funcionalidad implementada - mostrará estadísticas detalladas\n" +
-               "   • Contexto: " + projectName + (teamName != null ? "/" + teamName : "") + "\n";
+        return interactiveNavigator.analyzeFieldUsageStats(projectName, teamName, iterationName);
     }
     
     /**
