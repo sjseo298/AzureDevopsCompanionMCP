@@ -63,6 +63,9 @@ public class DiscoverOrganizationTool implements McpTool {
     
     // Navegador interactivo para la jerarquía de Azure DevOps refactorizado
     private final com.mcp.server.utils.navigation.InteractiveNavigator interactiveNavigator;
+    
+    // Investigador organizacional centralizado refactorizado
+    private final com.mcp.server.utils.investigation.OrganizationInvestigator organizationInvestigatorRefactored;
 
     public DiscoverOrganizationTool(
             AzureDevOpsClient azureDevOpsClient,
@@ -106,6 +109,10 @@ public class DiscoverOrganizationTool implements McpTool {
             
             // Inicializar navegador interactivo
             this.interactiveNavigator = new com.mcp.server.utils.navigation.InteractiveNavigator(teamConfigurationManager);
+            
+            // Inicializar investigador organizacional refactorizado
+            this.organizationInvestigatorRefactored = new com.mcp.server.utils.investigation.OrganizationInvestigator(
+                azureDevOpsClient, configurationGenerator, workItemTypeManager, fieldAnalyzer);
         } else {
             // Para testing - inicializar con valores null
             this.httpUtil = null;
@@ -116,6 +123,7 @@ public class DiscoverOrganizationTool implements McpTool {
             this.teamConfigurationManager = null;
             this.hierarchyAnalyzer = null;
             this.interactiveNavigator = null;
+            this.organizationInvestigatorRefactored = null;
         }
     }
     
@@ -2948,160 +2956,24 @@ public class DiscoverOrganizationTool implements McpTool {
     /**
     /**
      * Realiza backup de archivos de configuración existentes
+     * @deprecated Esta funcionalidad ha sido movida a OrganizationInvestigator.
+     * Use organizationInvestigatorRefactored.performConfigurationBackup() en su lugar.
      */
+    @Deprecated
     private String performConfigurationBackup() {
-        StringBuilder backupReport = new StringBuilder();
-        backupReport.append("💾 **Backup de Archivos de Configuración**\n");
-        backupReport.append("========================================\n");
-        
-        try {
-            List<String> configFiles = List.of(
-                "config/organization-config.yml",
-                "config/field-mappings.yml", 
-                "config/discovered-organization.yml",
-                "src/main/resources/application.yml"
-            );
-            
-            int backedUpFiles = 0;
-            String timestamp = java.time.LocalDateTime.now().format(
-                java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
-            );
-            
-            for (String configFile : configFiles) {
-                try {
-                    java.nio.file.Path originalPath = java.nio.file.Paths.get(configFile);
-                    
-                    if (java.nio.file.Files.exists(originalPath)) {
-                        String backupFileName = configFile.replace(".", "_backup_" + timestamp + ".");
-                        java.nio.file.Path backupPath = java.nio.file.Paths.get(backupFileName);
-                        
-                        java.nio.file.Files.copy(originalPath, backupPath, 
-                            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                        
-                        backupReport.append("✅ ").append(configFile).append(" → ").append(backupFileName).append("\n");
-                        backedUpFiles++;
-                    } else {
-                        backupReport.append("ℹ️ ").append(configFile).append(" (no existe, no requiere backup)\n");
-                    }
-                    
-                } catch (Exception e) {
-                    backupReport.append("❌ Error con ").append(configFile).append(": ").append(e.getMessage()).append("\n");
-                }
-            }
-            
-            backupReport.append("\n📊 **Resumen:** ").append(backedUpFiles).append(" archivos respaldados exitosamente\n");
-            backupReport.append("🕒 **Timestamp:** ").append(timestamp).append("\n\n");
-            
-        } catch (Exception e) {
-            backupReport.append("❌ Error general durante backup: ").append(e.getMessage()).append("\n\n");
-        }
-        
-        return backupReport.toString();
+        return organizationInvestigatorRefactored.performConfigurationBackup();
     }
     
     /**
      * Analiza tipos de work items con documentación completa de TODOS los campos y sus valores permitidos
      */
+    /**
+     * @deprecated Esta funcionalidad ha sido movida a OrganizationInvestigator.
+     * Use organizationInvestigatorRefactored.analyzeWorkItemTypesWithCompleteFieldDocumentation() en su lugar.
+     */
+    @Deprecated
     private String analyzeWorkItemTypesWithCompleteFieldDocumentation(String project) {
-        StringBuilder analysis = new StringBuilder();
-        analysis.append("📋 **DOCUMENTACIÓN EXHAUSTIVA DE WORK ITEM TYPES**\n");
-        analysis.append("================================================\n\n");
-        
-        try {
-            // Obtener todos los tipos de work items disponibles
-            List<String> availableTypes = getAvailableWorkItemTypes(project);
-            
-            analysis.append("🔍 **Tipos encontrados:** ").append(availableTypes.size()).append("\n");
-            analysis.append("📋 **Lista:** ").append(String.join(", ", availableTypes)).append("\n\n");
-            
-            // Para cada tipo, documentar TODOS sus campos exhaustivamente
-            for (String workItemType : availableTypes) {
-                analysis.append("═".repeat(80)).append("\n");
-                analysis.append("📋 **WORK ITEM TYPE: ").append(workItemType.toUpperCase()).append("**\n");
-                analysis.append("═".repeat(80)).append("\n\n");
-                
-                // Obtener información completa del tipo
-                Map<String, Object> typeDefinition = getCompleteWorkItemTypeDefinition(project, workItemType);
-                
-                if (typeDefinition.isEmpty()) {
-                    analysis.append("❌ No se pudo obtener información del tipo ").append(workItemType).append("\n\n");
-                    continue;
-                }
-                
-                // Documentar campos obligatorios
-                analysis.append("🔴 **CAMPOS OBLIGATORIOS:**\n");
-                analysis.append("─".repeat(30)).append("\n");
-                List<String> requiredFields = getRequiredFieldsForType(typeDefinition);
-                if (requiredFields.isEmpty()) {
-                    analysis.append("ℹ️ No se detectaron campos obligatorios específicos\n");
-                } else {
-                    for (String field : requiredFields) {
-                        analysis.append("• ").append(field).append("\n");
-                    }
-                }
-                analysis.append("\n");
-                
-                // Documentar TODOS los campos disponibles
-                analysis.append("📝 **TODOS LOS CAMPOS DISPONIBLES:**\n");
-                analysis.append("─".repeat(35)).append("\n");
-                Map<String, Map<String, Object>> allFields = getAllFieldsForType(project, workItemType, typeDefinition);
-                
-                if (allFields.isEmpty()) {
-                    analysis.append("⚠️ No se pudieron obtener campos para este tipo\n");
-                } else {
-                    for (Map.Entry<String, Map<String, Object>> fieldEntry : allFields.entrySet()) {
-                        String fieldName = fieldEntry.getKey();
-                        Map<String, Object> fieldDetails = fieldEntry.getValue();
-                        
-                        analysis.append("\n🏷️ **").append(fieldName).append("**\n");
-                        
-                        // Información básica del campo
-                        String referenceName = (String) fieldDetails.get("referenceName");
-                        String fieldType = (String) fieldDetails.get("type");
-                        String inferredType = (String) fieldDetails.get("inferredType");
-                        Boolean isRequired = (Boolean) fieldDetails.get("required");
-                        String description = (String) fieldDetails.get("description");
-                        
-                        analysis.append("   📋 Referencia: ").append(referenceName != null ? referenceName : "N/A").append("\n");
-                        
-                        // MEJORADO: Mostrar tipo inferido si está disponible, sino el tipo base
-                        String displayType = inferredType != null ? inferredType : fieldType;
-                        analysis.append("   🔧 Tipo: ").append(displayType != null ? displayType : "N/A");
-                        if (inferredType != null && !inferredType.equals(fieldType)) {
-                            analysis.append(" (inferido de: ").append(fieldType != null ? fieldType : "N/A").append(")");
-                        }
-                        analysis.append("\n");
-                        
-                        analysis.append("   ✅ Obligatorio: ").append(isRequired != null ? (isRequired ? "Sí" : "No") : "N/A").append("\n");
-                        
-                        if (description != null && !description.trim().isEmpty()) {
-                            analysis.append("   📖 Descripción: ").append(description).append("\n");
-                        }
-                        
-                        // CRÍTICO: Documentar valores permitidos si los hay
-                        // Usar el tipo inferido para la búsqueda de valores permitidos
-                        String typeForValues = inferredType != null ? inferredType : fieldType;
-                        List<String> allowedValues = getFieldAllowedValues(project, workItemType, referenceName, typeForValues);
-                        if (!allowedValues.isEmpty()) {
-                            analysis.append("   🎯 **VALORES PERMITIDOS:**\n");
-                            for (String value : allowedValues) {
-                                analysis.append("      • ").append(value).append("\n");
-                            }
-                        } else {
-                            analysis.append("   ℹ️ Valores: Entrada libre\n");
-                        }
-                    }
-                }
-                
-                analysis.append("\n");
-            }
-            
-        } catch (Exception e) {
-            analysis.append("❌ Error durante análisis exhaustivo: ").append(e.getMessage()).append("\n");
-            e.printStackTrace();
-        }
-        
-        return analysis.toString();
+        return organizationInvestigatorRefactored.analyzeWorkItemTypesWithCompleteFieldDocumentation(project);
     }
     
     /**
@@ -4058,43 +3930,20 @@ public class DiscoverOrganizationTool implements McpTool {
     
     /**
      * Investigación de tipos de work items - REFACTORIZADO
-     * @deprecated Usar workItemTypeManager.performWorkItemTypesInvestigation() en su lugar
+     * @deprecated Usar organizationInvestigatorRefactored.performWorkItemTypesInvestigation() en su lugar
      */
     @Deprecated
     private String performWorkItemTypesInvestigation(String projectName, String teamName, String areaPath, String iterationName) {
-        return workItemTypeManager.performWorkItemTypesInvestigation(projectName, teamName, areaPath, iterationName);
+        return organizationInvestigatorRefactored.performWorkItemTypesInvestigation(projectName, teamName, areaPath, iterationName);
     }
     
+    /**
+     * @deprecated Esta funcionalidad ha sido movida a OrganizationInvestigator.
+     * Use organizationInvestigatorRefactored.performCustomFieldsInvestigation() en su lugar.
+     */
+    @Deprecated
     private String performCustomFieldsInvestigation(String projectName, String teamName, String areaPath, String iterationName) {
-        StringBuilder investigation = new StringBuilder();
-        investigation.append("🔍 INVESTIGACIÓN CENTRALIZADA: Campos Personalizados\n");
-        investigation.append("====================================================\n\n");
-        investigation.append("📍 Contexto específico:\n");
-        investigation.append("   • Proyecto: ").append(projectName).append("\n");
-        if (teamName != null) investigation.append("   • Equipo: ").append(teamName).append("\n");
-        if (areaPath != null) investigation.append("   • Área: ").append(areaPath).append("\n");
-        if (iterationName != null) investigation.append("   • Iteración: ").append(iterationName).append("\n");
-        investigation.append("\n");
-        
-        try {
-            // Generar configuración específica para campos personalizados
-            AzureDevOpsConfigurationGenerator.ConfigurationGenerationResult result = 
-                configurationGenerator.generateSpecificConfiguration(projectName, "custom-fields", false);
-            
-            investigation.append("🏗️ **RESULTADO DE GENERACIÓN:**\n");
-            investigation.append("==============================\n");
-            investigation.append(result.generateReport());
-            
-            // Usar método existente como complemento
-            investigation.append("\n🔧 **DETALLES ADICIONALES:**\n");
-            investigation.append("============================\n");
-            investigation.append(analyzeCustomFieldsDetailed(projectName));
-        
-        } catch (Exception e) {
-            investigation.append("❌ Error durante investigación: ").append(e.getMessage()).append("\n");
-        }
-        
-        return investigation.toString();
+        return organizationInvestigatorRefactored.performCustomFieldsInvestigation(projectName, teamName, areaPath, iterationName);
     }
     
     private String performPicklistValuesInvestigation(String projectName, String teamName, String areaPath, String iterationName) {
@@ -4129,44 +3978,12 @@ public class DiscoverOrganizationTool implements McpTool {
         return investigation.toString();
     }
     
+    /**
+     * @deprecated Esta funcionalidad ha sido movida a OrganizationInvestigator.
+     * Use organizationInvestigatorRefactored.performFullConfigurationGeneration() en su lugar.
+     */
+    @Deprecated
     private String performFullConfigurationGeneration(String projectName, String teamName, String areaPath, String iterationName, Boolean backupExistingFiles) {
-        StringBuilder investigation = new StringBuilder();
-        investigation.append("🏗️ GENERACIÓN COMPLETA DE CONFIGURACIÓN\n");
-        investigation.append("======================================\n\n");
-        investigation.append("📍 Contexto específico:\n");
-        investigation.append("   • Proyecto: ").append(projectName).append("\n");
-        if (teamName != null) investigation.append("   • Equipo: ").append(teamName).append("\n");
-        if (areaPath != null) investigation.append("   • Área: ").append(areaPath).append("\n");
-        if (iterationName != null) investigation.append("   • Iteración: ").append(iterationName).append("\n");
-        investigation.append("   • Backup: ").append(backupExistingFiles ? "Sí" : "No").append("\n");
-        investigation.append("\n");
-        
-        try {
-            // Generar configuración completa
-            AzureDevOpsConfigurationGenerator.ConfigurationGenerationResult result = 
-                configurationGenerator.generateCompleteConfiguration(projectName, backupExistingFiles);
-            
-            investigation.append("✅ **CONFIGURACIÓN COMPLETA GENERADA**\n");
-            investigation.append("======================================\n");
-            investigation.append(result.generateReport());
-            
-            if (result.isSuccess()) {
-                investigation.append("\n🎉 **¡PROCESO COMPLETADO EXITOSAMENTE!**\n");
-                investigation.append("========================================\n");
-                investigation.append("La configuración organizacional ha sido generada y está lista para usar.\n");
-                investigation.append("Los archivos YAML contienen toda la información descubierta automáticamente.\n\n");
-                
-                investigation.append("📁 **PRÓXIMOS PASOS:**\n");
-                investigation.append("1. Revisar los archivos generados en el directorio config/\n");
-                investigation.append("2. Ajustar valores según las necesidades específicas de la organización\n");
-                investigation.append("3. Reiniciar el servidor MCP para aplicar la nueva configuración\n");
-                investigation.append("4. Probar la creación de work items con los nuevos parámetros\n");
-            }
-        
-        } catch (Exception e) {
-            investigation.append("❌ Error durante generación completa: ").append(e.getMessage()).append("\n");
-        }
-        
-        return investigation.toString();
+        return organizationInvestigatorRefactored.performFullConfigurationGeneration(projectName, teamName, areaPath, iterationName, backupExistingFiles);
     }
 }
