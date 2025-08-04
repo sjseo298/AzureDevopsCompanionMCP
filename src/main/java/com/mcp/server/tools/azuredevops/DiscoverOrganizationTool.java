@@ -48,8 +48,10 @@ public class DiscoverOrganizationTool implements McpTool {
     
     // Procesador de work items refactorizado (inyectado por Spring)
     private final com.mcp.server.utils.workitem.WorkItemProcessor workItemProcessor;
+    
+    // Analizador de campos refactorizado
+    private final com.mcp.server.utils.field.FieldAnalyzer fieldAnalyzer;
 
-    @org.springframework.beans.factory.annotation.Autowired
     public DiscoverOrganizationTool(
             AzureDevOpsClient azureDevOpsClient,
             OrganizationConfigService configService,
@@ -77,11 +79,15 @@ public class DiscoverOrganizationTool implements McpTool {
 
             // Inicializar generador de configuración
             this.configurationGenerator = new AzureDevOpsConfigurationGenerator(organizationInvestigator);
+            
+            // Inicializar analizador de campos
+            this.fieldAnalyzer = new com.mcp.server.utils.field.FieldAnalyzer(azureDevOpsClient, httpUtil, picklistInvestigator);
         } else {
             // Para testing - inicializar con valores null
             this.httpUtil = null;
             this.organizationInvestigator = null;
             this.configurationGenerator = null;
+            this.fieldAnalyzer = null;
         }
     }
     
@@ -3100,24 +3106,12 @@ public class DiscoverOrganizationTool implements McpTool {
     
     /**
      * Obtiene todos los campos del proyecto con metadatos detallados
+     * @deprecated Usar fieldAnalyzer.getAllProjectFields() en su lugar
      */
+    @Deprecated
     private List<Map<String, Object>> getAllProjectFields(String project) {
-        List<Map<String, Object>> fields = new ArrayList<>();
-        
-        try {
-            String url = String.format("https://dev.azure.com/%s/%s/_apis/wit/fields?api-version=7.1", 
-                    azureDevOpsClient.getOrganization(), project);
-            
-            String response = makeDirectApiRequest(url);
-            if (response != null) {
-                fields = parseProjectFields(response);
-            }
-            
-        } catch (Exception e) {
-            System.err.println("Error obteniendo campos del proyecto: " + e.getMessage());
-        }
-        
-        return fields;
+        // REFACTORIZADO: Delegar a FieldAnalyzer
+        return fieldAnalyzer.getAllProjectFields(project);
     }
     
     /**
