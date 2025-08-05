@@ -1,6 +1,8 @@
 package com.mcp.server.protocol.types;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -175,8 +177,8 @@ public final class Tool {
         
         public Schema() {
             this.type = "object";
-            this.properties = Map.of();
-            this.required = List.of();
+            this.properties = new HashMap<>();
+            this.required = new ArrayList<>();
         }
         
         public Schema(String type, Map<String, Object> properties, List<String> required) {
@@ -194,8 +196,8 @@ public final class Tool {
         @SuppressWarnings("unchecked")
         public static Schema fromMap(Map<String, Object> schemaMap) {
             String type = (String) schemaMap.getOrDefault("type", "object");
-            Map<String, Object> properties = (Map<String, Object>) schemaMap.getOrDefault("properties", Map.of());
-            List<String> required = (List<String>) schemaMap.getOrDefault("required", List.of());
+            Map<String, Object> properties = (Map<String, Object>) schemaMap.getOrDefault("properties", new HashMap<>());
+            List<String> required = (List<String>) schemaMap.getOrDefault("required", new ArrayList<>());
             
             return new Schema(type, properties, required);
         }

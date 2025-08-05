@@ -36,15 +36,15 @@ public class UuidGeneratorTool implements McpTool {
     
     @Override
     public Tool getToolDefinition() {
+        Map<String, Object> schemaMap = new HashMap<>();
+        schemaMap.put("type", "object");
+        schemaMap.put("properties", new HashMap<>());
+        schemaMap.put("required", new ArrayList<>());
+        
         return Tool.builder()
                 .name(TOOL_NAME)
                 .description(DESCRIPTION)
-                .inputSchema(Map.of(
-                    "type", "object",
-                    "properties", Map.of(),
-                    "required", List.of(),
-                    "additionalProperties", false
-                ))
+                .inputSchema(Tool.Schema.fromMap(schemaMap))
                 .build();
     }
     
@@ -60,16 +60,19 @@ public class UuidGeneratorTool implements McpTool {
         // Generar UUID
         String uuid = UUID.randomUUID().toString();
         
-        // Crear respuesta en formato MCP
-        return Map.of(
-            "content", List.of(
-                Map.of(
-                    "type", "text",
-                    "text", "Generated UUID: " + uuid
-                )
-            ),
-            "isError", false
-        );
+        // Crear respuesta en formato MCP usando HashMap y ArrayList para evitar inmutables
+        Map<String, Object> contentItem = new HashMap<>();
+        contentItem.put("type", "text");
+        contentItem.put("text", "Generated UUID: " + uuid);
+        
+        List<Map<String, Object>> contentList = new ArrayList<>();
+        contentList.add(contentItem);
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("content", contentList);
+        result.put("isError", false);
+        
+        return result;
     }
     
     @Override
