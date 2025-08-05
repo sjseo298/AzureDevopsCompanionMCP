@@ -1,0 +1,48 @@
+# Plan de Eliminación de Funcionalidades MCP (Plantilla)
+
+## Objetivo
+Dejar el proyecto como plantilla MCP, conservando la base del protocolo y dejando solo una funcionalidad de ejemplo y un prompt de ejemplo. Eliminar toda la lógica y clases específicas de negocio, prompts y herramientas personalizadas, pero mantener la infraestructura MCP.
+
+## Pasos de Eliminación
+
+1. **Identificar la base MCP**
+   - Conservar: 
+     - Protocolo MCP (paquete `protocol` y subpaquetes)
+     - Clases base de prompts y herramientas (`prompts.base`, `tools.base`)
+     - Handler principal (`McpProtocolHandler`)
+     - Configuración mínima de Spring Boot
+
+2. **Eliminar prompts y herramientas personalizadas**
+   - Eliminar todos los prompts concretos (excepto uno de ejemplo)
+   - Eliminar todas las herramientas concretas (excepto una de ejemplo)
+   - Limpiar la configuración de beans (`PromptsConfig`, `ToolsConfig`) para registrar solo los ejemplos
+
+3. **Dejar un prompt y una herramienta de ejemplo**
+   - Crear o conservar un prompt de ejemplo simple (por ejemplo, "echo" o "hello world")
+   - Crear o conservar una herramienta de ejemplo simple
+
+4. **Limpiar archivos de configuración**
+   - Dejar comentarios indicando que es una plantilla
+
+5. **Actualizar pruebas**
+   - Eliminar o adaptar pruebas unitarias/integración para que solo cubran la funcionalidad de ejemplo
+
+6. **Verificar arranque y funcionamiento básico**
+   - Probar que el servidor arranca y responde a los métodos MCP básicos y al ejemplo
+
+7. **Documentar el resultado**
+   - Dejar instrucciones en el README sobre cómo extender la plantilla
+
+---
+
+
+## Progreso
+- [x] Paso 1: Identificación de la base MCP
+- [x] Paso 2: Eliminación de prompts y herramientas personalizadas
+- [x] Paso 3: Dejar ejemplos mínimos
+- [ ] Paso 4: Limpieza de configuración
+- [ ] Paso 5: Actualización de pruebas
+- [ ] Paso 6: Verificación de funcionamiento
+
+
+Este archivo se irá actualizando conforme avance el proceso.
