@@ -11,6 +11,9 @@ La documentacion debe tener una explicacion de para que sirve la funcionalidad.
 **Cada vez que vayas a procesar una seccion, debes seguir la URL y leer el contenido de la pagina, para asegurarte de seguir todos los links de esa seccion, por que pueden tener subsecciones que deben ser documentados, al entrar en el link, debes seguir lo links para poder documentar todas las subsecciones, la documentacion de cada parametro debe estar tambien incluida, para poder saber que posibles valores deben enviarse, quiero que documentes en cada seccion, lo que sea tipo Filtros de propiedades a incluir, para que la documentacion quede completa, asi este sea a su vez un json, dejalo documentado, debe ser todos los posibles valores, no solo los valores comunes, todos los ejemplos de consumo deben ser con curl**
 
 
+**Cuando una seccion sea muy grande, y contenga muchas subsecciones, se creara una carpeta interior para tener esas subsecciones separadas y evitar tener un archivo demasiado grande, el archivo de la seccion tendra una tabla con el indice del progreso documentado*
+
+
 ## Main API Areas (as seen in the official documentation)
 
 - [Get started with Azure DevOps & REST](https://learn.microsoft.com/en-us/rest/api/azure/devops/?view=azure-devops-rest-7.2)
@@ -62,7 +65,7 @@ La documentacion debe tener una explicacion de para que sirve la funcionalidad.
 - [Token Admin](https://learn.microsoft.com/en-us/rest/api/azure/devops/tokenadmin/?view=azure-devops-rest-7.2)
 - [Tokens](https://learn.microsoft.com/en-us/rest/api/azure/devops/tokens/?view=azure-devops-rest-7.2)
 - [Wiki](https://learn.microsoft.com/en-us/rest/api/azure/devops/wiki/?view=azure-devops-rest-7.2)
-- [Work](https://learn.microsoft.com/en-us/rest/api/azure/devops/work/?view=azure-devops-rest-7.2)
+- [Work](https://learn.microsoft.com/en-us/rest/api/azure/devops/work/?view=azure-devops-rest-7.2) ([local documentation](api_doc/work.md)) ⏳
 - [Work Item Tracking](https://learn.microsoft.com/en-us/rest/api/azure/devops/wit/?view=azure-devops-rest-7.2) ([local documentation](api_doc/wit.md)) ✅
 - [Work Item Tracking Process](https://learn.microsoft.com/en-us/rest/api/azure/devops/workitemtrackingprocess/?view=azure-devops-rest-7.2)
 - [Work Item Tracking Process Template](https://learn.microsoft.com/en-us/rest/api/azure/devops/workitemtrackingprocesstemplate/?view=azure-devops-rest-7.2)
