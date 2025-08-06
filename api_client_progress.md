@@ -1,4 +1,10 @@
 8. **Gestión de Progreso y Tamaño de Archivos**
+9. **Actualización y Lectura de Archivos de Progreso**
+   - Para cada área y subfuncionalidad, consulta el archivo de avance correspondiente en la subcarpeta.
+   - Antes de implementar o modificar una funcionalidad, revisa el archivo .md de progreso para conocer el estado actual y las instrucciones específicas.
+   - Al avanzar en la implementación, actualiza el archivo .md de la subfuncionalidad, cambiando el estado, agregando notas, ejemplos, fechas y responsables si aplica.
+   - Si una funcionalidad se completa, marca el estado como ✅ y documenta los endpoints, parámetros y ejemplos de uso.
+   - Mantén la trazabilidad referenciando los archivos de avance desde este archivo principal y desde la documentación local.
    - El progreso de cada documento debe mantenerse en archivos pequeños y claros.
    - Si para registrar el progreso se necesita almacenar más información, crea subcarpetas específicas para cada área o funcionalidad.
    - Cada subcarpeta debe contener archivos de avance detallado y ser referenciada desde este archivo principal, asegurando trazabilidad y organización.
