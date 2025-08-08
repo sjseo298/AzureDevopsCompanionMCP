@@ -56,7 +56,7 @@ Este archivo resume el estado de avance de la implementación de un cliente para
 | Core | [api_doc/core.md](api_doc/core.md) | ✅ |
 | Dashboard | [api_doc/dashboard.md](api_doc/dashboard.md) | ⏳ |
 | Work | [api_doc/work.md](api_doc/work.md) | ⏳ |
-| Work Item Tracking | [api_doc/wit.md](api_doc/wit.md) | ⏳ |
+| Work Item Tracking | [api_doc/wit.md](api_doc/wit.md) | ⏳ (iniciado) |
 
 ---
 
@@ -70,3 +70,17 @@ Notas de avance recientes
     - Projects: `scripts/curl/core/list_projects.sh`, `scripts/curl/core/get_project.sh`, `scripts/curl/core/create_project.sh`, `scripts/curl/core/update_project.sh`, `scripts/curl/core/delete_project.sh`, `scripts/curl/core/get_project_properties.sh`, `scripts/curl/core/set_project_properties.sh`.
     - Teams: `scripts/curl/core/list_teams.sh`, `scripts/curl/core/get_all_teams.sh`, `scripts/curl/core/get_team.sh`, `scripts/curl/core/create_team.sh`, `scripts/curl/core/update_team.sh`, `scripts/curl/core/delete_team.sh`, `scripts/curl/core/get_team_members.sh`.
   - Tests mínimos: definición y esquema de entrada para Projects y Teams (se ampliarán para nuevas tools).
+
+- Work Item Tracking (iniciado ⏳):
+  - Cliente: agregado soporte `getWitApi` y `postWitApi` en `AzureDevOpsClientService`.
+  - Scripts cURL (derivados 1:1 de `api_doc/wit_sections/*.md`):
+    - `scripts/curl/wit/account_my_work_recent_activity.sh`
+    - `scripts/curl/wit/artifact_link_types.sh`
+    - `scripts/curl/wit/artifact_uri_query.sh`
+    - `scripts/curl/wit/attachments_create.sh`
+  - Tools MCP:
+    - `azuredevops_wit_get_account_my_work_recent_activity` (`AccountMyWorkRecentActivityTool`)
+    - `azuredevops_wit_get_artifact_link_types` (`ArtifactLinkTypesTool`)
+    - `azuredevops_wit_artifact_uri_query` (`ArtifactUriQueryTool`)
+  - Tests mínimos: definición básica de tools creados.
+  - Próximo: completar Attachments (get/delete), `classification_nodes`, `comments` y siguientes, siguiendo orden alfabético.

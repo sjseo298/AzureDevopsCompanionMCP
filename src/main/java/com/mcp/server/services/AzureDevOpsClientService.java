@@ -265,4 +265,134 @@ public class AzureDevOpsClientService {
             .block();
         return body != null ? body : new HashMap<>();
     }
+
+    /**
+     * Llamadas al área WIT bajo /{project}/{team?}/_apis/wit/{path}
+     */
+    public Map<String, Object> getWitApi(String project, String team, String path) {
+        String proj = project == null ? "" : project.trim();
+        String tm = (team == null || team.trim().isEmpty()) ? null : team.trim();
+        String pth = path == null ? "" : path.trim();
+
+        List<String> segments = new ArrayList<>();
+        if (!proj.isEmpty()) segments.add(proj);
+        if (tm != null) segments.add(tm);
+        segments.add("_apis");
+        segments.add("wit");
+        for (String part : pth.split("/")) {
+            if (!part.isBlank()) segments.add(part);
+        }
+        return doGetWithSegmentsAndQuery(segments, null, apiVersion);
+    }
+
+    public Map<String, Object> postWitApi(String project, String team, String path, Object body, String apiVersionOverride) {
+        String proj = project == null ? "" : project.trim();
+        String tm = (team == null || team.trim().isEmpty()) ? null : team.trim();
+        String pth = path == null ? "" : path.trim();
+
+        List<String> segments = new ArrayList<>();
+        if (!proj.isEmpty()) segments.add(proj);
+        if (tm != null) segments.add(tm);
+        segments.add("_apis");
+        segments.add("wit");
+        for (String part : pth.split("/")) {
+            if (!part.isBlank()) segments.add(part);
+        }
+        return doExchangeWithSegments(org.springframework.http.HttpMethod.POST, segments, null, body, apiVersionOverride, org.springframework.http.MediaType.APPLICATION_JSON);
+    }
+
+    public Map<String, Object> putWitApi(String project, String team, String path, Object body, String apiVersionOverride) {
+        String proj = project == null ? "" : project.trim();
+        String tm = (team == null || team.trim().isEmpty()) ? null : team.trim();
+        String pth = path == null ? "" : path.trim();
+        List<String> segments = new ArrayList<>();
+        if (!proj.isEmpty()) segments.add(proj);
+        if (tm != null) segments.add(tm);
+        segments.add("_apis");
+        segments.add("wit");
+        for (String part : pth.split("/")) { if (!part.isBlank()) segments.add(part); }
+        return doExchangeWithSegments(org.springframework.http.HttpMethod.PUT, segments, null, body, apiVersionOverride, org.springframework.http.MediaType.APPLICATION_JSON);
+    }
+
+    public Map<String, Object> patchWitApi(String project, String team, String path, Object body, String apiVersionOverride) {
+        String proj = project == null ? "" : project.trim();
+        String tm = (team == null || team.trim().isEmpty()) ? null : team.trim();
+        String pth = path == null ? "" : path.trim();
+        List<String> segments = new ArrayList<>();
+        if (!proj.isEmpty()) segments.add(proj);
+        if (tm != null) segments.add(tm);
+        segments.add("_apis");
+        segments.add("wit");
+        for (String part : pth.split("/")) { if (!part.isBlank()) segments.add(part); }
+        return doExchangeWithSegments(org.springframework.http.HttpMethod.PATCH, segments, null, body, apiVersionOverride, org.springframework.http.MediaType.APPLICATION_JSON);
+    }
+
+    public Map<String, Object> deleteWitApi(String project, String team, String path, String apiVersionOverride) {
+        String proj = project == null ? "" : project.trim();
+        String tm = (team == null || team.trim().isEmpty()) ? null : team.trim();
+        String pth = path == null ? "" : path.trim();
+        List<String> segments = new ArrayList<>();
+        if (!proj.isEmpty()) segments.add(proj);
+        if (tm != null) segments.add(tm);
+        segments.add("_apis");
+        segments.add("wit");
+        for (String part : pth.split("/")) { if (!part.isBlank()) segments.add(part); }
+        return doExchangeWithSegments(org.springframework.http.HttpMethod.DELETE, segments, null, null, apiVersionOverride, null);
+    }
+
+    public Map<String,Object> postCoreBinary(String path, Map<String,String> query, byte[] data, String apiVersionOverride, MediaType contentType) {
+        String pth = path == null ? "" : path.trim();
+        List<String> segments = new ArrayList<>();
+        segments.add("_apis");
+        for (String part : pth.split("/")) {
+            if (!part.isBlank()) segments.add(part);
+        }
+        MediaType ct = contentType != null ? contentType : MediaType.APPLICATION_OCTET_STREAM;
+        return doExchangeWithSegments(HttpMethod.POST, segments, query, data != null ? data : new byte[0], apiVersionOverride, ct);
+    }
+
+    public Map<String,Object> getCoreBinary(String path, Map<String,String> query, String apiVersionOverride) {
+        String pth = path == null ? "" : path.trim();
+        List<String> segments = new ArrayList<>();
+        segments.add("_apis");
+        for (String part : pth.split("/")) {
+            if (!part.isBlank()) segments.add(part);
+        }
+        return webClient.get()
+            .uri(builder -> {
+                var b = builder.pathSegment(segments.toArray(new String[0]));
+                if (query != null) {
+                    for (Map.Entry<String,String> e : query.entrySet()) {
+                        b.queryParam(e.getKey(), e.getValue());
+                    }
+                }
+                String ver = (apiVersionOverride != null && !apiVersionOverride.isBlank()) ? apiVersionOverride : this.apiVersion;
+                b.queryParam("api-version", ver);
+                return b.build();
+            })
+            .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_OCTET_STREAM_VALUE)
+            .exchangeToMono(resp -> resp.bodyToMono(byte[].class).map(bytes -> {
+                String b64 = Base64.getEncoder().encodeToString(bytes != null ? bytes : new byte[0]);
+                String ct = resp.headers().contentType().map(MediaType::toString).orElse(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+                Map<String,Object> m = new HashMap<>();
+                m.put("data", b64);
+                m.put("contentType", ct);
+                return m;
+            }).onErrorResume(e -> Mono.just(Map.of("error", e.getMessage()))))
+            .block();
+    }
+
+    public Map<String, Object> getWitApiWithQuery(String project, String team, String path, Map<String,String> query, String apiVersionOverride) {
+        String proj = project == null ? "" : project.trim();
+        String tm = (team == null || team.trim().isEmpty()) ? null : team.trim();
+        String pth = path == null ? "" : path.trim();
+        List<String> segments = new ArrayList<>();
+        if (!proj.isEmpty()) segments.add(proj);
+        if (tm != null) segments.add(tm);
+        segments.add("_apis");
+        segments.add("wit");
+        for (String part : pth.split("/")) { if (!part.isBlank()) segments.add(part); }
+        String version = (apiVersionOverride != null && !apiVersionOverride.isBlank()) ? apiVersionOverride : this.apiVersion;
+        return doGetWithSegmentsAndQuery(segments, query, version);
+    }
 }

@@ -3,6 +3,8 @@ applyTo: "**"
 description: Documento unificado con las reglas de diseño, flujo y validación para implementar APIs de Azure DevOps (MCP Server)
 ---
 
+quiero que seas practico y que conforme vas leyendo una documentacion vayas creando los archivos indicados, para evitar que tengas una ventana de contexto que se llene.
+
 ## Stack y Alcance
 - Backend: Spring Boot (Java)
 - Cliente HTTP: WebClient
