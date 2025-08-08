@@ -1,4 +1,3 @@
-
 # Accounts API Documentation (Azure DevOps REST API v7.2)
 
 ## What is the Accounts API?
@@ -9,6 +8,16 @@ The Accounts API allows you to list and retrieve Azure DevOps accounts that a us
 ---
 
 ## Operations
+
+### 0. Get My MemberId (helper)
+- Description: Retrieves the memberId (GUID) of the authenticated user, required by some Accounts queries.
+- Endpoint: `GET https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=7.1`
+- Tool MCP: `azuredevops_get_my_memberid`
+- cURL Example:
+```bash
+curl -u :$AZURE_DEVOPS_PAT "https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=7.1"
+```
+- Response sample (fields): `id`, `displayName`, `emailAddress`
 
 ### 1. List Accounts
 - **Description:** Retrieves all accounts that the authenticated user has access to.
@@ -21,7 +30,7 @@ The Accounts API allows you to list and retrieve Azure DevOps accounts that a us
 - **cURL Example:**
 ```bash
 curl -u :<PAT> \
-  "https://app.vssps.visualstudio.com/_apis/accounts?api-version=7.1"
+  "https://app.vssps.visualstudio.com/_apis/accounts?memberId=<guid>&api-version=7.1"
 ```
 - **Sample Response:**
 ```json
@@ -68,3 +77,4 @@ curl -u :<PAT> \
 ## Progress
 - [x] Operations listed
 - [x] Detailed documentation for each operation
+- [x] Helper documented: get_my_memberid (Profiles)

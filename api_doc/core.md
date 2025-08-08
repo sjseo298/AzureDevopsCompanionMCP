@@ -28,6 +28,20 @@ Cada sección incluirá explicación funcional, parámetros, ejemplos cURL, requ
 
 ---
 
+## Projects
+
+Ejemplo cURL local (scripts):
+- Listar proyectos de la organización
+  - scripts/curl/core/list_projects.sh
+
+## Teams
+
+Ejemplo cURL local (scripts):
+- Listar equipos de un proyecto (requiere projectId GUID)
+  - scripts/curl/core/list_teams.sh
+
+---
+
 ## Avatar
 
 La API de Avatar permite obtener y actualizar los avatares (imágenes de perfil) asociados a usuarios, equipos y proyectos en Azure DevOps. Es útil para personalizar la experiencia visual y para identificar rápidamente entidades en la interfaz.

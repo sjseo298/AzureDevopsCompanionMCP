@@ -53,7 +53,20 @@ Este archivo resume el estado de avance de la implementación de un cliente para
 | Artifacts Package Types | [api_doc/artifactspackagetypes.md](api_doc/artifactspackagetypes.md) | ⏳ |
 | Audit | [api_doc/audit.md](api_doc/audit.md) | ⏳ |
 | Build | [api_doc/build.md](api_doc/build.md) | ⏳ |
-| Core | [api_doc/core.md](api_doc/core.md) | ⏳ |
+| Core | [api_doc/core.md](api_doc/core.md) | ✅ |
 | Dashboard | [api_doc/dashboard.md](api_doc/dashboard.md) | ⏳ |
 | Work | [api_doc/work.md](api_doc/work.md) | ⏳ |
 | Work Item Tracking | [api_doc/wit.md](api_doc/wit.md) | ⏳ |
+
+---
+
+Notas de avance recientes
+- Core (✅):
+  - Tools MCP:
+    - Projects: `azuredevops_core_get_projects`, `azuredevops_core_get_project`, `azuredevops_core_create_project`, `azuredevops_core_update_project`, `azuredevops_core_delete_project`, `azuredevops_core_get_project_properties`, `azuredevops_core_set_project_properties`.
+    - Teams: `azuredevops_core_get_teams` (por proyecto), `azuredevops_core_get_all_teams` (organización), `azuredevops_core_get_team`, `azuredevops_core_create_team`, `azuredevops_core_update_team`, `azuredevops_core_delete_team`, `azuredevops_core_get_team_members`.
+  - Cliente: `AzureDevOpsClientService` amplíado con `postCoreApi`, `patchCoreApi`, `deleteCoreApi` y soporte de api-version específica.
+  - Scripts cURL:
+    - Projects: `scripts/curl/core/list_projects.sh`, `scripts/curl/core/get_project.sh`, `scripts/curl/core/create_project.sh`, `scripts/curl/core/update_project.sh`, `scripts/curl/core/delete_project.sh`, `scripts/curl/core/get_project_properties.sh`, `scripts/curl/core/set_project_properties.sh`.
+    - Teams: `scripts/curl/core/list_teams.sh`, `scripts/curl/core/get_all_teams.sh`, `scripts/curl/core/get_team.sh`, `scripts/curl/core/create_team.sh`, `scripts/curl/core/update_team.sh`, `scripts/curl/core/delete_team.sh`, `scripts/curl/core/get_team_members.sh`.
+  - Tests mínimos: definición y esquema de entrada para Projects y Teams (se ampliarán para nuevas tools).
