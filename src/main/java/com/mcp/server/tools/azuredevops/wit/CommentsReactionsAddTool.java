@@ -40,13 +40,24 @@ public class CommentsReactionsAddTool extends AbstractAzureDevOpsTool {
         if (azureService == null) return error("Servicio Azure DevOps no configurado en este entorno");
         String project = getProject(arguments);
         String team = getTeam(arguments);
-        String wi = Objects.toString(arguments.get("workItemId"));
-        String ci = Objects.toString(arguments.get("commentId"));
-        String type = Objects.toString(arguments.get("type")).toLowerCase(Locale.ROOT);
+        Object wiObj = arguments.get("workItemId");
+        Object ciObj = arguments.get("commentId");
+        Object typeObj = arguments.get("type");
+        if (wiObj == null || !wiObj.toString().matches("\\d+")) return error("'workItemId' es requerido y debe ser numérico");
+        if (ciObj == null || !ciObj.toString().matches("\\d+")) return error("'commentId' es requerido y debe ser numérico");
+        if (typeObj == null) return error("'type' es requerido");
+        String type = typeObj.toString().toLowerCase(Locale.ROOT);
+        if (!List.of("like","dislike","heart","hooray","smile","confused").contains(type)) {
+            return error("'type' inválido. Valores: like, dislike, heart, hooray, smile, confused");
+        }
+        String wi = wiObj.toString();
+        String ci = ciObj.toString();
         String endpoint = "workItems/" + wi + "/comments/" + ci + "/reactions/" + type;
         Map<String,Object> resp = azureService.putWitApi(project, team, endpoint, Map.of(), API_VERSION_OVERRIDE);
         String formattedErr = tryFormatRemoteError(resp);
         if (formattedErr != null) return success(formattedErr);
-        return success("Reacción agregada: " + type + " -> " + resp.toString());
+        Object count = resp.get("count");
+        Object me = resp.get("isCurrentUserEngaged");
+        return success("Reacción agregada: " + type + " (count=" + (count!=null?count:1) + ", me=" + Boolean.TRUE.equals(me) + ")");
     }
 }

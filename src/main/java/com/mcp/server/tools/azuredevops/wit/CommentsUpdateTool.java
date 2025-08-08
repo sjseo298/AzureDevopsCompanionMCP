@@ -40,21 +40,22 @@ public class CommentsUpdateTool extends AbstractAzureDevOpsTool {
         if (azureService == null) return error("Servicio Azure DevOps no configurado en este entorno");
         String project = getProject(arguments);
         String team = getTeam(arguments);
-        String wi = Objects.toString(arguments.get("workItemId"));
-        String ci = Objects.toString(arguments.get("commentId"));
-        String text = Objects.toString(arguments.get("text"));
+        Object wiObj = arguments.get("workItemId");
+        Object ciObj = arguments.get("commentId");
+        Object textObj = arguments.get("text");
+        if (wiObj == null || !wiObj.toString().matches("\\d+")) return error("'workItemId' es requerido y debe ser numérico");
+        if (ciObj == null || !ciObj.toString().matches("\\d+")) return error("'commentId' es requerido y debe ser numérico");
+        if (textObj == null || textObj.toString().trim().isEmpty()) return error("'text' es requerido");
+        String wi = wiObj.toString();
+        String ci = ciObj.toString();
+        String text = textObj.toString();
         String endpoint = "workItems/" + wi + "/comments/" + ci;
         Map<String,Object> body = Map.of("text", text);
         Map<String,Object> resp = azureService.patchWitApi(project, team, endpoint, body, API_VERSION_OVERRIDE);
         String formattedErr = tryFormatRemoteError(resp);
         if (formattedErr != null) return success(formattedErr);
-        return success(format(resp));
-    }
-
-    private String format(Map<String,Object> data) {
-        if (data == null || data.isEmpty()) return "(Respuesta vacía)";
-        Object id = data.get("id");
-        Object text = data.get("text");
-        return "Comentario actualizado id=" + (id != null ? id : "?") + "\n" + (text != null ? text.toString() : "");
+        Object id = resp.get("id");
+        Object ver = resp.get("version");
+        return success("Comentario actualizado id=" + (id!=null?id:"?") + ", version=" + (ver!=null?ver:"?") );
     }
 }

@@ -67,4 +67,22 @@ public class CommentsToolsTest {
         assertNotNull(def.getDescription());
         assertNotNull(def.getInputSchema());
     }
+
+    @Test
+    void testCommentsVersionsListDefinition() {
+        CommentsVersionsListTool tool = new CommentsVersionsListTool(null);
+        var def = tool.getToolDefinition();
+        assertEquals("azuredevops_wit_comments_versions_list", def.getName());
+        assertNotNull(def.getDescription());
+        assertNotNull(def.getInputSchema());
+    }
+
+    @Test
+    void testCommentsVersionsGetDefinition() {
+        CommentsVersionsGetTool tool = new CommentsVersionsGetTool(null);
+        var def = tool.getToolDefinition();
+        assertEquals("azuredevops_wit_comments_versions_get", def.getName());
+        assertNotNull(def.getDescription());
+        assertNotNull(def.getInputSchema());
+    }
 }
