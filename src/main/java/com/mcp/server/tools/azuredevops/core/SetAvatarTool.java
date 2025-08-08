@@ -38,7 +38,6 @@ public class SetAvatarTool extends AbstractAzureDevOpsTool {
         String sub = Optional.ofNullable(args.get("subjectDescriptor")).map(Object::toString).map(String::trim).orElse("");
         String data = Optional.ofNullable(args.get("dataBase64")).map(Object::toString).map(String::trim).orElse("");
         if (sub.isEmpty() || data.isEmpty()) throw new IllegalArgumentException("'subjectDescriptor' y 'dataBase64' son requeridos");
-        // Validación básica base64
         try { Base64.getDecoder().decode(data); } catch (IllegalArgumentException e) { throw new IllegalArgumentException("'dataBase64' no es base64 válido"); }
     }
 

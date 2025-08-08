@@ -9,9 +9,12 @@ PROJECT_ID=${1:-}
 KEYS=${2:-}
 [[ -z "$PROJECT_ID" ]] && usage
 
-URL="${DEVOPS_BASE}/_apis/projects/${PROJECT_ID}/properties?api-version=7.2-preview.1"
-if [[ -n "${KEYS}" ]]; then
-  URL+="&keys=$(printf '%s' "$KEYS" | sed 's/\s//g')"
+urlencode() { jq -rn --arg s "$1" '$s|@uri'; }
+PID_ENC=$(urlencode "$PROJECT_ID")
+
+URL="${DEVOPS_BASE}/_apis/projects/${PID_ENC}/properties?api-version=7.2-preview.1"
+if [[ -n "$KEYS" ]]; then
+  URL+="&keys=$(printf '%s' "$KEYS" | tr -d ' \t')"
 fi
 
 curl_json "$URL" | jq .

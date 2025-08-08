@@ -9,10 +9,14 @@ PROJECT=${1:-}
 TEAM=${2:-}
 [[ -z "$PROJECT" ]] && usage
 
+urlencode() { jq -rn --arg s "$1" '$s|@uri'; }
+PROJECT_ENC=$(urlencode "$PROJECT")
+
 if [[ -n "$TEAM" ]]; then
-  URL="${DEVOPS_BASE}/${PROJECT}/${TEAM}/_apis/work/boards?api-version=7.2-preview.1"
+  TEAM_ENC=$(urlencode "$TEAM")
+  URL="${DEVOPS_BASE}/${PROJECT_ENC}/${TEAM_ENC}/_apis/work/boards?api-version=${AZURE_DEVOPS_API_VERSION}"
 else
-  URL="${DEVOPS_BASE}/${PROJECT}/_apis/work/boards?api-version=7.2-preview.1"
+  URL="${DEVOPS_BASE}/${PROJECT_ENC}/_apis/work/boards?api-version=${AZURE_DEVOPS_API_VERSION}"
 fi
 
 curl_json "$URL" | jq .

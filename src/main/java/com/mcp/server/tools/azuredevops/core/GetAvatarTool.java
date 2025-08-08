@@ -28,10 +28,17 @@ public class GetAvatarTool extends AbstractAzureDevOpsTool {
     }
 
     @Override
+    protected void validateCommon(Map<String, Object> args) {
+        String sd = Optional.ofNullable(args.get("subjectDescriptor")).map(Object::toString).map(String::trim).orElse("");
+        if (sd.isEmpty()) throw new IllegalArgumentException("'subjectDescriptor' es requerido");
+    }
+
+    @Override
     protected Map<String, Object> executeInternal(Map<String, Object> arguments) {
         if (azureService == null) return error("Servicio no disponible en tests");
         String sd = arguments.get("subjectDescriptor").toString().trim();
-        Map<String,Object> resp = azureService.getCoreApi("graph/Subjects/"+sd+"/avatar", Map.of());
+        // Usar VSSPS binario para Avatars, versión preview
+        Map<String,Object> resp = azureService.getVsspsBinary("graph/avatars/"+sd+"?api-version=7.2-preview.1");
         String formattedErr = tryFormatRemoteError(resp);
         if (formattedErr != null) return success(formattedErr);
         return Map.of("isError", false, "raw", resp);

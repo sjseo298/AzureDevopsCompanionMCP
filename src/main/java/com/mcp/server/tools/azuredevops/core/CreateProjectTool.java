@@ -26,9 +26,9 @@ public class CreateProjectTool extends AbstractAzureDevOpsTool {
         String sourceControlType = Optional.ofNullable(args.get("sourceControlType")).map(Object::toString).map(String::trim).orElse("");
         String processTypeId = Optional.ofNullable(args.get("processTypeId")).map(Object::toString).map(String::trim).orElse("");
         if (name.isEmpty()) throw new IllegalArgumentException("'name' es requerido");
-        if (visibility.isEmpty()) throw new IllegalArgumentException("'visibility' es requerido (private|public)");
-        if (sourceControlType.isEmpty()) throw new IllegalArgumentException("'sourceControlType' es requerido (Git|TFVC)");
-        if (processTypeId.isEmpty()) throw new IllegalArgumentException("'processTypeId' es requerido (GUID)");
+        if (!Set.of("private","public").contains(visibility)) throw new IllegalArgumentException("'visibility' debe ser private|public");
+        if (!Set.of("Git","TFVC").contains(sourceControlType)) throw new IllegalArgumentException("'sourceControlType' debe ser Git|TFVC");
+        if (!processTypeId.matches("[0-9a-fA-F-]{36}")) throw new IllegalArgumentException("'processTypeId' debe ser GUID de 36 chars");
     }
 
     @Override
@@ -38,8 +38,8 @@ public class CreateProjectTool extends AbstractAzureDevOpsTool {
         Map<String,Object> props = new LinkedHashMap<>();
         props.put("name", Map.of("type","string","description","Nombre del proyecto"));
         props.put("description", Map.of("type","string","description","Descripción (opcional)"));
-        props.put("visibility", Map.of("type","string","description","Visibilidad (private|public)"));
-        props.put("sourceControlType", Map.of("type","string","description","Tipo de control de versiones (Git|TFVC)"));
+        props.put("visibility", Map.of("type","string","enum", List.of("private","public"), "description","Visibilidad (private|public)"));
+        props.put("sourceControlType", Map.of("type","string","enum", List.of("Git","TFVC"), "description","Tipo de control de versiones (Git|TFVC)"));
         props.put("processTypeId", Map.of("type","string","description","Process template typeId (GUID)"));
         s.put("properties", props);
         s.put("required", List.of("name","visibility","sourceControlType","processTypeId"));

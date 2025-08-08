@@ -49,6 +49,16 @@ public class TeamsTool extends AbstractAzureDevOpsTool {
         if (!s.matches("[0-9a-fA-F-]{36}")) {
             throw new IllegalArgumentException("'projectId' debe ser GUID de 36 chars");
         }
+        Object top = args.get("top");
+        if (top != null) {
+            try { int t = Integer.parseInt(top.toString()); if (t < 1 || t > 1000) throw new IllegalArgumentException("'top' debe estar entre 1 y 1000"); }
+            catch (NumberFormatException e) { throw new IllegalArgumentException("'top' debe ser numérico"); }
+        }
+        Object skip = args.get("skip");
+        if (skip != null) {
+            try { int k = Integer.parseInt(skip.toString()); if (k < 0) throw new IllegalArgumentException("'skip' debe ser >= 0"); }
+            catch (NumberFormatException e) { throw new IllegalArgumentException("'skip' debe ser numérico"); }
+        }
     }
 
     @Override
