@@ -39,8 +39,12 @@ public class CommentReactionsEngagedUsersListTool extends AbstractAzureDevOpsToo
         if (azureService == null) return error("Servicio Azure DevOps no configurado en este entorno");
         String project = getProject(arguments);
         String team = getTeam(arguments);
-        String wi = Objects.toString(arguments.get("workItemId"));
-        String ci = Objects.toString(arguments.get("commentId"));
+        Object wiObj = arguments.get("workItemId");
+        Object ciObj = arguments.get("commentId");
+        if (wiObj == null || !wiObj.toString().matches("\\d+")) return error("'workItemId' es requerido y debe ser numérico");
+        if (ciObj == null || !ciObj.toString().matches("\\d+")) return error("'commentId' es requerido y debe ser numérico");
+        String wi = wiObj.toString();
+        String ci = ciObj.toString();
         String endpoint = "workItems/" + wi + "/comments/" + ci + "/reactions/users";
         Map<String,Object> resp = azureService.getWitApiWithQuery(project, team, endpoint, null, API_VERSION_OVERRIDE);
         String formattedErr = tryFormatRemoteError(resp);
@@ -49,24 +53,48 @@ public class CommentReactionsEngagedUsersListTool extends AbstractAzureDevOpsToo
     }
 
     private String format(Map<String,Object> data) {
-        if (data == null || data.isEmpty()) return "(Respuesta vacía)";
+        if (data == null || data.isEmpty()) return "(Sin datos)";
         Object val = data.get("value");
         if (val instanceof List) {
             List<?> list = (List<?>) val;
-            StringBuilder sb = new StringBuilder("=== Comment Reactions Users ===\n\n");
-            int i=1;
-            for (Object o : list) {
-                if (o instanceof Map) {
-                    Map<?,?> m = (Map<?,?>) o;
-                    sb.append(i++).append(". ");
-                    Object dn = m.get("displayName");
-                    Object un = m.get("uniqueName");
-                    sb.append(dn != null ? dn : "(sin nombre)");
-                    if (un != null) sb.append(" <").append(un).append(">");
-                    sb.append('\n');
+            if (list.isEmpty()) return "(Sin usuarios/reacciones)";
+            // Detectar tipo de elementos
+            Object first = list.get(0);
+            if (first instanceof Map && ((Map<?,?>) first).containsKey("displayName")) {
+                StringBuilder sb = new StringBuilder("=== Usuarios que reaccionaron ===\n\n");
+                int i=1;
+                for (Object o : list) {
+                    if (o instanceof Map) {
+                        Map<?,?> m = (Map<?,?>) o;
+                        Object dn = m.get("displayName");
+                        Object un = m.get("uniqueName");
+                        sb.append(i++).append(". ")
+                          .append(dn != null ? dn : "(sin nombre)");
+                        if (un != null) sb.append(" <").append(un).append(">");
+                        sb.append('\n');
+                    }
                 }
+                return sb.toString();
+            } else if (first instanceof Map && ((Map<?,?>) first).containsKey("type")) {
+                StringBuilder sb = new StringBuilder("=== Resumen de reacciones ===\n\n");
+                int i=1;
+                for (Object o : list) {
+                    if (o instanceof Map) {
+                        Map<?,?> m = (Map<?,?>) o;
+                        Object type = m.get("type");
+                        Object count = m.get("count");
+                        Object engaged = m.get("isCurrentUserEngaged");
+                        sb.append(i++).append(") ")
+                          .append(type != null ? type : "?")
+                          .append(" -> count=")
+                          .append(count != null ? count : 0)
+                          .append(", me=")
+                          .append(Boolean.TRUE.equals(engaged))
+                          .append('\n');
+                    }
+                }
+                return sb.toString();
             }
-            return sb.toString();
         }
         return data.toString();
     }

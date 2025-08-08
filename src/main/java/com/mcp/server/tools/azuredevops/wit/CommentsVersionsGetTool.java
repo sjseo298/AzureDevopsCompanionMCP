@@ -8,18 +8,18 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 
 /**
- * Tool MCP: azuredevops_wit_comments_reactions_delete
- * Elimina una reacción de un comentario.
+ * Tool MCP: azuredevops_wit_comments_versions_get
+ * Obtiene una versión específica de un comentario.
  */
 @Component
-public class CommentsReactionsDeleteTool extends AbstractAzureDevOpsTool {
+public class CommentsVersionsGetTool extends AbstractAzureDevOpsTool {
 
-    private static final String NAME = "azuredevops_wit_comments_reactions_delete";
-    private static final String DESC = "Elimina una reacción (like/dislike/heart/hooray/smile/confused) de un comentario.";
-    private static final String API_VERSION_OVERRIDE = "7.2-preview.1";
+    private static final String NAME = "azuredevops_wit_comments_versions_get";
+    private static final String DESC = "Obtiene una versión específica de un comentario.";
+    private static final String API_VERSION_OVERRIDE = "7.2-preview.3";
 
     @Autowired
-    public CommentsReactionsDeleteTool(AzureDevOpsClientService service) { super(service); }
+    public CommentsVersionsGetTool(AzureDevOpsClientService service) { super(service); }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
@@ -30,8 +30,8 @@ public class CommentsReactionsDeleteTool extends AbstractAzureDevOpsTool {
         @SuppressWarnings("unchecked") Map<String,Object> props = (Map<String, Object>) base.get("properties");
         props.put("workItemId", Map.of("type","integer","description","ID del work item"));
         props.put("commentId", Map.of("type","integer","description","ID del comentario"));
-        props.put("type", Map.of("type","string","enum", List.of("like","dislike","heart","hooray","smile","confused"), "description","Tipo de reacción"));
-        base.put("required", List.of("project","workItemId","commentId","type"));
+        props.put("version", Map.of("type","integer","description","Número de versión"));
+        base.put("required", List.of("project","workItemId","commentId","version"));
         return base;
     }
 
@@ -42,22 +42,25 @@ public class CommentsReactionsDeleteTool extends AbstractAzureDevOpsTool {
         String team = getTeam(arguments);
         Object wiObj = arguments.get("workItemId");
         Object ciObj = arguments.get("commentId");
-        Object typeObj = arguments.get("type");
+        Object verObj = arguments.get("version");
         if (wiObj == null || !wiObj.toString().matches("\\d+")) return error("'workItemId' es requerido y debe ser numérico");
         if (ciObj == null || !ciObj.toString().matches("\\d+")) return error("'commentId' es requerido y debe ser numérico");
-        if (typeObj == null) return error("'type' es requerido");
-        String type = typeObj.toString().toLowerCase(Locale.ROOT);
-        if (!List.of("like","dislike","heart","hooray","smile","confused").contains(type)) {
-            return error("'type' inválido. Valores: like, dislike, heart, hooray, smile, confused");
-        }
+        if (verObj == null || !verObj.toString().matches("\\d+")) return error("'version' es requerido y debe ser numérico");
         String wi = wiObj.toString();
         String ci = ciObj.toString();
-        String endpoint = "workItems/" + wi + "/comments/" + ci + "/reactions/" + type;
-        Map<String,Object> resp = azureService.deleteWitApi(project, team, endpoint, API_VERSION_OVERRIDE);
+        String ver = verObj.toString();
+        String endpoint = "workItems/" + wi + "/comments/" + ci + "/versions/" + ver;
+        Map<String,Object> resp = azureService.getWitApiWithQuery(project, team, endpoint, null, API_VERSION_OVERRIDE);
         String formattedErr = tryFormatRemoteError(resp);
         if (formattedErr != null) return success(formattedErr);
-        Object count = resp.get("count");
-        Object me = resp.get("isCurrentUserEngaged");
-        return success("Reacción eliminada: " + type + " (count=" + (count!=null?count:0) + ", me=" + Boolean.TRUE.equals(me) + ")");
+        if (resp.isEmpty()) return success("(Versión no disponible o endpoint no habilitado en esta organización)");
+        return success(format(resp));
+    }
+
+    private String format(Map<String,Object> data) {
+        if (data == null || data.isEmpty()) return "(Sin datos)";
+        Object ver = data.get("version");
+        Object text = data.get("text");
+        return "Comentario v" + (ver != null ? ver : "?") + ":\n" + (text != null ? text.toString() : "");
     }
 }
