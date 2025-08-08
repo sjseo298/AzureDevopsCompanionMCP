@@ -27,7 +27,23 @@ public class ProjectsTool extends AbstractAzureDevOpsTool {
 
     @Override
     protected void validateCommon(Map<String, Object> args) {
-        // Para Projects, no requerimos 'project' ni 'team'. Solo credenciales a nivel org.
+        // Sin 'project' requerido. Validar opcionales.
+        Object state = args.get("state");
+        if (state != null && !state.toString().isBlank()) {
+            String s = state.toString().trim();
+            if (!Set.of("WellFormed","CreatePending","Deleted").contains(s)) {
+                throw new IllegalArgumentException("'state' debe ser uno de: WellFormed|CreatePending|Deleted");
+            }
+        }
+        Object top = args.get("top");
+        if (top != null) {
+            try {
+                int t = Integer.parseInt(top.toString());
+                if (t < 1 || t > 1000) throw new IllegalArgumentException("'top' debe estar entre 1 y 1000");
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("'top' debe ser numérico");
+            }
+        }
     }
 
     @Override

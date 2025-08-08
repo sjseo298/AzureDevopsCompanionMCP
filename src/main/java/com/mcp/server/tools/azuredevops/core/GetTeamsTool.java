@@ -40,6 +40,7 @@ public class GetTeamsTool extends AbstractAzureDevOpsTool {
         String tid = Optional.ofNullable(args.get("teamId")).map(Object::toString).map(String::trim).orElse("");
         if (pid.isEmpty() || tid.isEmpty()) throw new IllegalArgumentException("'projectId' y 'teamId' son requeridos");
         if (!pid.matches("[0-9a-fA-F-]{36}")) throw new IllegalArgumentException("'projectId' debe ser GUID de 36 chars");
+        // teamId puede ser GUID o nombre, no forzar patrón
     }
 
     @Override

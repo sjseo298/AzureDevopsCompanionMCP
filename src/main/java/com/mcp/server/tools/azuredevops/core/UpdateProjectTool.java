@@ -10,7 +10,7 @@ import java.util.*;
 @Component
 public class UpdateProjectTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_core_update_project";
-    private static final String DESC = "Actualiza nombre/descripcion/visibilidad de un proyecto";
+    private static final String DESC = "Actualiza nombre y/o descripción de un proyecto";
 
     @Autowired
     public UpdateProjectTool(AzureDevOpsClientService service) { super(service); }
@@ -36,6 +36,9 @@ public class UpdateProjectTool extends AbstractAzureDevOpsTool {
         String pid = Optional.ofNullable(args.get("projectId")).map(Object::toString).map(String::trim).orElse("");
         if (pid.isEmpty()) throw new IllegalArgumentException("'projectId' es requerido");
         if (!pid.matches("[0-9a-fA-F-]{36}")) throw new IllegalArgumentException("'projectId' debe ser GUID de 36 chars");
+        boolean hasName = Optional.ofNullable(args.get("name")).map(Object::toString).map(String::trim).filter(s -> !s.isEmpty()).isPresent();
+        boolean hasDesc = Optional.ofNullable(args.get("description")).map(Object::toString).map(String::trim).filter(s -> !s.isEmpty()).isPresent();
+        if (!hasName && !hasDesc) throw new IllegalArgumentException("Debe proporcionar 'name' y/o 'description' para actualizar");
     }
 
     @Override

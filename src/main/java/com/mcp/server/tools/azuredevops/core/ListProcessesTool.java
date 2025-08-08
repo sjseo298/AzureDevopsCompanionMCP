@@ -20,7 +20,7 @@ public class ListProcessesTool extends AbstractAzureDevOpsTool {
 
     @Override
     protected void validateCommon(Map<String, Object> args) {
-        // No requiere 'project'
+        // No requiere 'project' ni otros parámetros
     }
 
     @Override

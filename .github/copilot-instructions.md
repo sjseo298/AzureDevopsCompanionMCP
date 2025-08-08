@@ -33,6 +33,21 @@ description: Documento unificado con las reglas de diseño, flujo y validación 
 - Usar `curl_json "$URL"` y, si procede, formatear con `jq`.
 - Para nombres con espacios o caracteres especiales (project/team), codificar en URL.
 
+### Nivel de documentación requerido para cURL
+- Cada script DEBE derivarse explícitamente del archivo en `api_doc/<area>/<endpoint>.md` correspondiente. No inventar rutas no documentadas localmente.
+- Incluir un bloque `usage` que referencie el archivo MD fuente e indique:
+  - Parámetros obligatorios/opcionales y flags admitidos.
+  - Ejemplos de uso (incluyendo valores con espacios y caracteres especiales correctamente citados).
+- Validar y exigir los parámetros marcados como obligatorios en la doc. Si en nuestra organización un parámetro opcional es de facto requerido, indicarlo (“obligatorio en nuestra org”).
+- Respetar el nivel del recurso según la doc local: nivel proyecto, equipo o tablero. Si existen variantes, crear scripts separados y con nombres inequívocos (p.ej., `get_boardrows_project.sh` vs `get_boardrows.sh`).
+- Codificar SIEMPRE todos los segmentos de ruta con `jq -rn --arg s "$val" '$s|@uri'`.
+- Usar `"${AZURE_DEVOPS_API_VERSION}"` por defecto. Donde la doc local especifique una preview distinta, usar esa versión (ej.: capacities `7.2-preview.3`, cardsettings/cardrulesettings `7.2-preview.2`).
+- Evitar endpoints no documentados en la doc local (p.ej., no usar `/work/columns` si `columns.md` exige board).
+- Consideraciones de salida/seguridad:
+  - Mostrar JSON formateado con `jq` cuando aplique; si la respuesta es binaria, mostrar headers para validar.
+  - No imprimir secretos (PAT) ni variables sensibles.
+  - El script debe mostrar `usage` y salir con código != 0 si faltan argumentos requeridos.
+
 ## Reglas para herramientas MCP
 - Todas extienden `AbstractAzureDevOpsTool` y usan SIEMPRE `AzureDevOpsClientService` (sin lógica HTTP duplicada).
 - Esquema de entrada: incluir `project` (requerido) y `team` (opcional). Parámetros específicos mínimos necesarios.
