@@ -25,6 +25,11 @@ public class RecycleBinGetTool extends AbstractAzureDevOpsTool {
         @SuppressWarnings("unchecked") Map<String,Object> props = (Map<String,Object>) base.get("properties");
         props.put("id", Map.of("type","integer","description","ID del work item eliminado"));
         @SuppressWarnings("unchecked") List<String> req = (List<String>) base.get("required");
+        // Crear copia mutable si es inmutable
+        if (!(req instanceof ArrayList)) {
+            req = new ArrayList<>(req);
+            base.put("required", req);
+        }
         if (!req.contains("id")) req.add("id");
         return base;
     }
