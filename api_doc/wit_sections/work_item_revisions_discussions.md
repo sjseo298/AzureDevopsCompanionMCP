@@ -4,6 +4,8 @@ Permite consultar las discusiones asociadas a las revisiones de los work items e
 
 **Documentación oficial:** [Work Item Revisions Discussions](https://learn.microsoft.com/en-us/rest/api/azure/devops/wit/work-item-revisions-discussions?view=azure-devops-rest-7.2)
 
+> Nota (organización SuraColombia): Al intentar consumir `/_apis/wit/reporting/workitemrevisionsdiscussions` (7.2-preview) la respuesta no es JSON sino HTML con el mensaje: `The controller for path '/<project>/_apis/wit/reporting/workitemrevisionsdiscussions' was not found or does not implement IController.` Por lo tanto, este endpoint no parece estar habilitado / disponible actualmente en esta organización o versión preview. Se deja documentado y no se implementa herramienta MCP hasta que devuelva JSON válido.
+
 ## Operaciones principales
 
 | Operación                 | Endpoint                                                                                                 | Método |
