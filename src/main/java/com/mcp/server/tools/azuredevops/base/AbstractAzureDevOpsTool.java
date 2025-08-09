@@ -8,13 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Clase base para herramientas Azure DevOps proporcionando:
- * - Validación estándar de parámetros
- * - Manejo uniforme de errores
- * - Esquema base (project, team)
- * - Utilidades de formateo simple
- */
 public abstract class AbstractAzureDevOpsTool implements McpTool {
 
     protected final AzureDevOpsClientService azureService;
@@ -22,6 +15,8 @@ public abstract class AbstractAzureDevOpsTool implements McpTool {
     protected AbstractAzureDevOpsTool(AzureDevOpsClientService azureService) {
         this.azureService = azureService; // puede ser null en tests unitarios de validación
     }
+
+    protected boolean isProjectRequired() { return true; }
 
     @Override
     public final Map<String, Object> execute(Map<String, Object> arguments) {
@@ -38,13 +33,23 @@ public abstract class AbstractAzureDevOpsTool implements McpTool {
     protected abstract Map<String,Object> executeInternal(Map<String,Object> arguments);
 
     protected void validateCommon(Map<String,Object> args) {
-        Object project = args.get("project");
-        if (project == null || project.toString().trim().isEmpty()) {
-            throw new IllegalArgumentException("El parámetro 'project' es requerido");
+        if (isProjectRequired()) {
+            Object project = args.get("project");
+            if (project == null || project.toString().trim().isEmpty()) {
+                throw new IllegalArgumentException("El parámetro 'project' es requerido");
+            }
         }
     }
 
-    protected String getProject(Map<String,Object> args) { return args.get("project").toString().trim(); }
+    protected String getProject(Map<String,Object> args) {
+        if (!isProjectRequired()) {
+            Object p = args.get("project");
+            if (p == null) return null;
+            String s = p.toString().trim();
+            return s.isEmpty() ? null : s;
+        }
+        return args.get("project").toString().trim();
+    }
     protected String getTeam(Map<String,Object> args) {
         Object t = args.get("team");
         if (t == null) return null;
@@ -66,21 +71,17 @@ public abstract class AbstractAzureDevOpsTool implements McpTool {
         );
     }
 
-    /**
-     * Esquema base (project obligatorio, team opcional). Subclases pueden añadir propiedades.
-     */
     protected Map<String,Object> createBaseSchema() {
-        return Map.of(
-            "type", "object",
-            "properties", new HashMap<>(Map.of(
-                "project", Map.of("type", "string", "description", "Nombre o ID del proyecto Azure DevOps"),
-                "team", Map.of("type", "string", "description", "Nombre o ID del equipo (opcional)")
-            )),
-            "required", List.of("project")
-        );
+        Map<String,Object> props = new HashMap<>();
+        props.put("project", Map.of("type", "string", "description", "Nombre o ID del proyecto Azure DevOps"));
+        props.put("team", Map.of("type", "string", "description", "Nombre o ID del equipo (opcional)"));
+        Map<String,Object> schema = new HashMap<>();
+        schema.put("type", "object");
+        schema.put("properties", props);
+        schema.put("required", isProjectRequired() ? List.of("project") : List.of());
+        return schema;
     }
 
-    /** Permite a la subclase mutar el schema base antes de devolverlo. */
     protected Map<String,Object> finalizeSchema(Map<String,Object> schema) { return schema; }
 
     public abstract String getName();
@@ -97,11 +98,6 @@ public abstract class AbstractAzureDevOpsTool implements McpTool {
             .build();
     }
 
-    /**
-     * Intenta detectar y formatear un error remoto estándar de Azure DevOps (HTTP error JSON).
-     * Si no hay error detectable, devuelve null.
-     */
-    @SuppressWarnings("unchecked")
     protected String tryFormatRemoteError(Map<String,Object> data) {
         if (data == null || data.isEmpty()) return null;
         if (data.containsKey("error")) {
