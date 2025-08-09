@@ -78,9 +78,19 @@ Notas de avance recientes
     - `scripts/curl/wit/artifact_link_types.sh`
     - `scripts/curl/wit/artifact_uri_query.sh`
     - `scripts/curl/wit/attachments_create.sh`
+   - `scripts/curl/wit/work_item_transitions_list.sh`
+   - `scripts/curl/wit/work_item_type_categories_list.sh`, `work_item_type_categories_get.sh`
+   - `scripts/curl/wit/work_item_type_states_list.sh`
+   - `scripts/curl/wit/work_item_types_field_list.sh`, `work_item_types_field_get.sh`
+   - `scripts/curl/wit/work_item_types_list.sh`, `work_item_types_get.sh`
   - Tools MCP:
     - `azuredevops_wit_get_account_my_work_recent_activity` (`AccountMyWorkRecentActivityTool`)
     - `azuredevops_wit_get_artifact_link_types` (`ArtifactLinkTypesTool`)
     - `azuredevops_wit_artifact_uri_query` (`ArtifactUriQueryTool`)
+   - `azuredevops_wit_work_item_transitions_list` (`WorkItemTransitionsListTool`)
+   - `azuredevops_wit_work_item_type_categories_list` / `_get` (`WorkItemTypeCategoriesListTool`, `WorkItemTypeCategoriesGetTool`)
+   - `azuredevops_wit_work_item_type_states_list` (`WorkItemTypeStatesListTool`)
+   - `azuredevops_wit_work_item_types_field_list` / `_get` (`WorkItemTypesFieldListTool`, `WorkItemTypesFieldGetTool`)
+   - `azuredevops_wit_work_item_types_list` / `_get` (`WorkItemTypesListTool`, `WorkItemTypesGetTool`)
   - Tests mínimos: definición básica de tools creados.
   - Próximo: completar Attachments (get/delete), `classification_nodes`, `comments` y siguientes, siguiendo orden alfabético.
