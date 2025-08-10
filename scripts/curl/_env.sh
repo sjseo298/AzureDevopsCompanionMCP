@@ -2,7 +2,7 @@
 set -euo pipefail
 
 export AZURE_DEVOPS_ORGANIZATION="YOUR_ORGANIZATION"
-export AZURE_DEVOPS_PAT="dxlchhaa5assxmppanr2l47dxyqx7uixvp7gj6o2fmix7gnkdl2q"
+export AZURE_DEVOPS_PAT="FNOMiDi3UgdF3m8f7XHupnZPgcgTiS7oqR3APbC6QViLYwkBYIeoJQQJ99BHACAAAAA5G0YpAAASAZDO2DhS"
 
 # Variables requeridas
 : "${AZURE_DEVOPS_PAT:?AZURE_DEVOPS_PAT es requerido}"
