@@ -3,10 +3,10 @@ package com.mcp.server.services;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.http.HttpMethod;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
@@ -298,7 +298,20 @@ public class AzureDevOpsClientService {
         for (String part : pth.split("/")) {
             if (!part.isBlank()) segments.add(part);
         }
-        return doExchangeWithSegments(org.springframework.http.HttpMethod.POST, segments, null, body, apiVersionOverride, org.springframework.http.MediaType.APPLICATION_JSON);
+    return doExchangeWithSegments(HttpMethod.POST, segments, null, body, apiVersionOverride, MediaType.APPLICATION_JSON);
+    }
+
+    public Map<String, Object> postWitApiWithQuery(String project, String team, String path, Map<String,String> query, Object body, String apiVersionOverride, MediaType contentType) {
+        String proj = project == null ? "" : project.trim();
+        String tm = (team == null || team.trim().isEmpty()) ? null : team.trim();
+        String pth = path == null ? "" : path.trim();
+        java.util.List<String> segments = new java.util.ArrayList<>();
+        if (!proj.isEmpty()) segments.add(proj);
+        if (tm != null) segments.add(tm);
+        segments.add("_apis");
+        segments.add("wit");
+        for (String part : pth.split("/")) { if (!part.isBlank()) segments.add(part); }
+    return doExchangeWithSegments(HttpMethod.POST, segments, query, body, apiVersionOverride, contentType);
     }
 
     public Map<String, Object> putWitApi(String project, String team, String path, Object body, String apiVersionOverride) {
@@ -311,7 +324,7 @@ public class AzureDevOpsClientService {
         segments.add("_apis");
         segments.add("wit");
         for (String part : pth.split("/")) { if (!part.isBlank()) segments.add(part); }
-        return doExchangeWithSegments(org.springframework.http.HttpMethod.PUT, segments, null, body, apiVersionOverride, org.springframework.http.MediaType.APPLICATION_JSON);
+    return doExchangeWithSegments(HttpMethod.PUT, segments, null, body, apiVersionOverride, MediaType.APPLICATION_JSON);
     }
 
     public Map<String, Object> patchWitApi(String project, String team, String path, Object body, String apiVersionOverride) {
@@ -324,7 +337,20 @@ public class AzureDevOpsClientService {
         segments.add("_apis");
         segments.add("wit");
         for (String part : pth.split("/")) { if (!part.isBlank()) segments.add(part); }
-        return doExchangeWithSegments(org.springframework.http.HttpMethod.PATCH, segments, null, body, apiVersionOverride, org.springframework.http.MediaType.APPLICATION_JSON);
+    return doExchangeWithSegments(HttpMethod.PATCH, segments, null, body, apiVersionOverride, MediaType.APPLICATION_JSON);
+    }
+
+    public Map<String, Object> patchWitApiWithQuery(String project, String team, String path, Map<String,String> query, Object body, String apiVersionOverride, MediaType contentType) {
+        String proj = project == null ? "" : project.trim();
+        String tm = (team == null || team.trim().isEmpty()) ? null : team.trim();
+        String pth = path == null ? "" : path.trim();
+        java.util.List<String> segments = new java.util.ArrayList<>();
+        if (!proj.isEmpty()) segments.add(proj);
+        if (tm != null) segments.add(tm);
+        segments.add("_apis");
+        segments.add("wit");
+        for (String part : pth.split("/")) { if (!part.isBlank()) segments.add(part); }
+    return doExchangeWithSegments(HttpMethod.PATCH, segments, query, body, apiVersionOverride, contentType);
     }
 
     public Map<String, Object> deleteWitApi(String project, String team, String path, String apiVersionOverride) {
@@ -337,7 +363,20 @@ public class AzureDevOpsClientService {
         segments.add("_apis");
         segments.add("wit");
         for (String part : pth.split("/")) { if (!part.isBlank()) segments.add(part); }
-        return doExchangeWithSegments(org.springframework.http.HttpMethod.DELETE, segments, null, null, apiVersionOverride, null);
+    return doExchangeWithSegments(HttpMethod.DELETE, segments, null, null, apiVersionOverride, null);
+    }
+
+    public Map<String, Object> deleteWitApiWithQuery(String project, String team, String path, Map<String,String> query, String apiVersionOverride) {
+        String proj = project == null ? "" : project.trim();
+        String tm = (team == null || team.trim().isEmpty()) ? null : team.trim();
+        String pth = path == null ? "" : path.trim();
+        List<String> segments = new ArrayList<>();
+        if (!proj.isEmpty()) segments.add(proj);
+        if (tm != null) segments.add(tm);
+        segments.add("_apis");
+        segments.add("wit");
+        for (String part : pth.split("/")) { if (!part.isBlank()) segments.add(part); }
+        return doExchangeWithSegments(HttpMethod.DELETE, segments, query, null, apiVersionOverride, null);
     }
 
     public Map<String,Object> postCoreBinary(String path, Map<String,String> query, byte[] data, String apiVersionOverride, MediaType contentType) {
