@@ -1,6 +1,7 @@
 package com.mcp.server.tools.azuredevops.wit;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import com.mcp.server.services.helpers.WitRevisionsHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 
 import java.util.*;
@@ -15,7 +16,12 @@ public class RevisionsListTool extends AbstractAzureDevOpsTool {
     private static final String DESC = "Lista revisiones de un work item (hasta 5 mostradas).";
     private static final String API_VERSION = "7.2-preview.3";
 
-    public RevisionsListTool(AzureDevOpsClientService svc) { super(svc); }
+    private final WitRevisionsHelper helper;
+
+    public RevisionsListTool(AzureDevOpsClientService svc) {
+        super(svc);
+        this.helper = new WitRevisionsHelper(svc);
+    }
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
 
@@ -36,33 +42,15 @@ public class RevisionsListTool extends AbstractAzureDevOpsTool {
     protected Map<String,Object> executeInternal(Map<String,Object> args) {
         String project = getProject(args);
         Object idObj = args.get("id");
-        if (idObj == null || !idObj.toString().matches("\\d+")) return error("'id' es requerido y numérico");
-        String id = idObj.toString();
-        Map<String,String> query = new LinkedHashMap<>();
-        putIf(query, "$expand", args.get("expand"));
-        putIf(query, "$skip", args.get("skip"));
-        putIf(query, "$top", args.get("top"));
-        Map<String,Object> resp = azureService.getWitApiWithQuery(project,null,"workItems/"+id+"/revisions", query.isEmpty()? null : query, API_VERSION);
+        try {
+            helper.validateId(idObj);
+        } catch (IllegalArgumentException e) {
+            return error(e.getMessage());
+        }
+        Map<String,String> query = helper.buildListQuery(args.get("expand"), args.get("skip"), args.get("top"));
+        Map<String,Object> resp = helper.fetchRevisionsList(project, idObj, query);
         String err = tryFormatRemoteError(resp);
         if (err != null) return success(err);
-        Object count = resp.get("count");
-        @SuppressWarnings("unchecked") List<Map<String,Object>> value = (List<Map<String,Object>>) resp.get("value");
-        StringBuilder sb = new StringBuilder();
-        sb.append("Revisiones count=").append(count).append('\n');
-        if (value != null && !value.isEmpty()) {
-            int max = Math.min(5, value.size());
-            for (int i=0;i<max;i++) {
-                Map<String,Object> v = value.get(i);
-                Object rev = v.get("rev");
-                @SuppressWarnings("unchecked") Map<String,Object> fields = (Map<String,Object>) v.get("fields");
-                Object title = fields != null ? fields.get("System.Title") : null;
-                Object state = fields != null ? fields.get("System.State") : null;
-                sb.append(i+1).append(") rev=").append(rev).append(" title=").append(title).append(" state=").append(state).append('\n');
-            }
-            if (value.size()>max) sb.append("... ("+(value.size()-max)+" más)\n");
-        }
-        return success(sb.toString());
+        return success(helper.formatRevisionsListResponse(resp));
     }
-
-    private void putIf(Map<String,String> q, String key, Object val) { if (val != null) { String s = val.toString().trim(); if (!s.isEmpty()) q.put(key, s); } }
 }

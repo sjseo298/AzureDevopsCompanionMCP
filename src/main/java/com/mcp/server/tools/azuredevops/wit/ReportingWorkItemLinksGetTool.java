@@ -1,6 +1,7 @@
 package com.mcp.server.tools.azuredevops.wit;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import com.mcp.server.services.helpers.WitReportingHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 
 import java.util.*;
@@ -15,7 +16,12 @@ public class ReportingWorkItemLinksGetTool extends AbstractAzureDevOpsTool {
     private static final String DESC = "Obtiene vínculos entre work items (reporting) con filtros y continuationToken.";
     private static final String API_VERSION = "7.2-preview.3";
 
-    public ReportingWorkItemLinksGetTool(AzureDevOpsClientService svc) { super(svc); }
+    private final WitReportingHelper helper;
+
+    public ReportingWorkItemLinksGetTool(AzureDevOpsClientService svc) {
+        super(svc);
+        this.helper = new WitReportingHelper(svc);
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
@@ -34,54 +40,10 @@ public class ReportingWorkItemLinksGetTool extends AbstractAzureDevOpsTool {
     @Override
     protected Map<String,Object> executeInternal(Map<String,Object> args) {
         String project = getProject(args);
-        String linkTypes = opt(args, "linkTypes");
-        String types = opt(args, "types");
-        String start = opt(args, "startDateTime");
-        String cont = opt(args, "continuationToken");
-
-        Map<String,String> query = new LinkedHashMap<>();
-        if (linkTypes != null) query.put("linkTypes", linkTypes);
-        if (types != null) query.put("types", types);
-        if (start != null) query.put("startDateTime", start);
-        if (cont != null) query.put("continuationToken", cont);
-
-        Map<String,Object> resp = azureService.getWitApiWithQuery(project,null,"reporting/workitemlinks", query.isEmpty()? null : query, API_VERSION);
+        Map<String,String> query = helper.buildLinksQuery(args.get("linkTypes"), args.get("types"), args.get("startDateTime"), args.get("continuationToken"));
+        Map<String,Object> resp = helper.fetchWorkItemLinks(project, query);
         String err = tryFormatRemoteError(resp);
         if (err != null) return success(err);
-
-        @SuppressWarnings("unchecked") List<Map<String,Object>> values = (List<Map<String,Object>>) resp.get("values");
-        Object isLast = resp.get("isLastBatch");
-        Object nextLink = resp.get("nextLink");
-
-        StringBuilder sb = new StringBuilder();
-        if (values == null) {
-            sb.append("Sin datos.");
-        } else {
-            sb.append("Links recibidos: ").append(values.size()).append('\n');
-            int max = Math.min(values.size(), 10);
-            for (int i=0;i<max;i++) {
-                Map<String,Object> v = values.get(i);
-                sb.append(i+1).append(") ")
-                  .append(v.get("rel"))
-                  .append(" ")
-                  .append(v.get("sourceId"))
-                  .append(" -> ")
-                  .append(v.get("targetId"));
-                Object changed = v.get("changedDate");
-                if (changed != null) sb.append(" | ").append(changed);
-                sb.append('\n');
-            }
-            if (values.size() > max) sb.append("... ("+(values.size()-max)+" más)\n");
-        }
-        if (isLast != null) sb.append("isLastBatch=").append(isLast).append('\n');
-        if (nextLink != null) sb.append("Tiene siguiente lote (usar continuationToken extraído del nextLink).\n");
-        return success(sb.toString());
-    }
-
-    private String opt(Map<String,Object> m, String k) {
-        Object v = m.get(k);
-        if (v == null) return null;
-        String s = v.toString().trim();
-        return s.isEmpty()? null : s;
+        return success(helper.formatWorkItemLinksResponse(resp));
     }
 }
