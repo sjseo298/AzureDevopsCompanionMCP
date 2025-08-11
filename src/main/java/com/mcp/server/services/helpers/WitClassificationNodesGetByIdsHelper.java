@@ -1,6 +1,7 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +10,7 @@ import java.util.Objects;
 /**
  * Helper para obtener nodos de clasificación por IDs (query param ids=...).
  */
+@Component
 public class WitClassificationNodesGetByIdsHelper {
     private final AzureDevOpsClientService azureService;
 

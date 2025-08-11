@@ -1,9 +1,11 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.*;
 
 /** Helper para eliminar un work item (respeta destroy flag). */
+@Component
 public class WitWorkItemDeleteHelper {
     private final AzureDevOpsClientService client;
     public WitWorkItemDeleteHelper(AzureDevOpsClientService client) { this.client = client; }

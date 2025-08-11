@@ -1,11 +1,13 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.*;
 
 /**
  * Helper para búsqueda de queries y envío de correo en Azure DevOps.
  */
+@Component
 public class WitQueriesMailHelper {
     private final AzureDevOpsClientService azureService;
 

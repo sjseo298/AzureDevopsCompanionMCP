@@ -1,6 +1,7 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -9,6 +10,7 @@ import java.util.Objects;
 /**
  * Helper para actualizar nodos de clasificación (areas/iterations) a nivel proyecto.
  */
+@Component
 public class WitClassificationNodesUpdateHelper {
     private final AzureDevOpsClientService azureService;
 

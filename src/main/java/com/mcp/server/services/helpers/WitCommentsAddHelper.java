@@ -1,11 +1,13 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.Map;
 
 /**
  * Helper para agregar un comentario a un work item.
  */
+@Component
 public class WitCommentsAddHelper {
     private final AzureDevOpsClientService azureService;
 

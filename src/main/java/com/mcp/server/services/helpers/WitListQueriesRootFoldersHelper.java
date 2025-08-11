@@ -1,6 +1,7 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +9,7 @@ import java.util.Map;
 /**
  * Helper para listar carpetas raíz y subcarpetas de queries en un proyecto.
  */
+@Component
 public class WitListQueriesRootFoldersHelper {
     private final AzureDevOpsClientService azureService;
     private static final String API_VERSION_OVERRIDE = "7.2-preview";

@@ -1,12 +1,14 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Helper para listar versiones de un comentario de un work item.
  */
+@Component
 public class WitCommentsVersionsListHelper {
     private final AzureDevOpsClientService azureService;
 

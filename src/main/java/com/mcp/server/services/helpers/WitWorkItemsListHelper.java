@@ -1,9 +1,11 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.*;
 
 /** Helper para listar múltiples work items por IDs replicando script work_items_list.sh */
+@Component
 public class WitWorkItemsListHelper {
     private final AzureDevOpsClientService client;
     public WitWorkItemsListHelper(AzureDevOpsClientService client) { this.client = client; }

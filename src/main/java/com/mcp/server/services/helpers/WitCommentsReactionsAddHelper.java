@@ -1,12 +1,14 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Helper para agregar una reacción a un comentario de un work item.
  */
+@Component
 public class WitCommentsReactionsAddHelper {
     private final AzureDevOpsClientService azureService;
     private static final List<String> VALID_TYPES = List.of("like","dislike","heart","hooray","smile","confused");

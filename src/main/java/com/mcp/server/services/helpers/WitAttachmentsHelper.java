@@ -1,10 +1,9 @@
 package com.mcp.server.services.helpers;
 
 import org.springframework.http.MediaType;
-
 import com.mcp.server.services.AzureDevOpsClientService;
 import java.util.Base64;
-import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -12,6 +11,7 @@ import java.util.Objects;
 /**
  * Helper para operaciones de adjuntos (attachments) a nivel organización.
  */
+@Component
 public class WitAttachmentsHelper {
 
     private final AzureDevOpsClientService azureService;
