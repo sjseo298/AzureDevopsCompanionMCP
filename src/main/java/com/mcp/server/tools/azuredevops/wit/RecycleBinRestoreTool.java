@@ -1,6 +1,8 @@
 package com.mcp.server.tools.azuredevops.wit;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+
+import com.mcp.server.services.helpers.WitRecycleBinHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 
 import java.util.*;
@@ -14,7 +16,12 @@ public class RecycleBinRestoreTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_recyclebin_restore";
     private static final String DESC = "Restaura un work item desde la Recycle Bin.";
 
-    public RecycleBinRestoreTool(AzureDevOpsClientService svc) { super(svc); }
+    private final WitRecycleBinHelper helper;
+
+    public RecycleBinRestoreTool(AzureDevOpsClientService svc) {
+        super(svc);
+        this.helper = new WitRecycleBinHelper(svc);
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
@@ -32,19 +39,16 @@ public class RecycleBinRestoreTool extends AbstractAzureDevOpsTool {
     @Override
     protected void validateCommon(Map<String, Object> args) {
         super.validateCommon(args);
-        if (args.get("id") == null) throw new IllegalArgumentException("'id' es requerido");
+        helper.validateId(args.get("id"));
     }
 
     @Override
     protected Map<String,Object> executeInternal(Map<String,Object> args) {
         String project = getProject(args);
-        String id = args.get("id").toString().trim();
-        Map<String,Object> resp = azureService.patchWitApi(project,null,"recyclebin/"+id, Map.of(), "7.2-preview");
+        Object id = args.get("id");
+        Map<String,Object> resp = helper.restore(project, id);
         String err = tryFormatRemoteError(resp);
         if (err != null) return success(err);
-        StringBuilder sb = new StringBuilder("Restaurado ID=").append(resp.get("id"));
-        Object name = resp.get("name"); if (name != null) sb.append(" | name=").append(name);
-        Object url = resp.get("url"); if (url != null) sb.append(" | url=").append(url);
-        return success(sb.toString());
+        return success(helper.formatRestoreResponse(resp));
     }
 }

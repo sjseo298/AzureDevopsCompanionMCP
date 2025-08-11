@@ -1,6 +1,7 @@
 package com.mcp.server.tools.azuredevops.wit;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import com.mcp.server.services.helpers.WitRecycleBinHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 
 import java.util.*;
@@ -14,7 +15,12 @@ public class RecycleBinGetTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_recyclebin_get";
     private static final String DESC = "Obtiene un work item eliminado (Recycle Bin) por ID.";
 
-    public RecycleBinGetTool(AzureDevOpsClientService svc) { super(svc); }
+    private final WitRecycleBinHelper helper;
+
+    public RecycleBinGetTool(AzureDevOpsClientService svc) {
+        super(svc);
+        this.helper = new WitRecycleBinHelper(svc);
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
@@ -37,22 +43,16 @@ public class RecycleBinGetTool extends AbstractAzureDevOpsTool {
     @Override
     protected void validateCommon(Map<String, Object> args) {
         super.validateCommon(args);
-        if (args.get("id") == null) throw new IllegalArgumentException("'id' es requerido");
+        helper.validateId(args.get("id"));
     }
 
     @Override
     protected Map<String, Object> executeInternal(Map<String, Object> arguments) {
         String project = getProject(arguments);
-        String id = arguments.get("id").toString().trim();
-        Map<String,Object> resp = azureService.getWitApi(project,null,"recyclebin/"+id);
+        Object id = arguments.get("id");
+        Map<String,Object> resp = helper.get(project, id);
         String err = tryFormatRemoteError(resp);
         if (err != null) return success(err);
-        StringBuilder sb = new StringBuilder();
-        sb.append("RecycleBin Item ID=").append(resp.get("id"));
-        Object name = resp.get("name");
-        if (name != null) sb.append(" | name=").append(name);
-        Object deletedDate = resp.get("deletedDate");
-        if (deletedDate != null) sb.append(" | deletedDate=").append(deletedDate);
-        return success(sb.toString());
+        return success(helper.formatGetResponse(resp));
     }
 }

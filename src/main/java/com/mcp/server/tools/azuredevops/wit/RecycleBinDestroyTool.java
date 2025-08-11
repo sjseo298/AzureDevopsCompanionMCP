@@ -1,6 +1,7 @@
 package com.mcp.server.tools.azuredevops.wit;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import com.mcp.server.services.helpers.WitRecycleBinHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 
 import java.util.*;
@@ -14,7 +15,12 @@ public class RecycleBinDestroyTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_recyclebin_destroy";
     private static final String DESC = "Elimina permanentemente un work item eliminado. Si retorna 404, se informa que no hay permisos y solo se puede soft delete.";
 
-    public RecycleBinDestroyTool(AzureDevOpsClientService svc) { super(svc); }
+    private final WitRecycleBinHelper helper;
+
+    public RecycleBinDestroyTool(AzureDevOpsClientService svc) {
+        super(svc);
+        this.helper = new WitRecycleBinHelper(svc);
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
@@ -32,23 +38,14 @@ public class RecycleBinDestroyTool extends AbstractAzureDevOpsTool {
     @Override
     protected void validateCommon(Map<String, Object> args) {
         super.validateCommon(args);
-        if (args.get("id") == null) throw new IllegalArgumentException("'id' es requerido");
+        helper.validateId(args.get("id"));
     }
 
     @Override
     protected Map<String,Object> executeInternal(Map<String,Object> args) {
         String project = getProject(args);
-        String id = args.get("id").toString().trim();
-        Map<String,Object> resp = azureService.deleteWitApi(project,null,"recyclebin/"+id, "7.2-preview");
-        // Para delete devolvemos {} en éxito, errores vienen marcados
-        if (Boolean.TRUE.equals(resp.get("isHttpError"))) {
-            Object status = resp.get("httpStatus");
-            if (Objects.equals(status, 404)) {
-                return success("No es posible destruir (404). Probablemente no cuentas con el permiso de eliminación permanente; solo puedes hacer soft delete.");
-            }
-            String formatted = tryFormatRemoteError(resp);
-            return success(formatted != null ? formatted : "Error remoto desconocido");
-        }
-        return success("Destroy ejecutado (si el item existía)." );
+        Object id = args.get("id");
+        Map<String,Object> resp = helper.destroy(project, id);
+        return success(helper.formatDestroyResponse(resp));
     }
 }
