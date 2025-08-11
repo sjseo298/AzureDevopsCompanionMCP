@@ -39,8 +39,10 @@ public class SendMailTool extends AbstractAzureDevOpsTool {
         props.put("body", Map.of("type","string","description","Cuerpo HTML o texto"));
         props.put("workItemIds", Map.of("type","string","description","IDs de work items separados por comas"));
         props.put("reason", Map.of("type","string","description","Motivo opcional"));
-        @SuppressWarnings("unchecked") List<String> req = (List<String>) base.get("required");
-        for (String r : List.of("to","subject","body","workItemIds")) if (!req.contains(r)) req.add(r);
+    @SuppressWarnings("unchecked") List<String> originalReq = (List<String>) base.get("required");
+    List<String> req = new ArrayList<>(originalReq);
+    for (String r : List.of("to","subject","body","workItemIds")) if (!req.contains(r)) req.add(r);
+    base.put("required", req);
         return base;
     }
 

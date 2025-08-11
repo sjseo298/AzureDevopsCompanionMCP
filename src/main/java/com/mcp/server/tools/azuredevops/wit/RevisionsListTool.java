@@ -36,8 +36,10 @@ public class RevisionsListTool extends AbstractAzureDevOpsTool {
         props.put("expand", Map.of("type","string","description","none|relations|fields|links|all"));
         props.put("skip", Map.of("type","integer","description","$skip"));
         props.put("top", Map.of("type","integer","description","$top"));
-        @SuppressWarnings("unchecked") List<String> req = (List<String>) base.get("required");
-        if (!req.contains("id")) req.add("id");
+    @SuppressWarnings("unchecked") List<String> originalReq = (List<String>) base.get("required");
+    List<String> req = new ArrayList<>(originalReq);
+    if (!req.contains("id")) req.add("id");
+    base.put("required", req);
         return base;
     }
 

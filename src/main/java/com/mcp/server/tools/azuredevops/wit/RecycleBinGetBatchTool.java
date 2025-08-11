@@ -34,8 +34,10 @@ public class RecycleBinGetBatchTool extends AbstractAzureDevOpsTool {
         Map<String,Object> base = new LinkedHashMap<>(createBaseSchema());
         @SuppressWarnings("unchecked") Map<String,Object> props = (Map<String,Object>) base.get("properties");
         props.put("ids", Map.of("type","string","description","Lista de IDs separados por coma"));
-        @SuppressWarnings("unchecked") List<String> req = (List<String>) base.get("required");
-        if (!req.contains("ids")) req.add("ids");
+    @SuppressWarnings("unchecked") List<String> originalReq = (List<String>) base.get("required");
+    List<String> req = new ArrayList<>(originalReq);
+    if (!req.contains("ids")) req.add("ids");
+    base.put("required", req);
         return base;
     }
 
