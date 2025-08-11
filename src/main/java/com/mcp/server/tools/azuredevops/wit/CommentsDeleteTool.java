@@ -1,6 +1,7 @@
 package com.mcp.server.tools.azuredevops.wit;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import com.mcp.server.services.helpers.WitCommentsDeleteHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -18,8 +19,13 @@ public class CommentsDeleteTool extends AbstractAzureDevOpsTool {
     private static final String DESC = "Elimina un comentario de un work item.";
     private static final String API_VERSION_OVERRIDE = "7.2-preview.4";
 
+    private final WitCommentsDeleteHelper helper;
+
     @Autowired
-    public CommentsDeleteTool(AzureDevOpsClientService service) { super(service); }
+    public CommentsDeleteTool(AzureDevOpsClientService service) {
+        super(service);
+        this.helper = new WitCommentsDeleteHelper(service);
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
@@ -41,14 +47,14 @@ public class CommentsDeleteTool extends AbstractAzureDevOpsTool {
         String team = getTeam(arguments);
         Object wiObj = arguments.get("workItemId");
         Object ciObj = arguments.get("commentId");
-        if (wiObj == null || !wiObj.toString().matches("\\d+")) return error("'workItemId' es requerido y debe ser numérico");
-        if (ciObj == null || !ciObj.toString().matches("\\d+")) return error("'commentId' es requerido y debe ser numérico");
+        try {
+            helper.validate(project, wiObj, ciObj);
+        } catch (IllegalArgumentException e) {
+            return error(e.getMessage());
+        }
         String wi = wiObj.toString();
         String ci = ciObj.toString();
-        String endpoint = "workItems/" + wi + "/comments/" + ci;
-        Map<String,Object> resp = azureService.deleteWitApi(project, team, endpoint, API_VERSION_OVERRIDE);
-        String formattedErr = tryFormatRemoteError(resp);
-        if (formattedErr != null) return success(formattedErr);
-        return success("Comentario eliminado (si existía)." );
+        Map<String,Object> resp = helper.deleteComment(project, team, wi, ci, API_VERSION_OVERRIDE);
+        return success(helper.formatDeleteResponse(resp));
     }
 }

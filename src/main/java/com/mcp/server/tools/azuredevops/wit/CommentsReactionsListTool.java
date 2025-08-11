@@ -1,6 +1,7 @@
 package com.mcp.server.tools.azuredevops.wit;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import com.mcp.server.services.helpers.WitCommentsReactionsListHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -18,8 +19,13 @@ public class CommentsReactionsListTool extends AbstractAzureDevOpsTool {
     private static final String DESC = "Lista reacciones (tipo y conteo) de un comentario.";
     private static final String API_VERSION_OVERRIDE = "7.2-preview.1";
 
+    private final WitCommentsReactionsListHelper helper;
+
     @Autowired
-    public CommentsReactionsListTool(AzureDevOpsClientService service) { super(service); }
+    public CommentsReactionsListTool(AzureDevOpsClientService service) {
+        super(service);
+        this.helper = new WitCommentsReactionsListHelper(service);
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
@@ -39,40 +45,16 @@ public class CommentsReactionsListTool extends AbstractAzureDevOpsTool {
         if (azureService == null) return error("Servicio Azure DevOps no configurado en este entorno");
         String project = getProject(arguments);
         String team = getTeam(arguments);
-        String wi = Objects.toString(arguments.get("workItemId"));
-        String ci = Objects.toString(arguments.get("commentId"));
-        String endpoint = "workItems/" + wi + "/comments/" + ci + "/reactions";
-        Map<String,Object> resp = azureService.getWitApiWithQuery(project, team, endpoint, null, API_VERSION_OVERRIDE);
-        String formattedErr = tryFormatRemoteError(resp);
-        if (formattedErr != null) return success(formattedErr);
-        return success(format(resp));
-    }
-
-    private String format(Map<String,Object> data) {
-        if (data == null || data.isEmpty()) return "(Sin reacciones)";
-        Object container = data.get("value");
-        if (container instanceof List) {
-            List<?> list = (List<?>) container;
-            if (list.isEmpty()) return "(Sin reacciones)";
-            StringBuilder sb = new StringBuilder("=== Reacciones ===\n\n");
-            int i=1;
-            for (Object o : list) {
-                if (o instanceof Map) {
-                    Map<?,?> m = (Map<?,?>) o;
-                    Object type = m.get("type");
-                    Object count = m.get("count");
-                    Object engaged = m.get("isCurrentUserEngaged");
-                    sb.append(i++).append(") ")
-                      .append(type != null ? type : "?")
-                      .append(" -> count=")
-                      .append(count != null ? count : 0)
-                      .append(", me=")
-                      .append(Boolean.TRUE.equals(engaged))
-                      .append('\n');
-                }
-            }
-            return sb.toString();
+        Object wiObj = arguments.get("workItemId");
+        Object ciObj = arguments.get("commentId");
+        try {
+            helper.validate(project, wiObj, ciObj);
+        } catch (IllegalArgumentException e) {
+            return error(e.getMessage());
         }
-        return data.toString();
+        String wi = wiObj.toString();
+        String ci = ciObj.toString();
+        Map<String,Object> resp = helper.fetchReactions(project, team, wi, ci, API_VERSION_OVERRIDE);
+        return success(helper.formatReactionsResponse(resp));
     }
 }

@@ -1,6 +1,7 @@
 package com.mcp.server.tools.azuredevops.wit;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import com.mcp.server.services.helpers.WitClassificationNodesGetHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -20,8 +21,13 @@ public class ClassificationNodesGetTool extends AbstractAzureDevOpsTool {
     // Según doc local: usar 7.2-preview (sin .1) para evitar respuestas no-JSON
     private static final String API_VERSION_OVERRIDE = "7.2-preview";
 
+    private final WitClassificationNodesGetHelper helper;
+
     @Autowired
-    public ClassificationNodesGetTool(AzureDevOpsClientService service) { super(service); }
+    public ClassificationNodesGetTool(AzureDevOpsClientService service) {
+        super(service);
+        this.helper = new WitClassificationNodesGetHelper(service);
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
@@ -45,39 +51,16 @@ public class ClassificationNodesGetTool extends AbstractAzureDevOpsTool {
     protected Map<String, Object> executeInternal(Map<String, Object> arguments) {
         if (azureService == null) return error("Servicio Azure DevOps no configurado en este entorno");
         String project = getProject(arguments);
-        if (project == null || project.isBlank()) return error("Parámetro 'project' es obligatorio.");
         String team = getTeam(arguments);
-        Object groupObj = arguments.get("group");
-        if (groupObj == null) return error("Parámetro 'group' es obligatorio (areas|iterations).");
-        String group = groupObj.toString().trim().toLowerCase(Locale.ROOT);
-        if (!"areas".equals(group) && !"iterations".equals(group)) {
-            return error("Parámetro 'group' inválido. Valores permitidos: areas, iterations.");
+        String group = arguments.get("group") != null ? arguments.get("group").toString().trim().toLowerCase() : null;
+        String path = arguments.get("path") != null ? arguments.get("path").toString().trim() : null;
+        try {
+            helper.validate(project, group);
+        } catch (IllegalArgumentException e) {
+            return error(e.getMessage());
         }
-        String path = Optional.ofNullable(arguments.get("path")).map(Object::toString).filter(s -> !s.isBlank()).orElse(null);
-        String endpoint = path == null ? ("classificationnodes/" + group) : ("classificationnodes/" + group + "/" + path);
-
-        // Forzar api-version=7.2-preview como en el script validado para evitar respuestas no-JSON
-        Map<String,Object> resp = azureService.getWitApiWithQuery(project, team, endpoint, null, API_VERSION_OVERRIDE);
-        String formattedErr = tryFormatRemoteError(resp);
-        if (formattedErr != null) return success(formattedErr);
-        return success(format(resp));
-    }
-
-    private String format(Map<String,Object> data) {
-        if (data == null || data.isEmpty()) return "(Respuesta vacía)";
-        if (data.containsKey("error")) return "Error remoto: " + data.get("error");
-        String name = Objects.toString(data.get("name"), null);
-        String structureType = Objects.toString(data.get("structureType"), null);
-        Object id = data.get("id");
-        Object hasChildren = data.get("hasChildren");
-        if (name != null || structureType != null || id != null) {
-            StringBuilder sb = new StringBuilder("=== Classification Node ===\n\n");
-            if (id != null) sb.append("Id: ").append(id).append('\n');
-            if (name != null) sb.append("Name: ").append(name).append('\n');
-            if (structureType != null) sb.append("Type: ").append(structureType).append('\n');
-            if (hasChildren != null) sb.append("HasChildren: ").append(hasChildren).append('\n');
-            return sb.toString();
-        }
-        return data.toString();
+        String endpoint = helper.buildEndpoint(group, path);
+        Map<String,Object> resp = helper.fetchNode(project, team, endpoint, API_VERSION_OVERRIDE);
+        return success(helper.formatNodeResponse(resp));
     }
 }
