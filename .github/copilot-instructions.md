@@ -5,6 +5,12 @@ description: Documento unificado con las reglas de diseño, flujo y validación 
 
 quiero que seas practico y que conforme vas leyendo una documentacion vayas creando los archivos indicados, para evitar que tengas una ventana de contexto que se llene.
 
+1. Mantener las clases Tool únicamente como capa de adaptación para MCP, sin lógica de negocio interna.
+2. Extrae un helper o servicio que encapsule la funcionalidad que necesite la clase Tool.
+3. Hacer que la clase Tool delegue completamente esta funcionalidad al helper, en lugar de contener lógica propia.
+Actualizar los demás tools para que también llamen al helper.
+
+
 ## Stack y Alcance
 - Backend: Spring Boot (Java)
 - Cliente HTTP: WebClient
