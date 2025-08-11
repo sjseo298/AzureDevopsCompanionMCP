@@ -1,11 +1,14 @@
 package com.mcp.server.tools.azuredevops.wit;
 
+
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.services.helpers.WitWorkItemsDeleteListHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import org.springframework.stereotype.Component;
 import java.util.*;
 
 /** Tool: azuredevops_wit_work_items_delete_list (DELETE multiple) */
+@Component
 public class WorkItemsDeleteListTool extends AbstractAzureDevOpsTool {
     private final WitWorkItemsDeleteListHelper helper;
     private static final String NAME = "azuredevops_wit_work_items_delete_list";

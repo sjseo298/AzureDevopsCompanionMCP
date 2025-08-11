@@ -1,8 +1,10 @@
 package com.mcp.server.tools.azuredevops.wit;
 
+
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.services.helpers.WitRecycleBinHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
@@ -11,6 +13,7 @@ import java.util.*;
  * Lista referencias (shallow) de work items eliminados.
  * Endpoint: GET /{project}/_apis/wit/recyclebin?api-version=7.2-preview
  */
+@Component
 public class RecycleBinListTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_recyclebin_list";
     private static final String DESC = "Lista work items eliminados (shallow). Si la organización excede límite, muestra mensaje con recomendación de filtrar por id.";

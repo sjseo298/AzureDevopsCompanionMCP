@@ -1,8 +1,10 @@
 package com.mcp.server.tools.azuredevops.wit;
 
+
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.services.helpers.WitWorkItemCreateHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import org.springframework.stereotype.Component;
 import java.util.*;
 
 /**
@@ -10,6 +12,7 @@ import java.util.*;
  * Derivado de scripts/curl/wit/work_items_create.sh
  * Endpoint: POST /{project}/_apis/wit/workitems/${type}?api-version=7.2-preview
  */
+@Component
 public class WorkItemCreateTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_work_item_create";
     private static final String DESC = "Crea un work item en un proyecto Azure DevOps, permitiendo campos extra, herencia y relaciones.";

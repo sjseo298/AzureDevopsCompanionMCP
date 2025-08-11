@@ -28,26 +28,36 @@ public class WitAccountActivityHelper {
     }
 
     @SuppressWarnings("unchecked")
-    public String formatRecentActivity(Map<String,Object> resp) {
+    public String formatRecentActivity(Map<String,Object> resp, Integer top, String fromDate) {
         if (resp == null || resp.isEmpty()) return "(Respuesta vacía)";
         Object value = resp.get("value");
         if (value instanceof List) {
             List<?> list = (List<?>) value;
             StringBuilder sb = new StringBuilder("=== Recent Activity ===\n\n");
             int i = 1;
+            int count = 0;
             for (Object o : list) {
                 if (o instanceof Map) {
                     Map<?,?> m = (Map<?,?>) o;
+                    Object dateObj = m.get("activityDate");
+                    boolean dateOk = true;
+                    if (fromDate != null && dateObj instanceof String) {
+                        // dateObj formato ISO: "2025-08-01T12:34:56.789Z"
+                        String dateStr = ((String) dateObj).substring(0,10); // YYYY-MM-DD
+                        dateOk = dateStr.compareTo(fromDate) >= 0;
+                    }
+                    if (!dateOk) continue;
                     Object id = m.get("workItemId");
                     Object type = m.get("activityType");
-                    Object date = m.get("activityDate");
                     Object title = m.get("title");
                     sb.append(i++).append(". ");
                     if (title != null) sb.append(title).append(" ");
                     if (id != null) sb.append("[#").append(id).append("] ");
                     if (type != null) sb.append("(").append(type).append(") ");
-                    if (date != null) sb.append("@ ").append(date);
+                    if (dateObj != null) sb.append("@ ").append(dateObj);
                     sb.append('\n');
+                    count++;
+                    if (top != null && count >= top) break;
                 }
             }
             return sb.toString();

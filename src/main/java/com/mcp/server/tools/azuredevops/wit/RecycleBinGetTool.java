@@ -1,8 +1,10 @@
 package com.mcp.server.tools.azuredevops.wit;
 
+
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.services.helpers.WitRecycleBinHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
@@ -11,6 +13,7 @@ import java.util.*;
  * Obtiene un work item eliminado (papelera) por ID.
  * Endpoint: GET /{project}/_apis/wit/recyclebin/{id}?api-version=7.2-preview
  */
+@Component
 public class RecycleBinGetTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_recyclebin_get";
     private static final String DESC = "Obtiene un work item eliminado (Recycle Bin) por ID.";

@@ -1,8 +1,10 @@
 package com.mcp.server.tools.azuredevops.wit;
 
+
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.services.helpers.WitRecycleBinHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
@@ -11,6 +13,7 @@ import java.util.*;
  * Destruye permanentemente (Destroy) un work item que está en la Recycle Bin.
  * Endpoint: DELETE /{project}/_apis/wit/recyclebin/{id}?api-version=7.2-preview
  */
+@Component
 public class RecycleBinDestroyTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_recyclebin_destroy";
     private static final String DESC = "Elimina permanentemente un work item eliminado. Si retorna 404, se informa que no hay permisos y solo se puede soft delete.";

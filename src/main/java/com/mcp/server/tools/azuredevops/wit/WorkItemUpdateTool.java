@@ -4,6 +4,7 @@ import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.services.helpers.WitWorkItemUpdateHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 
+import org.springframework.stereotype.Component;
 import java.util.*;
 
 /**
@@ -11,6 +12,7 @@ import java.util.*;
  * Derivado de scripts/curl/wit/work_items_update.sh
  * Endpoint: PATCH /{project}/_apis/wit/workitems/{id}?api-version=7.2-preview
  */
+@Component
 public class WorkItemUpdateTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_work_item_update";
     private static final String DESC = "Actualiza un work item (add/replace/remove, shortcuts de campos, relaciones, re-parenting y diagnóstico).";

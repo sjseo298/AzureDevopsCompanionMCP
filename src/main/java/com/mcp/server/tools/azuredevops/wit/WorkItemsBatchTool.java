@@ -1,12 +1,15 @@
 package com.mcp.server.tools.azuredevops.wit;
 
+
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.services.helpers.WitWorkItemsBatchHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
 /** Tool: azuredevops_wit_work_items_batch (POST workitemsbatch) */
+@Component
 public class WorkItemsBatchTool extends AbstractAzureDevOpsTool {
     private final WitWorkItemsBatchHelper helper;
     private static final String NAME = "azuredevops_wit_work_items_batch";

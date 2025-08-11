@@ -1,8 +1,10 @@
 package com.mcp.server.tools.azuredevops.wit;
 
+
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.services.helpers.WitRevisionsHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
@@ -11,6 +13,7 @@ import java.util.*;
  * Lista revisiones de un work item específico.
  * Endpoint: GET /{project}/_apis/wit/workItems/{id}/revisions?api-version=7.2-preview.3
  */
+@Component
 public class RevisionsListTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_revisions_list";
     private static final String DESC = "Lista revisiones de un work item (hasta 5 mostradas).";

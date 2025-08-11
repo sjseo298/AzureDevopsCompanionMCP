@@ -1,8 +1,10 @@
 package com.mcp.server.tools.azuredevops.wit;
 
+
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.services.helpers.WitRecycleBinHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -12,6 +14,7 @@ import java.util.stream.Collectors;
  * Obtiene varios work items eliminados por lista de IDs.
  * Endpoint: GET /{project}/_apis/wit/recyclebin?ids=1,2,3&api-version=7.2-preview
  */
+@Component
 public class RecycleBinGetBatchTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_recyclebin_get_batch";
     private static final String DESC = "Obtiene varios work items eliminados (Recycle Bin) por IDs.";

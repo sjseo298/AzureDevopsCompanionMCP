@@ -1,8 +1,10 @@
 package com.mcp.server.tools.azuredevops.wit;
 
+
 import com.mcp.server.services.AzureDevOpsClientService;
 
 import com.mcp.server.services.helpers.WitRecycleBinHelper;
+import org.springframework.stereotype.Component;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 
 import java.util.*;
@@ -12,6 +14,7 @@ import java.util.*;
  * Restaura un work item desde la Recycle Bin.
  * Endpoint: PATCH /{project}/_apis/wit/recyclebin/{id}?api-version=7.2-preview
  */
+@Component
 public class RecycleBinRestoreTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_recyclebin_restore";
     private static final String DESC = "Restaura un work item desde la Recycle Bin.";

@@ -1,8 +1,10 @@
 package com.mcp.server.tools.azuredevops.wit;
 
+
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.services.helpers.WitQueriesMailHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
@@ -11,6 +13,7 @@ import java.util.*;
  * Envía un correo relacionado a work items (POST sendmail).
  * Endpoint: POST /{project}/_apis/wit/sendmail?api-version=7.2-preview.1
  */
+@Component
 public class SendMailTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_send_mail";
     private static final String DESC = "Envía un correo sobre uno o más work items.";

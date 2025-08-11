@@ -1,8 +1,10 @@
 package com.mcp.server.tools.azuredevops.wit;
 
+
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 import com.mcp.server.services.helpers.WitAttachmentsHelper;
+import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
