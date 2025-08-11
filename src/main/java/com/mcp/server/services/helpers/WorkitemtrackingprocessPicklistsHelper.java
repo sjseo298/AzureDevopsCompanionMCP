@@ -1,11 +1,13 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.*;
 
 /**
- * Helper para obtener picklists (listas de selección) a nivel organización en Azure DevOps.
+ * Helper para operaciones con picklists del proceso de work item tracking.
  */
+@Component
 public class WorkitemtrackingprocessPicklistsHelper {
     private final AzureDevOpsClientService azureService;
     private static final String API_VERSION = "7.2-preview.1";
