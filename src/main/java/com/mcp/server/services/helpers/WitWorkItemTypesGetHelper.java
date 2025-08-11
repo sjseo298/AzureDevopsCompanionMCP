@@ -1,8 +1,10 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.Map;
 
+@Component
 public class WitWorkItemTypesGetHelper {
     private final AzureDevOpsClientService client;
     public WitWorkItemTypesGetHelper(AzureDevOpsClientService client) {

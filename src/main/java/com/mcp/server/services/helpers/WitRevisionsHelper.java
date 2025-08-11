@@ -1,11 +1,13 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.*;
 
 /**
  * Helper para revisiones de work items en Azure DevOps.
  */
+@Component
 public class WitRevisionsHelper {
     private final AzureDevOpsClientService azureService;
 

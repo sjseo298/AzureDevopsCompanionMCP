@@ -1,9 +1,11 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.*;
 
 /** Helper para eliminar múltiples work items (ids coma) */
+@Component
 public class WitWorkItemsDeleteListHelper {
     private final AzureDevOpsClientService client;
     public WitWorkItemsDeleteListHelper(AzureDevOpsClientService client) { this.client = client; }

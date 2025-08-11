@@ -1,9 +1,11 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.Map;
 import java.util.HashMap;
 
+@Component
 public class WitWorkItemTypesFieldGetHelper {
     private final AzureDevOpsClientService client;
     private final WitFieldsGlobalGetHelper fieldsGlobalHelper;

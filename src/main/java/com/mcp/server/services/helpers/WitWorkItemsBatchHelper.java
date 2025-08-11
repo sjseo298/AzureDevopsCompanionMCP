@@ -2,10 +2,12 @@ package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
 import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
 /** Helper para invocar POST workitemsbatch replicando script work_items_batch.sh */
+@Component
 public class WitWorkItemsBatchHelper {
     private final AzureDevOpsClientService client;
     public WitWorkItemsBatchHelper(AzureDevOpsClientService client) { this.client = client; }

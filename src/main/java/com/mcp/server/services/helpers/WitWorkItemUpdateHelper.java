@@ -1,6 +1,7 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import org.springframework.http.MediaType;
 
 import java.util.*;
@@ -17,6 +18,7 @@ import java.util.*;
  *  - Flags: validateOnly, bypassRules, suppressNotifications, debug, noDiagnostic, raw
  *  - Diagnóstico enriquecido de RuleValidationErrors (tipo de campo, picklists, estados válidos para System.State, sugerencias)
  */
+@Component
 public class WitWorkItemUpdateHelper {
     private final AzureDevOpsClientService client;
     private final WitWorkItemGetHelper getHelper;

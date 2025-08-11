@@ -1,12 +1,14 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import org.springframework.http.MediaType;
 import java.util.Map;
 
 /**
  * Helper para crear work items replicando lógica avanzada del script bash.
  */
+@Component
 public class WitWorkItemCreateHelper {
     private final AzureDevOpsClientService client;
     private final WitWorkItemTypesFieldListHelper fieldListHelper;

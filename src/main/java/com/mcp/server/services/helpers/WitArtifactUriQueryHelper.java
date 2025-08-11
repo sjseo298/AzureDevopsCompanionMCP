@@ -1,6 +1,7 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.Map;
  * Helper para consultar work items vinculados a URIs de artefactos (artifacturiquery) a nivel organización.
  */
 @Service
+@Component
 public class WitArtifactUriQueryHelper {
 
     private final AzureDevOpsClientService azureService;

@@ -1,12 +1,14 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Helper para listar usuarios que reaccionaron a un comentario de un work item.
  */
+@Component
 public class WitCommentReactionsEngagedUsersListHelper {
     private final AzureDevOpsClientService azureService;
 

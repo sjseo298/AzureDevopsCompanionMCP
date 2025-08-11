@@ -1,6 +1,7 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -8,6 +9,7 @@ import java.util.Objects;
 /**
  * Helper para eliminar nodos de clasificación (areas/iterations) a nivel proyecto.
  */
+@Component
 public class WitClassificationNodesDeleteHelper {
     private final AzureDevOpsClientService azureService;
 

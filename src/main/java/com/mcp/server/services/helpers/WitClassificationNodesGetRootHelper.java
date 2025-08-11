@@ -1,12 +1,14 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Helper para obtener los nodos raíz de clasificación (areas e iterations) a nivel proyecto.
  */
+@Component
 public class WitClassificationNodesGetRootHelper {
     private final AzureDevOpsClientService azureService;
 

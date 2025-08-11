@@ -1,11 +1,13 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.*;
 
 /**
  * Helper para operaciones de Recycle Bin (papelera de work items) en Azure DevOps.
  */
+@Component
 public class WitRecycleBinHelper {
     private final AzureDevOpsClientService azureService;
 
