@@ -1,8 +1,10 @@
 package com.mcp.server.tools.azuredevops.wit;
 
+
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.services.helpers.WitWorkItemRelationTypesListHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import org.springframework.stereotype.Component;
 import java.util.*;
 
 /**
@@ -10,6 +12,7 @@ import java.util.*;
  * Derivado de scripts/curl/wit/work_item_relation_types_list.sh
  * Endpoint: GET /_apis/wit/workitemrelationtypes?api-version=7.2-preview
  */
+@Component
 public class WorkItemRelationTypesListTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_work_item_relation_types_list";
     private static final String DESC = "Lista los tipos de relación entre work items definidos en la organización.";

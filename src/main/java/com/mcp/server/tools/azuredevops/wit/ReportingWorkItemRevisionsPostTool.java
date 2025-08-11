@@ -1,8 +1,10 @@
 package com.mcp.server.tools.azuredevops.wit;
 
+
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.services.helpers.WitReportingHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
@@ -11,6 +13,7 @@ import java.util.*;
  * Obtiene revisiones (reporting) vía POST con filtros en body.
  * Endpoint: POST /{project}/_apis/wit/reporting/workitemrevisions?api-version=7.2-preview.2
  */
+@Component
 public class ReportingWorkItemRevisionsPostTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_reporting_workitemrevisions_post";
     private static final String DESC = "Obtiene revisiones (POST) enviando filtros extensos en el cuerpo.";

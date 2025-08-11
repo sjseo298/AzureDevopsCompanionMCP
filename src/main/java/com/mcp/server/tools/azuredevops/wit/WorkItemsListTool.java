@@ -1,12 +1,15 @@
 package com.mcp.server.tools.azuredevops.wit;
 
+
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.services.helpers.WitWorkItemsListHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
 /** Tool: azuredevops_wit_work_items_list (GET multiple by ids) */
+@Component
 public class WorkItemsListTool extends AbstractAzureDevOpsTool {
     private final WitWorkItemsListHelper helper;
     private static final String NAME = "azuredevops_wit_work_items_list";

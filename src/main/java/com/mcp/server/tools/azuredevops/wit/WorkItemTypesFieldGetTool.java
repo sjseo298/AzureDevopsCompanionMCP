@@ -1,8 +1,10 @@
 package com.mcp.server.tools.azuredevops.wit;
 
+
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.services.helpers.WitWorkItemTypesFieldGetHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
@@ -11,6 +13,7 @@ import java.util.*;
  * Derivado de scripts/curl/wit/work_item_types_field_get.sh
  * Endpoint: GET /{project}/_apis/wit/workitemtypes/{type}/fields/{field}?api-version=7.2-preview
  */
+@Component
 public class WorkItemTypesFieldGetTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_work_item_types_field_get";
     private static final String DESC = "Obtiene el detalle de un campo de un tipo de work item, con enriquecimiento opcional.";

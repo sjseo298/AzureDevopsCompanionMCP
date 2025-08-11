@@ -1,8 +1,10 @@
 package com.mcp.server.tools.azuredevops.wit;
 
+
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.services.helpers.WitReportingHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
@@ -11,6 +13,7 @@ import java.util.*;
  * Obtiene revisiones de work items (reporting) vía GET con filtros y paginación.
  * Endpoint: GET /{project}/_apis/wit/reporting/workitemrevisions?api-version=7.2-preview.2
  */
+@Component
 public class ReportingWorkItemRevisionsGetTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_reporting_workitemrevisions_get";
     private static final String DESC = "Obtiene revisiones (GET) con filtros/paginación (reporting).";
