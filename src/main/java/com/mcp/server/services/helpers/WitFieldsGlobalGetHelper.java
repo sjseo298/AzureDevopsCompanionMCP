@@ -27,6 +27,13 @@ public class WitFieldsGlobalGetHelper {
         return azureService.getCoreApi("wit/" + path, q);
     }
 
+    /**
+     * Devuelve el JSON crudo de la definición global del campo
+     */
+    public Map<String,Object> getFieldGlobal(String fieldRef, boolean raw) {
+        return fetchField(fieldRef);
+    }
+
     public String formatFieldResponse(Map<String,Object> data) {
         if (data == null || data.isEmpty()) return "(sin datos)";
         StringBuilder sb = new StringBuilder();

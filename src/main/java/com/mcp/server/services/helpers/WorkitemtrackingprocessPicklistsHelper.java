@@ -25,6 +25,13 @@ public class WorkitemtrackingprocessPicklistsHelper {
         return azureService.getCoreApi(path, q);
     }
 
+    /**
+     * Devuelve el JSON crudo del picklist
+     */
+    public Map<String,Object> getPicklist(String id, boolean raw) {
+        return fetchPicklist(id);
+    }
+
     public String formatPicklistResponse(Map<String,Object> data) {
         if (data == null || data.isEmpty()) return "(sin datos)";
         StringBuilder sb = new StringBuilder();
