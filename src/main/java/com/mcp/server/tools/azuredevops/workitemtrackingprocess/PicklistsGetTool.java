@@ -4,6 +4,7 @@ import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import com.mcp.server.services.helpers.WorkitemtrackingprocessPicklistsHelper;
 
 import java.util.*;
 
@@ -22,9 +23,9 @@ public class PicklistsGetTool extends AbstractAzureDevOpsTool {
     private final WorkitemtrackingprocessPicklistsHelper helper;
 
     @Autowired
-    public PicklistsGetTool(AzureDevOpsClientService service) {
+    public PicklistsGetTool(AzureDevOpsClientService service, WorkitemtrackingprocessPicklistsHelper helper) {
         super(service);
-        this.helper = new WorkitemtrackingprocessPicklistsHelper(service);
+        this.helper = helper;
     }
 
     @Override public String getName() { return NAME; }

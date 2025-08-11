@@ -4,6 +4,7 @@ import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import com.mcp.server.services.helpers.WitWiqlHelper;
 
 import java.util.*;
 
@@ -21,9 +22,9 @@ public class WiqlByQueryTool extends AbstractAzureDevOpsTool {
     private final WitWiqlHelper helper;
 
     @Autowired
-    public WiqlByQueryTool(AzureDevOpsClientService service) {
+    public WiqlByQueryTool(AzureDevOpsClientService service, WitWiqlHelper helper) {
         super(service);
-        this.helper = new WitWiqlHelper(service);
+        this.helper = helper;
     }
 
     @Override public String getName() { return NAME; }

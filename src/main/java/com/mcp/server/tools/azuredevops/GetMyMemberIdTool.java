@@ -4,6 +4,7 @@ import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import com.mcp.server.services.helpers.ProfileGetMyMemberIdHelper;
 
 import java.util.List;
 import java.util.Map;
@@ -17,9 +18,9 @@ public class GetMyMemberIdTool extends AbstractAzureDevOpsTool {
     private final ProfileGetMyMemberIdHelper helper;
 
     @Autowired
-    public GetMyMemberIdTool(AzureDevOpsClientService service) {
+    public GetMyMemberIdTool(AzureDevOpsClientService service, ProfileGetMyMemberIdHelper helper) {
         super(service);
-        this.helper = new ProfileGetMyMemberIdHelper(service);
+        this.helper = helper;
     }
 
     @Override
