@@ -35,9 +35,11 @@ public class RevisionsGetTool extends AbstractAzureDevOpsTool {
         props.put("id", Map.of("type","integer","description","ID del work item"));
         props.put("rev", Map.of("type","integer","description","Número de la revisión"));
         props.put("expand", Map.of("type","string","description","none|relations|fields|links|all"));
-        @SuppressWarnings("unchecked") List<String> req = (List<String>) base.get("required");
-        if (!req.contains("id")) req.add("id");
-        if (!req.contains("rev")) req.add("rev");
+    @SuppressWarnings("unchecked") List<String> originalReq = (List<String>) base.get("required");
+    List<String> req = new ArrayList<>(originalReq);
+    if (!req.contains("id")) req.add("id");
+    if (!req.contains("rev")) req.add("rev");
+    base.put("required", req);
         return base;
     }
 

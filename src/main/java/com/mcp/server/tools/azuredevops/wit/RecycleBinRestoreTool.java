@@ -34,8 +34,10 @@ public class RecycleBinRestoreTool extends AbstractAzureDevOpsTool {
         Map<String,Object> base = new LinkedHashMap<>(createBaseSchema());
         @SuppressWarnings("unchecked") Map<String,Object> props = (Map<String,Object>) base.get("properties");
         props.put("id", Map.of("type","integer","description","ID del work item eliminado"));
-        @SuppressWarnings("unchecked") List<String> req = (List<String>) base.get("required");
-        if (!req.contains("id")) req.add("id");
+    @SuppressWarnings("unchecked") List<String> originalReq = (List<String>) base.get("required");
+    List<String> req = new ArrayList<>(originalReq);
+    if (!req.contains("id")) req.add("id");
+    base.put("required", req);
         return base;
     }
 

@@ -81,7 +81,24 @@ public class McpProtocolHandler {
         List<Object> tools = new ArrayList<>();
         
         for (McpTool tool : availableTools.values()) {
-            tools.add(tool.getToolDefinition());
+            try {
+                if (tool == null) {
+                    System.err.println("[MCP][tools/list] Bean McpTool nulo encontrado - se ignora");
+                    continue;
+                }
+                var def = tool.getToolDefinition();
+                if (def == null) {
+                    System.err.println("[MCP][tools/list] getToolDefinition() devolvió null para: " + tool.getClass().getName());
+                    continue; // evitar NPE
+                }
+                tools.add(def);
+            } catch (NullPointerException npe) {
+                System.err.println("[MCP][tools/list] NullPointer al procesar tool: " + tool.getClass().getName());
+                npe.printStackTrace();
+            } catch (Exception ex) {
+                System.err.println("[MCP][tools/list] Error al registrar tool " + tool.getClass().getName() + ": " + ex.getMessage());
+                ex.printStackTrace();
+            }
         }
         
         result.put("tools", tools);
