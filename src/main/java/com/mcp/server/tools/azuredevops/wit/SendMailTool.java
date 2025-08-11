@@ -1,6 +1,7 @@
 package com.mcp.server.tools.azuredevops.wit;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import com.mcp.server.services.helpers.WitQueriesMailHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 
 import java.util.*;
@@ -15,7 +16,12 @@ public class SendMailTool extends AbstractAzureDevOpsTool {
     private static final String DESC = "Envía un correo sobre uno o más work items.";
     private static final String API_VERSION = "7.2-preview.1";
 
-    public SendMailTool(AzureDevOpsClientService svc) { super(svc); }
+    private final WitQueriesMailHelper helper;
+
+    public SendMailTool(AzureDevOpsClientService svc) {
+        super(svc);
+        this.helper = new WitQueriesMailHelper(svc);
+    }
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
 
@@ -38,31 +44,15 @@ public class SendMailTool extends AbstractAzureDevOpsTool {
     @Override
     protected Map<String,Object> executeInternal(Map<String,Object> args) {
         String project = getProject(args);
-        String to = str(args.get("to"));
-        String subject = str(args.get("subject"));
-        String body = str(args.get("body"));
-        String workItemIds = str(args.get("workItemIds"));
-        if (to==null || subject==null || body==null || workItemIds==null) return error("Parámetros obligatorios faltantes");
-        Map<String,Object> payload = new LinkedHashMap<>();
-        Map<String,Object> message = new LinkedHashMap<>();
-        message.put("to", splitCsv(to));
-        if (has(args.get("cc"))) message.put("cc", splitCsv(str(args.get("cc"))));
-        if (has(args.get("replyTo"))) message.put("replyTo", splitCsv(str(args.get("replyTo"))));
-        message.put("subject", subject);
-        message.put("body", body);
-        payload.put("message", message);
-        payload.put("workItemIds", toIntList(workItemIds));
-        if (has(args.get("reason"))) payload.put("reason", str(args.get("reason")));
-
-        Map<String,Object> resp = azureService.postWitApi(project,null,"sendmail", payload, API_VERSION);
+        try {
+            helper.validateMailParams(args);
+        } catch (IllegalArgumentException e) {
+            return error(e.getMessage());
+        }
+        Map<String,Object> payload = helper.buildMailPayload(args);
+        Map<String,Object> resp = helper.sendMail(project, payload);
         String err = tryFormatRemoteError(resp);
         if (err != null) return success(err);
-        Object status = resp.get("status");
-        return success(status != null ? ("Estado: "+status) : "Correo enviado (revisar status)." );
+        return success(helper.formatMailResponse(resp));
     }
-
-    private String str(Object o) { if (o==null) return null; String s=o.toString().trim(); return s.isEmpty()? null : s; }
-    private boolean has(Object o){ return str(o)!=null; }
-    private List<String> splitCsv(String csv){ List<String> l=new ArrayList<>(); for(String p: csv.split(",")){ String t=p.trim(); if(!t.isEmpty()) l.add(t);} return l; }
-    private List<Integer> toIntList(String csv){ List<Integer> l=new ArrayList<>(); for(String p: csv.split(",")){ String t=p.trim(); if(t.matches("\\d+")) l.add(Integer.parseInt(t)); } return l; }
 }
