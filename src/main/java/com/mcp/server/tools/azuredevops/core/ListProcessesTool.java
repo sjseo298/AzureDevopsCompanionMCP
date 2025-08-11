@@ -1,6 +1,7 @@
 package com.mcp.server.tools.azuredevops.core;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import com.mcp.server.services.helpers.ProcessesHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -12,8 +13,13 @@ public class ListProcessesTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_core_list_processes";
     private static final String DESC = "Lista procesos/metodologías disponibles en la organización";
 
+    private final ProcessesHelper processesHelper;
+
     @Autowired
-    public ListProcessesTool(AzureDevOpsClientService service) { super(service); }
+    public ListProcessesTool(AzureDevOpsClientService service, ProcessesHelper processesHelper) {
+        super(service);
+        this.processesHelper = processesHelper;
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
@@ -31,22 +37,11 @@ public class ListProcessesTool extends AbstractAzureDevOpsTool {
     @Override
     protected Map<String, Object> executeInternal(Map<String, Object> arguments) {
         if (azureService == null) return error("Servicio no disponible en tests");
-        Map<String,String> q = new LinkedHashMap<>(); q.put("api-version","7.2-preview.1");
-        Map<String,Object> resp = azureService.getCoreApi("process/processes", q);
+        Map<String,Object> resp = processesHelper.fetchProcesses();
         String formattedErr = tryFormatRemoteError(resp);
         if (formattedErr != null) return success(formattedErr);
-        Object count = resp.get("count"), value = resp.get("value");
-        if (count instanceof Number && value instanceof List) {
-            StringBuilder sb = new StringBuilder();
-            @SuppressWarnings("unchecked") List<Map<String,Object>> items = (List<Map<String,Object>>) value;
-            int i=1; for (Map<String,Object> it: items) {
-                sb.append(i++).append(") ")
-                  .append(String.valueOf(it.getOrDefault("name","<sin nombre>")))
-                  .append(" [").append(String.valueOf(it.getOrDefault("id","?"))).append("]\n");
-            }
-            if (sb.length()==0) sb.append("Sin resultados");
-            return success(sb.toString());
-        }
+        String formatted = processesHelper.formatProcessesList(resp);
+        if (formatted != null) return success(formatted);
         return Map.of("isError", false, "raw", resp);
     }
 }

@@ -1,6 +1,7 @@
 package com.mcp.server.tools.azuredevops.core;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import com.mcp.server.services.helpers.ProjectsHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -13,22 +14,25 @@ public class CreateProjectTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_core_create_project";
     private static final String DESC = "Crea un proyecto (nombre requerido)";
 
+    private final ProjectsHelper projectsHelper;
+
     @Autowired
-    public CreateProjectTool(AzureDevOpsClientService service) { super(service); }
+    public CreateProjectTool(AzureDevOpsClientService service, ProjectsHelper projectsHelper) {
+        super(service);
+        this.projectsHelper = projectsHelper;
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
 
     @Override
     protected void validateCommon(Map<String, Object> args) {
-        String name = Optional.ofNullable(args.get("name")).map(Object::toString).map(String::trim).orElse("");
-        String visibility = Optional.ofNullable(args.get("visibility")).map(Object::toString).map(String::trim).orElse("");
-        String sourceControlType = Optional.ofNullable(args.get("sourceControlType")).map(Object::toString).map(String::trim).orElse("");
-        String processTypeId = Optional.ofNullable(args.get("processTypeId")).map(Object::toString).map(String::trim).orElse("");
-        if (name.isEmpty()) throw new IllegalArgumentException("'name' es requerido");
-        if (!Set.of("private","public").contains(visibility)) throw new IllegalArgumentException("'visibility' debe ser private|public");
-        if (!Set.of("Git","TFVC").contains(sourceControlType)) throw new IllegalArgumentException("'sourceControlType' debe ser Git|TFVC");
-        if (!processTypeId.matches("[0-9a-fA-F-]{36}")) throw new IllegalArgumentException("'processTypeId' debe ser GUID de 36 chars");
+        projectsHelper.validateCreateProject(
+            Optional.ofNullable(args.get("name")).map(Object::toString).orElse(null),
+            Optional.ofNullable(args.get("visibility")).map(Object::toString).orElse(null),
+            Optional.ofNullable(args.get("sourceControlType")).map(Object::toString).orElse(null),
+            Optional.ofNullable(args.get("processTypeId")).map(Object::toString).orElse(null)
+        );
     }
 
     @Override
@@ -49,21 +53,18 @@ public class CreateProjectTool extends AbstractAzureDevOpsTool {
     @Override
     protected Map<String, Object> executeInternal(Map<String, Object> arguments) {
         if (azureService == null) return error("Servicio no disponible en tests");
-        Map<String,Object> body = new LinkedHashMap<>();
-        body.put("name", arguments.get("name").toString().trim());
-        Object desc = arguments.get("description");
-        if (desc != null && !desc.toString().isBlank()) body.put("description", desc.toString());
-        body.put("visibility", arguments.get("visibility").toString().trim());
-        body.put("capabilities", Map.of(
-            "versioncontrol", Map.of("sourceControlType", arguments.get("sourceControlType").toString().trim()),
-            "processTemplate", Map.of("templateTypeId", arguments.get("processTypeId").toString().trim())
-        ));
-        Map<String,Object> resp = azureService.postCoreApi("projects", null, body, "7.2-preview.4");
+        Map<String,Object> body = projectsHelper.buildCreateProjectBody(
+            arguments.get("name").toString(),
+            Optional.ofNullable(arguments.get("description")).map(Object::toString).orElse(null),
+            arguments.get("visibility").toString(),
+            arguments.get("sourceControlType").toString(),
+            arguments.get("processTypeId").toString()
+        );
+        Map<String,Object> resp = projectsHelper.createProject(body);
         String formattedErr = tryFormatRemoteError(resp);
         if (formattedErr != null) return success(formattedErr);
-        if (resp.containsKey("id") || resp.containsKey("name")) {
-            return success(String.format("%s [%s]", String.valueOf(resp.getOrDefault("name","<sin nombre>")), String.valueOf(resp.getOrDefault("id","?"))));
-        }
+        String formatted = projectsHelper.formatCreateProjectResponse(resp);
+        if (formatted != null) return success(formatted);
         return Map.of("isError", false, "raw", resp);
     }
 }
