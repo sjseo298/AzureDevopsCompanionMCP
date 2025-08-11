@@ -19,8 +19,13 @@ public class PicklistsGetTool extends AbstractAzureDevOpsTool {
     private static final String DESC = "Obtiene un picklist (lista de selección) por GUID (nivel organización).";
     private static final String API_VERSION = "7.2-preview.1"; // especificada en la doc local
 
+    private final WorkitemtrackingprocessPicklistsHelper helper;
+
     @Autowired
-    public PicklistsGetTool(AzureDevOpsClientService service) { super(service); }
+    public PicklistsGetTool(AzureDevOpsClientService service) {
+        super(service);
+        this.helper = new WorkitemtrackingprocessPicklistsHelper(service);
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
@@ -45,15 +50,14 @@ public class PicklistsGetTool extends AbstractAzureDevOpsTool {
     protected Map<String, Object> executeInternal(Map<String, Object> arguments) {
         if (azureService == null) return error("Servicio Azure DevOps no configurado");
         Object idObj = arguments.get("id");
-        if (idObj == null || idObj.toString().trim().isEmpty()) return error("'id' es requerido");
-        String id = idObj.toString().trim();
-        boolean raw = Boolean.TRUE.equals(arguments.get("raw"));
-
-        // Endpoint org-level usando Core API builder: /_apis/work/processes/lists/{id}
-        String path = "work/processes/lists/" + id;
-        Map<String,String> q = new LinkedHashMap<>();
-        q.put("api-version", API_VERSION);
-        Map<String,Object> resp = azureService.getCoreApi(path, q);
+        Object rawObj = arguments.get("raw");
+        try {
+            helper.validateId(idObj);
+        } catch (IllegalArgumentException e) {
+            return error(e.getMessage());
+        }
+        boolean raw = Boolean.TRUE.equals(rawObj);
+        Map<String,Object> resp = helper.fetchPicklist(idObj);
         String err = tryFormatRemoteError(resp);
         if (err != null) return success(err);
         if (raw) {
@@ -62,22 +66,6 @@ public class PicklistsGetTool extends AbstractAzureDevOpsTool {
                 "raw", resp
             );
         }
-        return success(format(resp));
-    }
-
-    private String format(Map<String,Object> data) {
-        if (data == null || data.isEmpty()) return "(sin datos)";
-        StringBuilder sb = new StringBuilder();
-        sb.append("Picklist: ").append(data.getOrDefault("name","(sin nombre)"));
-        Object id = data.get("id"); if (id != null) sb.append(" [").append(id).append("]");
-        Object type = data.get("type"); if (type != null) sb.append(" | type=").append(type);
-        @SuppressWarnings("unchecked") List<Object> items = (List<Object>) data.get("items");
-        if (items != null) {
-            sb.append("\nItems (" ).append(items.size()).append("):");
-            int i=1; for (Object it : items) {
-                sb.append("\n  ").append(i++).append(") ").append(it);
-            }
-        }
-        return sb.toString();
+        return success(helper.formatPicklistResponse(resp));
     }
 }
