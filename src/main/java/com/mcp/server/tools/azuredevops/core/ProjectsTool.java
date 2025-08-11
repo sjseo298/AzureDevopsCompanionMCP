@@ -1,6 +1,7 @@
 package com.mcp.server.tools.azuredevops.core;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import com.mcp.server.services.helpers.ProjectsHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -16,8 +17,13 @@ public class ProjectsTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_core_get_projects";
     private static final String DESC = "Obtiene la lista de proyectos de la organización";
 
+    private final ProjectsHelper projectsHelper;
+
     @Autowired
-    public ProjectsTool(AzureDevOpsClientService service) { super(service); }
+    public ProjectsTool(AzureDevOpsClientService service, ProjectsHelper projectsHelper) {
+        super(service);
+        this.projectsHelper = projectsHelper;
+    }
 
     @Override
     public String getName() { return NAME; }
@@ -27,23 +33,7 @@ public class ProjectsTool extends AbstractAzureDevOpsTool {
 
     @Override
     protected void validateCommon(Map<String, Object> args) {
-        // Sin 'project' requerido. Validar opcionales.
-        Object state = args.get("state");
-        if (state != null && !state.toString().isBlank()) {
-            String s = state.toString().trim();
-            if (!Set.of("WellFormed","CreatePending","Deleted").contains(s)) {
-                throw new IllegalArgumentException("'state' debe ser uno de: WellFormed|CreatePending|Deleted");
-            }
-        }
-        Object top = args.get("top");
-        if (top != null) {
-            try {
-                int t = Integer.parseInt(top.toString());
-                if (t < 1 || t > 1000) throw new IllegalArgumentException("'top' debe estar entre 1 y 1000");
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("'top' debe ser numérico");
-            }
-        }
+        projectsHelper.validateListProjects(args.get("state"), args.get("top"));
     }
 
     @Override
@@ -63,34 +53,16 @@ public class ProjectsTool extends AbstractAzureDevOpsTool {
     @Override
     protected Map<String, Object> executeInternal(Map<String, Object> arguments) {
         if (azureService == null) return error("Servicio no disponible en tests");
-        Map<String,String> query = new LinkedHashMap<>();
-        Object state = arguments.get("state");
-        if (state != null && !state.toString().isBlank()) query.put("stateFilter", state.toString().trim());
-        Object top = arguments.get("top");
-        if (top != null) query.put("$top", String.valueOf(top));
-        Object cont = arguments.get("continuationToken");
-        if (cont != null && !cont.toString().isBlank()) query.put("continuationToken", cont.toString().trim());
-        // api-version específica para Projects
-        query.put("api-version", "7.2-preview.4");
-
-        Map<String,Object> resp = azureService.getCoreApi("projects", query);
+        Map<String,String> query = projectsHelper.buildListProjectsQuery(
+            arguments.get("state"),
+            arguments.get("top"),
+            arguments.get("continuationToken")
+        );
+        Map<String,Object> resp = projectsHelper.fetchProjects(query);
         String formattedErr = tryFormatRemoteError(resp);
         if (formattedErr != null) return success(formattedErr);
-        // Formateo simple si es lista
-        Object count = resp.get("count");
-        Object value = resp.get("value");
-        if (count instanceof Number && value instanceof List) {
-            StringBuilder sb = new StringBuilder();
-            @SuppressWarnings("unchecked") List<Map<String,Object>> items = (List<Map<String,Object>>) value;
-            int idx = 1;
-            for (Map<String,Object> it : items) {
-                sb.append(idx++).append(") ")
-                  .append(String.valueOf(it.getOrDefault("name", "<sin nombre>")))
-                  .append(" [").append(String.valueOf(it.getOrDefault("id", "?"))).append("]\n");
-            }
-            if (sb.length() == 0) sb.append("Sin resultados");
-            return success(sb.toString());
-        }
+        String formatted = projectsHelper.formatProjectsList(resp);
+        if (formatted != null) return success(formatted);
         return Map.of("isError", false, "raw", resp);
     }
 }

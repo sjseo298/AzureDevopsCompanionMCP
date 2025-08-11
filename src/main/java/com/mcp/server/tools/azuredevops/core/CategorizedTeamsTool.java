@@ -1,6 +1,7 @@
 package com.mcp.server.tools.azuredevops.core;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import com.mcp.server.services.helpers.CoreTeamsHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -16,8 +17,13 @@ public class CategorizedTeamsTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_core_get_categorized_teams";
     private static final String DESC = "Obtiene equipos categorizados (legibles y de pertenencia)";
 
+    private final CoreTeamsHelper helper;
+
     @Autowired
-    public CategorizedTeamsTool(AzureDevOpsClientService service) { super(service); }
+    public CategorizedTeamsTool(AzureDevOpsClientService service, CoreTeamsHelper helper) {
+        super(service);
+        this.helper = helper;
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
@@ -36,33 +42,19 @@ public class CategorizedTeamsTool extends AbstractAzureDevOpsTool {
 
     @Override
     protected void validateCommon(Map<String, Object> args) {
-        String pid = Optional.ofNullable(args.get("projectId")).map(Object::toString).map(String::trim).orElse("");
-        if (pid.isEmpty()) throw new IllegalArgumentException("'projectId' es requerido");
-        if (!pid.matches("[0-9a-fA-F-]{36}")) throw new IllegalArgumentException("'projectId' debe ser GUID de 36 chars");
+        helper.validateProjectId(Optional.ofNullable(args.get("projectId")).map(Object::toString).orElse(null));
     }
 
     @Override
     protected Map<String, Object> executeInternal(Map<String, Object> arguments) {
-        if (azureService == null) return error("Servicio no disponible en tests");
-        String pid = arguments.get("projectId").toString().trim();
-        Map<String,String> q = new LinkedHashMap<>();
-        if (Boolean.TRUE.equals(arguments.get("mine"))) q.put("mine","true");
-        q.put("api-version","7.2-preview.1");
-        Map<String,Object> resp = azureService.getCoreApi("projects/"+pid+"/teams", q);
+        if (azureService == null) return error("Servicio no disponible en tests"); // fallback tests
+        String pid = arguments.get("projectId").toString();
+        boolean mine = Boolean.TRUE.equals(arguments.get("mine"));
+        Map<String,Object> resp = helper.fetchCategorizedTeams(pid, mine);
         String formattedErr = tryFormatRemoteError(resp);
         if (formattedErr != null) return success(formattedErr);
-        Object count = resp.get("count"), value = resp.get("value");
-        if (count instanceof Number && value instanceof List) {
-            StringBuilder sb = new StringBuilder();
-            @SuppressWarnings("unchecked") List<Map<String,Object>> items = (List<Map<String, Object>>) value;
-            int i=1; for (Map<String,Object> it: items) {
-                sb.append(i++).append(") ")
-                  .append(String.valueOf(it.getOrDefault("name","<sin nombre>")))
-                  .append(" [").append(String.valueOf(it.getOrDefault("id","?"))).append("]\n");
-            }
-            if (sb.length()==0) sb.append("Sin resultados");
-            return success(sb.toString());
-        }
-        return Map.of("isError", false, "raw", resp);
+        String list = helper.formatTeamsList(resp);
+        if (list != null) return success(list);
+        return Map.of("isError", false, "raw", resp); // fallback raw
     }
 }

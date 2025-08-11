@@ -2,6 +2,7 @@ package com.mcp.server.tools.azuredevops.core;
 
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import com.mcp.server.services.helpers.ProjectsHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -12,8 +13,13 @@ public class UpdateProjectTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_core_update_project";
     private static final String DESC = "Actualiza nombre y/o descripción de un proyecto";
 
+    private final ProjectsHelper projectsHelper;
+
     @Autowired
-    public UpdateProjectTool(AzureDevOpsClientService service) { super(service); }
+    public UpdateProjectTool(AzureDevOpsClientService service, ProjectsHelper projectsHelper) {
+        super(service);
+        this.projectsHelper = projectsHelper;
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
@@ -33,24 +39,23 @@ public class UpdateProjectTool extends AbstractAzureDevOpsTool {
 
     @Override
     protected void validateCommon(Map<String, Object> args) {
-        String pid = Optional.ofNullable(args.get("projectId")).map(Object::toString).map(String::trim).orElse("");
-        if (pid.isEmpty()) throw new IllegalArgumentException("'projectId' es requerido");
-        if (!pid.matches("[0-9a-fA-F-]{36}")) throw new IllegalArgumentException("'projectId' debe ser GUID de 36 chars");
-        boolean hasName = Optional.ofNullable(args.get("name")).map(Object::toString).map(String::trim).filter(s -> !s.isEmpty()).isPresent();
-        boolean hasDesc = Optional.ofNullable(args.get("description")).map(Object::toString).map(String::trim).filter(s -> !s.isEmpty()).isPresent();
-        if (!hasName && !hasDesc) throw new IllegalArgumentException("Debe proporcionar 'name' y/o 'description' para actualizar");
+        projectsHelper.validateUpdateProject(
+            Objects.toString(args.get("projectId"), null),
+            args.get("name"),
+            args.get("description")
+        );
     }
 
     @Override
     protected Map<String, Object> executeInternal(Map<String, Object> arguments) {
         if (azureService == null) return error("Servicio no disponible en tests");
-        String pid = arguments.get("projectId").toString().trim();
-        Map<String,Object> body = new LinkedHashMap<>();
-        Object n = arguments.get("name"); if (n!=null && !n.toString().isBlank()) body.put("name", n.toString());
-        Object d = arguments.get("description"); if (d!=null && !d.toString().isBlank()) body.put("description", d.toString());
-        Map<String,Object> resp = azureService.patchCoreApi("projects/"+pid, null, body, "7.2-preview.4");
+        String projectId = arguments.get("projectId").toString();
+        Map<String,Object> body = projectsHelper.buildUpdateProjectBody(arguments.get("name"), arguments.get("description"));
+        Map<String,Object> resp = projectsHelper.updateProject(projectId, body);
         String formattedErr = tryFormatRemoteError(resp);
         if (formattedErr != null) return success(formattedErr);
+        String formatted = projectsHelper.formatUpdateProjectResponse(resp);
+        if (formatted != null) return success(formatted);
         return Map.of("isError", false, "raw", resp);
     }
 }
