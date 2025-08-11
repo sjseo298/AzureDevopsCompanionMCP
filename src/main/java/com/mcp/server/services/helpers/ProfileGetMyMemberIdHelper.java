@@ -1,11 +1,13 @@
 package com.mcp.server.services.helpers;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import org.springframework.stereotype.Component;
 import java.util.Map;
 
 /**
  * Helper para obtener el memberId del usuario autenticado desde Profiles (VSSPS).
  */
+@Component
 public class ProfileGetMyMemberIdHelper {
     private final AzureDevOpsClientService azureService;
 
