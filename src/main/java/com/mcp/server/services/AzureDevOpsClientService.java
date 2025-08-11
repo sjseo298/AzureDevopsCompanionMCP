@@ -285,6 +285,25 @@ public class AzureDevOpsClientService {
         return doGetWithSegmentsAndQuery(segments, null, apiVersion);
     }
 
+    /** GET WIT con query params y override opcional de api-version */
+    public Map<String,Object> getWitApiWithQuery(String project, String team, String path, Map<String,String> query, String apiVersionOverride) {
+        String proj = project == null ? "" : project.trim();
+        String tm = (team == null || team.trim().isEmpty()) ? null : team.trim();
+        String pth = path == null ? "" : path.trim();
+        List<String> segments = new ArrayList<>();
+        if (!proj.isEmpty()) segments.add(proj);
+        if (tm != null) segments.add(tm);
+        segments.add("_apis");
+        segments.add("wit");
+        for (String part : pth.split("/")) { if (!part.isBlank()) segments.add(part); }
+        Map<String,String> q = new java.util.LinkedHashMap<>();
+        if (query != null) q.putAll(query);
+        if (!q.containsKey("api-version")) {
+            q.put("api-version", (apiVersionOverride != null && !apiVersionOverride.isBlank()) ? apiVersionOverride : this.apiVersion);
+        }
+        return doGetWithSegmentsAndQuery(segments, q, this.apiVersion);
+    }
+
     public Map<String, Object> postWitApi(String project, String team, String path, Object body, String apiVersionOverride) {
         String proj = project == null ? "" : project.trim();
         String tm = (team == null || team.trim().isEmpty()) ? null : team.trim();
@@ -421,17 +440,4 @@ public class AzureDevOpsClientService {
             .block();
     }
 
-    public Map<String, Object> getWitApiWithQuery(String project, String team, String path, Map<String,String> query, String apiVersionOverride) {
-        String proj = project == null ? "" : project.trim();
-        String tm = (team == null || team.trim().isEmpty()) ? null : team.trim();
-        String pth = path == null ? "" : path.trim();
-        List<String> segments = new ArrayList<>();
-        if (!proj.isEmpty()) segments.add(proj);
-        if (tm != null) segments.add(tm);
-        segments.add("_apis");
-        segments.add("wit");
-        for (String part : pth.split("/")) { if (!part.isBlank()) segments.add(part); }
-        String version = (apiVersionOverride != null && !apiVersionOverride.isBlank()) ? apiVersionOverride : this.apiVersion;
-        return doGetWithSegmentsAndQuery(segments, query, version);
-    }
 }
