@@ -2,6 +2,7 @@ package com.mcp.server.tools.azuredevops.wit;
 
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import com.mcp.server.services.helpers.WitAttachmentsHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -20,23 +21,23 @@ public class AttachmentsCreateTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_attachments_create";
     private static final String DESC = "Crea un adjunto enviando dataBase64 y fileName (nivel organización).";
 
+    private final WitAttachmentsHelper attachmentsHelper;
+
     @Autowired
-    public AttachmentsCreateTool(AzureDevOpsClientService service) { super(service); }
+    public AttachmentsCreateTool(AzureDevOpsClientService service, WitAttachmentsHelper attachmentsHelper) {
+        super(service);
+        this.attachmentsHelper = attachmentsHelper;
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
 
     @Override
     protected void validateCommon(Map<String, Object> args) {
-        // Org-level. Validar parámetros específicos
-        String fileName = opt(args, "fileName");
-        String dataB64 = opt(args, "dataBase64");
-        if (fileName == null || dataB64 == null) {
-            throw new IllegalArgumentException("'fileName' y 'dataBase64' son requeridos");
-        }
-        try { Base64.getDecoder().decode(dataB64); } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("'dataBase64' no es base64 válido");
-        }
+        attachmentsHelper.validateCreate(
+            Objects.toString(args.get("fileName"), null),
+            Objects.toString(args.get("dataBase64"), null)
+        );
     }
 
     @Override
@@ -55,39 +56,15 @@ public class AttachmentsCreateTool extends AbstractAzureDevOpsTool {
     @Override
     protected Map<String, Object> executeInternal(Map<String, Object> arguments) {
         if (azureService == null) return error("Servicio Azure DevOps no configurado en este entorno");
-        String fileName = arguments.get("fileName").toString().trim();
-        String dataB64 = arguments.get("dataBase64").toString().trim();
-        String ctStr = Optional.ofNullable(arguments.get("contentType")).map(Object::toString).filter(s -> !s.isBlank()).orElse("application/octet-stream");
-        byte[] data = Base64.getDecoder().decode(dataB64);
-
-        Map<String,String> query = new LinkedHashMap<>();
-        query.put("fileName", fileName);
-        Map<String,Object> resp = azureService.postCoreBinary("wit/attachments", query, data, "7.2-preview", MediaType.parseMediaType(ctStr));
-
+        String fileName = arguments.get("fileName").toString();
+        String dataB64 = arguments.get("dataBase64").toString();
+        String ctStr = attachmentsHelper.sanitizeContentType(arguments.get("contentType") == null ? null : arguments.get("contentType").toString());
+        byte[] data = attachmentsHelper.decodeBase64(dataB64);
+        Map<String,Object> resp = attachmentsHelper.createAttachment(fileName, data, ctStr);
         String formattedErr = tryFormatRemoteError(resp);
         if (formattedErr != null) return success(formattedErr);
-
-        return success(format(resp));
-    }
-
-    private String format(Map<String,Object> data) {
-        if (data == null || data.isEmpty()) return "(Respuesta vacía)";
-        if (data.containsKey("error")) return "Error remoto: " + data.get("error");
-        String id = Objects.toString(data.get("id"), null);
-        String url = Objects.toString(data.get("url"), null);
-        if (id != null || url != null) {
-            StringBuilder sb = new StringBuilder("=== Attachment Created ===\n\n");
-            if (id != null) sb.append("ID: ").append(id).append("\n");
-            if (url != null) sb.append("URL: ").append(url).append("\n");
-            return sb.toString();
-        }
-        return data.toString();
-    }
-
-    private String opt(Map<String,Object> m, String k) {
-        Object v = m.get(k);
-        if (v == null) return null;
-        String s = v.toString().trim();
-        return s.isEmpty()? null : s;
+        String formatted = attachmentsHelper.formatCreateResponse(resp);
+        if (formatted != null) return success(formatted);
+        return Map.of("isError", false, "raw", resp);
     }
 }

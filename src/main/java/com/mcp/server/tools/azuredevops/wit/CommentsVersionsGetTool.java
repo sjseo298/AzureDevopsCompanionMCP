@@ -1,6 +1,7 @@
 package com.mcp.server.tools.azuredevops.wit;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import com.mcp.server.services.helpers.WitCommentsVersionsGetHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -18,8 +19,13 @@ public class CommentsVersionsGetTool extends AbstractAzureDevOpsTool {
     private static final String DESC = "Obtiene una versión específica de un comentario.";
     private static final String API_VERSION_OVERRIDE = "7.2-preview.3";
 
+    private final WitCommentsVersionsGetHelper helper;
+
     @Autowired
-    public CommentsVersionsGetTool(AzureDevOpsClientService service) { super(service); }
+    public CommentsVersionsGetTool(AzureDevOpsClientService service) {
+        super(service);
+        this.helper = new WitCommentsVersionsGetHelper(service);
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
@@ -43,24 +49,16 @@ public class CommentsVersionsGetTool extends AbstractAzureDevOpsTool {
         Object wiObj = arguments.get("workItemId");
         Object ciObj = arguments.get("commentId");
         Object verObj = arguments.get("version");
-        if (wiObj == null || !wiObj.toString().matches("\\d+")) return error("'workItemId' es requerido y debe ser numérico");
-        if (ciObj == null || !ciObj.toString().matches("\\d+")) return error("'commentId' es requerido y debe ser numérico");
-        if (verObj == null || !verObj.toString().matches("\\d+")) return error("'version' es requerido y debe ser numérico");
+        try {
+            helper.validate(project, wiObj, ciObj, verObj);
+        } catch (IllegalArgumentException e) {
+            return error(e.getMessage());
+        }
         String wi = wiObj.toString();
         String ci = ciObj.toString();
         String ver = verObj.toString();
-        String endpoint = "workItems/" + wi + "/comments/" + ci + "/versions/" + ver;
-        Map<String,Object> resp = azureService.getWitApiWithQuery(project, team, endpoint, null, API_VERSION_OVERRIDE);
-        String formattedErr = tryFormatRemoteError(resp);
-        if (formattedErr != null) return success(formattedErr);
+        Map<String,Object> resp = helper.fetchVersion(project, team, wi, ci, ver, API_VERSION_OVERRIDE);
         if (resp.isEmpty()) return success("(Versión no disponible o endpoint no habilitado en esta organización)");
-        return success(format(resp));
-    }
-
-    private String format(Map<String,Object> data) {
-        if (data == null || data.isEmpty()) return "(Sin datos)";
-        Object ver = data.get("version");
-        Object text = data.get("text");
-        return "Comentario v" + (ver != null ? ver : "?") + ":\n" + (text != null ? text.toString() : "");
+        return success(helper.formatVersionResponse(resp));
     }
 }

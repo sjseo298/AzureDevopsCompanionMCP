@@ -1,6 +1,7 @@
 package com.mcp.server.tools.azuredevops.wit;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import com.mcp.server.services.helpers.WitClassificationNodesUpdateHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -18,8 +19,13 @@ public class ClassificationNodesUpdateTool extends AbstractAzureDevOpsTool {
     private static final String DESC = "Actualiza un nodo de clasificación (areas/iterations) a nivel de proyecto.";
     private static final String API_VERSION_OVERRIDE = "7.2-preview"; // doc local
 
+    private final WitClassificationNodesUpdateHelper helper;
+
     @Autowired
-    public ClassificationNodesUpdateTool(AzureDevOpsClientService service) { super(service); }
+    public ClassificationNodesUpdateTool(AzureDevOpsClientService service) {
+        super(service);
+        this.helper = new WitClassificationNodesUpdateHelper(service);
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
@@ -43,33 +49,18 @@ public class ClassificationNodesUpdateTool extends AbstractAzureDevOpsTool {
     protected Map<String, Object> executeInternal(Map<String, Object> arguments) {
         if (azureService == null) return error("Servicio Azure DevOps no configurado en este entorno");
         String project = getProject(arguments);
-        if (project == null || project.isBlank()) return error("Parámetro 'project' es obligatorio.");
         String team = getTeam(arguments);
-        String group = Optional.ofNullable(arguments.get("group")).map(Object::toString).map(s -> s.trim().toLowerCase(Locale.ROOT)).orElse(null);
-        if (!"areas".equals(group) && !"iterations".equals(group)) return error("Parámetro 'group' inválido. Valores: areas, iterations.");
-        String path = Optional.ofNullable(arguments.get("path")).map(Object::toString).filter(s -> !s.isBlank()).orElse(null);
-        if (path == null) return error("Parámetro 'path' es obligatorio.");
-        String endpoint = "classificationnodes/" + group + "/" + path;
-
-        Map<String,Object> body = new LinkedHashMap<>();
-        String name = Optional.ofNullable(arguments.get("name")).map(Object::toString).filter(s -> !s.isBlank()).orElse(null);
-        if (name != null) body.put("name", name);
-
-        Map<String,Object> resp = azureService.patchWitApi(project, team, endpoint, body.isEmpty()? Map.of(): body, API_VERSION_OVERRIDE);
-        String formattedErr = tryFormatRemoteError(resp);
-        if (formattedErr != null) return success(formattedErr);
-        return success(format(resp));
-    }
-
-    private String format(Map<String,Object> data) {
-        if (data == null || data.isEmpty()) return "(Respuesta vacía)";
-        String name = Objects.toString(data.get("name"), null);
-        Object id = data.get("id");
-        String type = Objects.toString(data.get("structureType"), null);
-        StringBuilder sb = new StringBuilder("=== Classification Node (PATCH) ===\n\n");
-        if (id != null) sb.append("Id: ").append(id).append('\n');
-        if (name != null) sb.append("Name: ").append(name).append('\n');
-        if (type != null) sb.append("Type: ").append(type).append('\n');
-        return sb.toString();
+        String group = arguments.get("group") != null ? arguments.get("group").toString().trim().toLowerCase() : null;
+        String path = arguments.get("path") != null ? arguments.get("path").toString().trim() : null;
+        Object nameArg = arguments.get("name");
+        try {
+            helper.validate(project, group, path);
+        } catch (IllegalArgumentException e) {
+            return error(e.getMessage());
+        }
+        String endpoint = helper.buildEndpoint(group, path);
+        Map<String,Object> body = helper.buildBody(nameArg);
+        Map<String,Object> resp = helper.patchNode(project, team, endpoint, body, API_VERSION_OVERRIDE);
+        return success(helper.formatNodeResponse(resp));
     }
 }

@@ -2,6 +2,7 @@ package com.mcp.server.tools.azuredevops.wit;
 
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import com.mcp.server.services.helpers.WitAttachmentsHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -18,16 +19,20 @@ public class AttachmentsDeleteTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_wit_attachments_delete";
     private static final String DESC = "Elimina permanentemente un adjunto por ID.";
 
+    private final WitAttachmentsHelper attachmentsHelper;
+
     @Autowired
-    public AttachmentsDeleteTool(AzureDevOpsClientService service) { super(service); }
+    public AttachmentsDeleteTool(AzureDevOpsClientService service, WitAttachmentsHelper attachmentsHelper) {
+        super(service);
+        this.attachmentsHelper = attachmentsHelper;
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
 
     @Override
     protected void validateCommon(Map<String, Object> args) {
-        String id = opt(args, "id");
-        if (id == null) throw new IllegalArgumentException("'id' es requerido");
+        attachmentsHelper.validateDelete(Objects.toString(args.get("id"), null));
     }
 
     @Override
@@ -40,17 +45,14 @@ public class AttachmentsDeleteTool extends AbstractAzureDevOpsTool {
     @Override
     protected Map<String, Object> executeInternal(Map<String, Object> arguments) {
         if (azureService == null) return error("Servicio Azure DevOps no configurado en este entorno");
-        String id = arguments.get("id").toString().trim();
-        Map<String,Object> resp = azureService.deleteCoreApi("wit/attachments/"+id, null, null);
+        String id = arguments.get("id").toString();
+        Map<String,Object> resp = attachmentsHelper.deleteAttachment(id);
         String formattedErr = tryFormatRemoteError(resp);
         if (formattedErr != null) return success(formattedErr);
-        return success("Adjunto eliminado (si existía)");
+        String formatted = attachmentsHelper.formatDeleteResponse(resp);
+        if (formatted != null) return success(formatted);
+        return Map.of("isError", false, "raw", resp);
     }
 
-    private String opt(Map<String,Object> m, String k) {
-        Object v = m.get(k);
-        if (v == null) return null;
-        String s = v.toString().trim();
-        return s.isEmpty()? null : s;
-    }
+    // ...existing code...
 }

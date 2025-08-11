@@ -1,6 +1,7 @@
 package com.mcp.server.tools.azuredevops.wit;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import com.mcp.server.services.helpers.WitCommentsUpdateHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -18,8 +19,13 @@ public class CommentsUpdateTool extends AbstractAzureDevOpsTool {
     private static final String DESC = "Actualiza el texto de un comentario de un work item.";
     private static final String API_VERSION_OVERRIDE = "7.0-preview.3";
 
+    private final WitCommentsUpdateHelper helper;
+
     @Autowired
-    public CommentsUpdateTool(AzureDevOpsClientService service) { super(service); }
+    public CommentsUpdateTool(AzureDevOpsClientService service) {
+        super(service);
+        this.helper = new WitCommentsUpdateHelper(service);
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
@@ -43,19 +49,15 @@ public class CommentsUpdateTool extends AbstractAzureDevOpsTool {
         Object wiObj = arguments.get("workItemId");
         Object ciObj = arguments.get("commentId");
         Object textObj = arguments.get("text");
-        if (wiObj == null || !wiObj.toString().matches("\\d+")) return error("'workItemId' es requerido y debe ser numérico");
-        if (ciObj == null || !ciObj.toString().matches("\\d+")) return error("'commentId' es requerido y debe ser numérico");
-        if (textObj == null || textObj.toString().trim().isEmpty()) return error("'text' es requerido");
+        try {
+            helper.validate(project, wiObj, ciObj, textObj);
+        } catch (IllegalArgumentException e) {
+            return error(e.getMessage());
+        }
         String wi = wiObj.toString();
         String ci = ciObj.toString();
         String text = textObj.toString();
-        String endpoint = "workItems/" + wi + "/comments/" + ci;
-        Map<String,Object> body = Map.of("text", text);
-        Map<String,Object> resp = azureService.patchWitApi(project, team, endpoint, body, API_VERSION_OVERRIDE);
-        String formattedErr = tryFormatRemoteError(resp);
-        if (formattedErr != null) return success(formattedErr);
-        Object id = resp.get("id");
-        Object ver = resp.get("version");
-        return success("Comentario actualizado id=" + (id!=null?id:"?") + ", version=" + (ver!=null?ver:"?") );
+        Map<String,Object> resp = helper.updateComment(project, team, wi, ci, text, API_VERSION_OVERRIDE);
+        return success(helper.formatUpdateResponse(resp));
     }
 }

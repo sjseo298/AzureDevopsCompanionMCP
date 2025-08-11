@@ -2,6 +2,7 @@ package com.mcp.server.tools.azuredevops.wit;
 
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
+import com.mcp.server.services.helpers.WitClassificationNodesHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -18,8 +19,13 @@ public class ClassificationNodesCreateOrUpdateTool extends AbstractAzureDevOpsTo
     private static final String DESC = "Crea o actualiza un nodo de clasificación (areas/iterations) a nivel de proyecto.";
     private static final String API_VERSION_OVERRIDE = "7.2-preview"; // doc local
 
+    private final WitClassificationNodesHelper nodesHelper;
+
     @Autowired
-    public ClassificationNodesCreateOrUpdateTool(AzureDevOpsClientService service) { super(service); }
+    public ClassificationNodesCreateOrUpdateTool(AzureDevOpsClientService service, WitClassificationNodesHelper nodesHelper) {
+        super(service);
+        this.nodesHelper = nodesHelper;
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
@@ -43,37 +49,17 @@ public class ClassificationNodesCreateOrUpdateTool extends AbstractAzureDevOpsTo
     protected Map<String, Object> executeInternal(Map<String, Object> arguments) {
         if (azureService == null) return error("Servicio Azure DevOps no configurado en este entorno");
         String project = getProject(arguments);
-        if (project == null || project.isBlank()) return error("Parámetro 'project' es obligatorio.");
         String team = getTeam(arguments);
-        String group = Optional.ofNullable(arguments.get("group")).map(Object::toString).map(s -> s.trim().toLowerCase(Locale.ROOT)).orElse(null);
-        if (!"areas".equals(group) && !"iterations".equals(group)) return error("Parámetro 'group' inválido. Valores: areas, iterations.");
-        String path = Optional.ofNullable(arguments.get("path")).map(Object::toString).filter(s -> !s.isBlank()).orElse(null);
-        if (path == null) return error("Parámetro 'path' es obligatorio.");
-        String endpoint = "classificationnodes/" + group + "/" + path;
-
-        String name = Optional.ofNullable(arguments.get("name")).map(Object::toString).filter(s -> !s.isBlank()).orElse(null);
-        if (name == null) {
-            String[] parts = path.split("/");
-            name = parts.length > 0 ? parts[parts.length - 1] : path;
-        }
-        Map<String,Object> body = new LinkedHashMap<>();
-        body.put("name", name);
-
-        Map<String,Object> resp = azureService.putWitApi(project, team, endpoint, body, API_VERSION_OVERRIDE);
+        String group = Objects.toString(arguments.get("group"), null);
+        String path = Objects.toString(arguments.get("path"), null);
+        nodesHelper.validateCreateOrUpdate(project, group, path);
+        String name = nodesHelper.resolveName(path, arguments.get("name"));
+        Map<String,Object> body = nodesHelper.buildBody(name);
+        Map<String,Object> resp = nodesHelper.putNode(project, team, group, path, body, API_VERSION_OVERRIDE);
         String formattedErr = tryFormatRemoteError(resp);
         if (formattedErr != null) return success(formattedErr);
-        return success(format(resp));
-    }
-
-    private String format(Map<String,Object> data) {
-        if (data == null || data.isEmpty()) return "(Respuesta vacía)";
-        String name = Objects.toString(data.get("name"), null);
-        Object id = data.get("id");
-        String type = Objects.toString(data.get("structureType"), null);
-        StringBuilder sb = new StringBuilder("=== Classification Node (PUT) ===\n\n");
-        if (id != null) sb.append("Id: ").append(id).append('\n');
-        if (name != null) sb.append("Name: ").append(name).append('\n');
-        if (type != null) sb.append("Type: ").append(type).append('\n');
-        return sb.toString();
+        String formatted = nodesHelper.formatNodeResponse(resp);
+        if (formatted != null) return success(formatted);
+        return Map.of("isError", false, "raw", resp);
     }
 }

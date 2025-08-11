@@ -1,6 +1,7 @@
 package com.mcp.server.tools.azuredevops.wit;
 
 import com.mcp.server.services.AzureDevOpsClientService;
+import com.mcp.server.services.helpers.WitCommentsReactionsDeleteHelper;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -18,8 +19,13 @@ public class CommentsReactionsDeleteTool extends AbstractAzureDevOpsTool {
     private static final String DESC = "Elimina una reacción (like/dislike/heart/hooray/smile/confused) de un comentario.";
     private static final String API_VERSION_OVERRIDE = "7.2-preview.1";
 
+    private final WitCommentsReactionsDeleteHelper helper;
+
     @Autowired
-    public CommentsReactionsDeleteTool(AzureDevOpsClientService service) { super(service); }
+    public CommentsReactionsDeleteTool(AzureDevOpsClientService service) {
+        super(service);
+        this.helper = new WitCommentsReactionsDeleteHelper(service);
+    }
 
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
@@ -43,21 +49,15 @@ public class CommentsReactionsDeleteTool extends AbstractAzureDevOpsTool {
         Object wiObj = arguments.get("workItemId");
         Object ciObj = arguments.get("commentId");
         Object typeObj = arguments.get("type");
-        if (wiObj == null || !wiObj.toString().matches("\\d+")) return error("'workItemId' es requerido y debe ser numérico");
-        if (ciObj == null || !ciObj.toString().matches("\\d+")) return error("'commentId' es requerido y debe ser numérico");
-        if (typeObj == null) return error("'type' es requerido");
-        String type = typeObj.toString().toLowerCase(Locale.ROOT);
-        if (!List.of("like","dislike","heart","hooray","smile","confused").contains(type)) {
-            return error("'type' inválido. Valores: like, dislike, heart, hooray, smile, confused");
+        try {
+            helper.validate(project, wiObj, ciObj, typeObj);
+        } catch (IllegalArgumentException e) {
+            return error(e.getMessage());
         }
         String wi = wiObj.toString();
         String ci = ciObj.toString();
-        String endpoint = "workItems/" + wi + "/comments/" + ci + "/reactions/" + type;
-        Map<String,Object> resp = azureService.deleteWitApi(project, team, endpoint, API_VERSION_OVERRIDE);
-        String formattedErr = tryFormatRemoteError(resp);
-        if (formattedErr != null) return success(formattedErr);
-        Object count = resp.get("count");
-        Object me = resp.get("isCurrentUserEngaged");
-        return success("Reacción eliminada: " + type + " (count=" + (count!=null?count:0) + ", me=" + Boolean.TRUE.equals(me) + ")");
+        String type = typeObj.toString().toLowerCase();
+        Map<String,Object> resp = helper.deleteReaction(project, team, wi, ci, type, API_VERSION_OVERRIDE);
+        return success(helper.formatDeleteResponse(resp, type));
     }
 }
