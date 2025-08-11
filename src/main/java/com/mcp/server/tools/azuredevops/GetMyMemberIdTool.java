@@ -14,9 +14,12 @@ public class GetMyMemberIdTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_profile_get_my_memberid";
     private static final String DESC = "Obtiene el memberId (GUID) del usuario autenticado desde Profiles (VSSPS)";
 
+    private final ProfileGetMyMemberIdHelper helper;
+
     @Autowired
     public GetMyMemberIdTool(AzureDevOpsClientService service) {
         super(service);
+        this.helper = new ProfileGetMyMemberIdHelper(service);
     }
 
     @Override
@@ -44,21 +47,9 @@ public class GetMyMemberIdTool extends AbstractAzureDevOpsTool {
         if (azureService == null) {
             return error("Servicio Azure DevOps no configurado en este entorno");
         }
-        Map<String,Object> resp = azureService.getVsspsApi("profile/profiles/me");
+        Map<String,Object> resp = helper.fetchMyProfile();
         String formattedErr = tryFormatRemoteError(resp);
         if (formattedErr != null) return success(formattedErr);
-        return success(format(resp));
-    }
-
-    private String format(Map<String,Object> data) {
-        if (data == null || data.isEmpty()) return "(Respuesta vacía)";
-        if (data.containsKey("error")) return "Error remoto: " + data.get("error");
-        StringBuilder sb = new StringBuilder("=== Mi Perfil (memberId) ===\n\n");
-        sb.append("ID: ").append(data.get("id")).append("\n");
-        Object dn = data.get("displayName");
-        if (dn != null) sb.append("Nombre: ").append(dn).append("\n");
-        Object mail = data.get("emailAddress");
-        if (mail != null) sb.append("Email: ").append(mail).append("\n");
-        return sb.toString();
+        return success(helper.formatProfileResponse(resp));
     }
 }
