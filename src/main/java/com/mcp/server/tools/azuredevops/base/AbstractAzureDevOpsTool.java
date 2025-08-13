@@ -1,5 +1,7 @@
 package com.mcp.server.tools.azuredevops.base;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.tools.base.McpTool;
 import com.mcp.server.protocol.types.Tool;
@@ -11,6 +13,7 @@ import java.util.Map;
 public abstract class AbstractAzureDevOpsTool implements McpTool {
 
     protected final AzureDevOpsClientService azureService;
+    private static final ObjectMapper JSON = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     protected AbstractAzureDevOpsTool(AzureDevOpsClientService azureService) {
         this.azureService = azureService; // puede ser null en tests unitarios de validación
@@ -22,7 +25,8 @@ public abstract class AbstractAzureDevOpsTool implements McpTool {
     public final Map<String, Object> execute(Map<String, Object> arguments) {
         try {
             validateCommon(arguments);
-            return executeInternal(arguments);
+            Map<String,Object> out = executeInternal(arguments);
+            return normalizeOutput(out);
         } catch (IllegalArgumentException e) {
             return error("Parámetros inválidos: " + e.getMessage());
         } catch (Exception e) {
@@ -71,6 +75,35 @@ public abstract class AbstractAzureDevOpsTool implements McpTool {
             "isError", false,
             "content", List.of(Map.of("type", "text", "text", text))
         );
+    }
+
+    protected String toJson(Object obj) {
+        if (obj == null) return "null";
+        try { return JSON.writeValueAsString(obj); }
+        catch (Exception e) { return String.valueOf(obj); }
+    }
+
+    protected Map<String,Object> rawSuccess(Object raw) {
+        return Map.of(
+            "isError", false,
+            "raw", raw,
+            "content", List.of(Map.of("type","text","text", toJson(raw)))
+        );
+    }
+
+    protected Map<String,Object> normalizeOutput(Map<String,Object> out) {
+        if (out == null) return out;
+    Object content = out.get("content");
+    boolean hasContentList = content instanceof java.util.List;
+    if (hasContentList) return out;
+
+    // Prefer mostrar JSON del 'raw' si existe; si no, del 'result'; si no, del objeto completo
+    Object raw = out.get("raw");
+    Object result = out.get("result");
+    Object source = raw != null ? raw : (result != null ? result : out);
+    Map<String,Object> m = new java.util.HashMap<>(out);
+    m.put("content", java.util.List.of(java.util.Map.of("type","text","text", toJson(source))));
+    return m;
     }
 
     protected Map<String,Object> createBaseSchema() {

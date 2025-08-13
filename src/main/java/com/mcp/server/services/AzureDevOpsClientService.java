@@ -65,7 +65,7 @@ public class AzureDevOpsClientService {
         }
 
         @SuppressWarnings("unchecked")
-        Map<String, Object> body = webClient.get()
+        Map<String,Object> body = webClient.get()
             .uri(builder -> builder
                 .pathSegment(segments.toArray(new String[0]))
                 .queryParam("api-version", apiVersion)
@@ -73,14 +73,28 @@ public class AzureDevOpsClientService {
             )
             .exchangeToMono(resp -> {
                 if (resp.statusCode().isError()) {
-                    return resp.bodyToMono(Map.class).defaultIfEmpty(Map.of()).map(b -> {
-                        Map<String,Object> m = new HashMap<>();
-                        if (b != null) m.putAll(b);
-                        m.put("isHttpError", true);
-                        m.put("httpStatus", resp.statusCode().value());
-                        m.put("httpReason", resp.statusCode().toString());
-                        return m;
-                    });
+                    var ctype = resp.headers().contentType().orElse(null);
+                    boolean isJson = ctype != null && (MediaType.APPLICATION_JSON.includes(ctype) ||
+                            (ctype.getSubtype() != null && ctype.getSubtype().toLowerCase().contains("json")));
+                    if (isJson) {
+                        return resp.bodyToMono(Map.class).defaultIfEmpty(Map.of()).map(b -> {
+                            Map<String,Object> m = new HashMap<>();
+                            if (b != null) m.putAll(b);
+                            m.put("isHttpError", true);
+                            m.put("httpStatus", resp.statusCode().value());
+                            m.put("httpReason", resp.statusCode().toString());
+                            return m;
+                        });
+                    } else {
+                        return resp.bodyToMono(String.class).defaultIfEmpty("").map(s -> {
+                            Map<String,Object> m = new HashMap<>();
+                            m.put("isHttpError", true);
+                            m.put("httpStatus", resp.statusCode().value());
+                            m.put("httpReason", resp.statusCode().toString());
+                            if (s != null && !s.isBlank()) m.put("bodyRaw", s);
+                            return m;
+                        });
+                    }
                 }
                 return resp.bodyToMono(Map.class);
             })
@@ -123,14 +137,28 @@ public class AzureDevOpsClientService {
             })
             .exchangeToMono(resp -> {
                 if (resp.statusCode().isError()) {
-                    return resp.bodyToMono(Map.class).defaultIfEmpty(Map.of()).map(b -> {
-                        Map<String,Object> m = new HashMap<>();
-                        if (b != null) m.putAll(b);
-                        m.put("isHttpError", true);
-                        m.put("httpStatus", resp.statusCode().value());
-                        m.put("httpReason", resp.statusCode().toString());
-                        return m;
-                    });
+                    var ctype = resp.headers().contentType().orElse(null);
+                    boolean isJson = ctype != null && (MediaType.APPLICATION_JSON.includes(ctype) ||
+                            (ctype.getSubtype() != null && ctype.getSubtype().toLowerCase().contains("json")));
+                    if (isJson) {
+                        return resp.bodyToMono(Map.class).defaultIfEmpty(Map.of()).map(b -> {
+                            Map<String,Object> m = new HashMap<>();
+                            if (b != null) m.putAll(b);
+                            m.put("isHttpError", true);
+                            m.put("httpStatus", resp.statusCode().value());
+                            m.put("httpReason", resp.statusCode().toString());
+                            return m;
+                        });
+                    } else {
+                        return resp.bodyToMono(String.class).defaultIfEmpty("").map(s -> {
+                            Map<String,Object> m = new HashMap<>();
+                            m.put("isHttpError", true);
+                            m.put("httpStatus", resp.statusCode().value());
+                            m.put("httpReason", resp.statusCode().toString());
+                            if (s != null && !s.isBlank()) m.put("bodyRaw", s);
+                            return m;
+                        });
+                    }
                 }
                 return resp.bodyToMono(Map.class);
             })
@@ -158,14 +186,28 @@ public class AzureDevOpsClientService {
             .body(body != null ? BodyInserters.fromValue(body) : BodyInserters.empty())
             .exchangeToMono(r -> {
                 if (r.statusCode().isError()) {
-                    return r.bodyToMono(Map.class).defaultIfEmpty(Map.of()).map(b -> {
-                        Map<String,Object> m = new HashMap<>();
-                        if (b != null) m.putAll(b);
-                        m.put("isHttpError", true);
-                        m.put("httpStatus", r.statusCode().value());
-                        m.put("httpReason", r.statusCode().toString());
-                        return m;
-                    });
+                    var ctype = r.headers().contentType().orElse(null);
+                    boolean isJson = ctype != null && (MediaType.APPLICATION_JSON.includes(ctype) ||
+                            (ctype.getSubtype() != null && ctype.getSubtype().toLowerCase().contains("json")));
+                    if (isJson) {
+                        return r.bodyToMono(Map.class).defaultIfEmpty(Map.of()).map(b -> {
+                            Map<String,Object> m = new HashMap<>();
+                            if (b != null) m.putAll(b);
+                            m.put("isHttpError", true);
+                            m.put("httpStatus", r.statusCode().value());
+                            m.put("httpReason", r.statusCode().toString());
+                            return m;
+                        });
+                    } else {
+                        return r.bodyToMono(String.class).defaultIfEmpty("").map(s -> {
+                            Map<String,Object> m = new HashMap<>();
+                            m.put("isHttpError", true);
+                            m.put("httpStatus", r.statusCode().value());
+                            m.put("httpReason", r.statusCode().toString());
+                            if (s != null && !s.isBlank()) m.put("bodyRaw", s);
+                            return m;
+                        });
+                    }
                 }
                 return r.bodyToMono(Map.class);
             })
@@ -215,14 +257,28 @@ public class AzureDevOpsClientService {
                 .uri(url) // absoluta, ignora baseUrl
                 .exchangeToMono(resp -> {
                     if (resp.statusCode().isError()) {
-                        return resp.bodyToMono(Map.class).defaultIfEmpty(Map.of()).map(b -> {
-                            Map<String,Object> m = new HashMap<>();
-                            if (b != null) m.putAll(b);
-                            m.put("isHttpError", true);
-                            m.put("httpStatus", resp.statusCode().value());
-                            m.put("httpReason", resp.statusCode().toString());
-                            return m;
-                        });
+                        var ctype = resp.headers().contentType().orElse(null);
+                        boolean isJson = ctype != null && (MediaType.APPLICATION_JSON.includes(ctype) ||
+                                (ctype.getSubtype() != null && ctype.getSubtype().toLowerCase().contains("json")));
+                        if (isJson) {
+                            return resp.bodyToMono(Map.class).defaultIfEmpty(Map.of()).map(b -> {
+                                Map<String,Object> m = new HashMap<>();
+                                if (b != null) m.putAll(b);
+                                m.put("isHttpError", true);
+                                m.put("httpStatus", resp.statusCode().value());
+                                m.put("httpReason", resp.statusCode().toString());
+                                return m;
+                            });
+                        } else {
+                            return resp.bodyToMono(String.class).defaultIfEmpty("").map(s -> {
+                                Map<String,Object> m = new HashMap<>();
+                                m.put("isHttpError", true);
+                                m.put("httpStatus", resp.statusCode().value());
+                                m.put("httpReason", resp.statusCode().toString());
+                                if (s != null && !s.isBlank()) m.put("bodyRaw", s);
+                                return m;
+                            });
+                        }
                     }
                     return resp.bodyToMono(Map.class);
                 })
