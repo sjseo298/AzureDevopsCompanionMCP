@@ -23,7 +23,7 @@ public class WitWorkItemCreateHelper {
     }
 
     public Map<String,Object> createWorkItem(Map<String,Object> args) {
-        String project = args.getOrDefault("project","" ).toString();
+    String project = args.getOrDefault("project","" ).toString();
         String type = args.getOrDefault("type","" ).toString();
         String title = args.getOrDefault("title","" ).toString();
         String apiVersion = args.getOrDefault("apiVersion","7.2-preview").toString();
@@ -31,7 +31,7 @@ public class WitWorkItemCreateHelper {
         String iteration = args.getOrDefault("iteration",null) != null ? args.get("iteration").toString() : null;
         String description = args.getOrDefault("description",null) != null ? args.get("description").toString() : null;
         String state = args.getOrDefault("state",null) != null ? args.get("state").toString() : null;
-        Integer parentId = args.getOrDefault("parentId",null) != null ? Integer.valueOf(args.get("parentId").toString()) : null;
+    Integer parentId = args.getOrDefault("parentId",null) != null ? Integer.valueOf(args.get("parentId").toString()) : null;
         String fields = args.getOrDefault("fields",null) != null ? args.get("fields").toString() : null;
         String relations = args.getOrDefault("relations",null) != null ? args.get("relations").toString() : null;
         boolean raw = Boolean.TRUE.equals(args.get("raw"));
@@ -64,7 +64,26 @@ public class WitWorkItemCreateHelper {
         String parentArea = null, parentIter = null, parentUrl = null;
         if (parentId != null) {
             WitWorkItemGetHelper getHelper = new WitWorkItemGetHelper(client);
+            // Si no se especificó project intentar una inferencia mínima: necesitamos proyecto para la ruta scoped.
+            // Estrategia: Intentar consultar sin project (cliente añadirá solo /_apis/wit/... y Azure DevOps permite /_apis/wit/workitems/{id})
             Map<String,Object> parentJson = getHelper.getWorkItem(project, parentId, "System.AreaPath,System.IterationPath", apiVersion);
+            if ((project == null || project.isBlank()) && parentJson != null) {
+                // Intentar extraer project guid o name desde URL canonical si disponible
+                Object pUrl = parentJson.get("url");
+                if (pUrl instanceof String) {
+                    String url = (String)pUrl;
+                    // Ej: https://dev.azure.com/org/PROJECTGUID/_apis/wit/workItems/123
+                    // Tomar el segmento anterior a _apis
+                    int idxApis = url.indexOf("/_apis/wit/workItems/");
+                    if (idxApis > 0) {
+                        String prefix = url.substring(0, idxApis); // https://dev.azure.com/org/PROJECTGUID
+                        String[] segs = prefix.split("/");
+                        if (segs.length >= 5) { // .. dev.azure.com org PROJECTGUID
+                            project = segs[segs.length-1];
+                        }
+                    }
+                }
+            }
             if (parentJson != null && parentJson.get("fields") instanceof Map) {
                 Map<?,?> fm = (Map<?,?>)parentJson.get("fields");
                 Object paObj = fm.get("System.AreaPath");
@@ -82,6 +101,11 @@ public class WitWorkItemCreateHelper {
             if (parentUrl != null && !parentUrl.isBlank()) {
                 patch.add(Map.of("op","add","path","/relations/-","value",Map.of("rel","System.LinkTypes.Hierarchy-Reverse","url",parentUrl)));
             }
+        }
+
+        // Si aún no tenemos project (no se infirió) no podemos construir endpoint scoped -> devolver error consistente
+        if (project == null || project.isBlank()) {
+            return Map.of("isError", true, "message", "No se pudo inferir el proyecto a partir del parentId; especifique 'project'.");
         }
 
         if (relations != null && !relations.isEmpty()) {
@@ -119,7 +143,7 @@ public class WitWorkItemCreateHelper {
         if (bypassRules) query.put("bypassRules", "true");
         if (suppressNotifications) query.put("suppressNotifications", "true");
         if (validateOnly) query.put("validateOnly", "true");
-        String path = "workitems/$" + type;
+    String path = "workitems/$" + type;
     Map<String,Object> resp = client.postWitApiWithQuery(project, null, path, query, patch, apiVersion, MediaType.valueOf("application/json-patch+json"));
 
         if (!noDiagnostic && resp != null && resp.containsKey("customProperties")) {
@@ -160,7 +184,7 @@ public class WitWorkItemCreateHelper {
                             }
                         }
                         if ((pickInfo.isEmpty() || typeInfo.isEmpty()) && !ref.isEmpty()) {
-                            Map<String,Object> global = (Map<String,Object>)globalCache.computeIfAbsent(ref, r -> fieldsGlobalHelper.getFieldGlobal(r, true));
+                            @SuppressWarnings("unchecked") Map<String,Object> global = (Map<String,Object>)globalCache.computeIfAbsent(ref, r -> fieldsGlobalHelper.getFieldGlobal(r, true));
                             if (global != null) {
                                 if (typeInfo.isEmpty() && global.get("type") != null) typeInfo = " | type: " + global.get("type");
                                 if (pickInfo.isEmpty() && Boolean.TRUE.equals(global.get("isPicklist")) && global.get("picklistId") != null) {

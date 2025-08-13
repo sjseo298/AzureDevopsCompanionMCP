@@ -19,6 +19,10 @@ public class WorkItemsListTool extends AbstractAzureDevOpsTool {
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
 
+    // Este endpoint (GET _apis/wit/workitems?ids=) no requiere segmento de proyecto; hacemos project opcional.
+    @Override
+    protected boolean isProjectRequired() { return false; }
+
     @Override
     public Map<String,Object> getInputSchema() {
         Map<String,Object> props = new LinkedHashMap<>();
@@ -30,13 +34,12 @@ public class WorkItemsListTool extends AbstractAzureDevOpsTool {
         props.put("apiVersion", Map.of("type","string","description","Versión API","default", DEF_VER));
         props.put("api-version", Map.of("type","string","description","Alias (script) de apiVersion"));
         props.put("raw", Map.of("type","boolean","description","Devuelve JSON crudo"));
-        return Map.of("type","object","properties",props,"required",List.of("project","ids"));
+    return Map.of("type","object","properties",props,"required",List.of("ids"));
     }
 
     @Override
     protected Map<String,Object> executeInternal(Map<String,Object> args) {
-        String project = Objects.toString(args.get("project"),"");
-        if (project.isEmpty()) return error("project requerido");
+    String project = Objects.toString(args.get("project"),""); // opcional
         if (!args.containsKey("apiVersion") && args.containsKey("api-version")) args.put("apiVersion", args.get("api-version"));
         try {
             Map<String,Object> resp = helper.list(args);
