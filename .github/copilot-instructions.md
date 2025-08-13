@@ -1,38 +1,72 @@
 ---
 applyTo: "**"
-description: Documento unificado con las reglas de diseño, flujo y validación para implementar APIs de Azure DevOps (MCP Server)
+description: Reglas de implementación para APIs de Azure DevOps (MCP Server)
 ---
 
-quiero que seas practico y que conforme vas leyendo una documentacion vayas creando los archivos indicados, para evitar que tengas una ventana de contexto que se llene.
+## Principios de Arquitectura
 
-1. Mantener las clases Tool únicamente como capa de adaptación para MCP, sin lógica de negocio interna.
-2. Extrae un helper o servicio que encapsule la funcionalidad que necesite la clase Tool.
-3. Hacer que la clase Tool delegue completamente esta funcionalidad al helper, en lugar de contener lógica propia.
-Actualizar los demás tools para que también llamen al helper.
+### Separación de Responsabilidades
+1. **Tools (Capa MCP)**: Solo adaptación de parámetros y formateo de respuestas
+2. **Helpers (Lógica de Negocio)**: Encapsulan toda la funcionalidad específica
+3. **Cliente Unificado**: `AzureDevOpsClientService` para todas las llamadas HTTP
 
+### Enfoque Práctico
+- Implementa conforme lees la documentación
+- Crea archivos progresivamente para evitar sobrecarga de contexto
+- Valida cada endpoint con cURL antes de implementar
 
-## Stack y Alcance
-- Backend: Spring Boot (Java)
-- Cliente HTTP: WebClient
-- Protocolo: MCP
-- Auth: Azure DevOps PAT
-- Build: Gradle | Tests: JUnit 5 | Config: YAML/JSON
-- Alcance: implementar TODO lo documentado en `api_doc/` (incluye subcarpetas referenciadas), siguiendo el orden alfabético de archivos.
+## Stack Tecnológico
+- **Backend**: Spring Boot (Java)
+- **HTTP Client**: WebClient (ReactiveStreams)
+- **Protocolo**: MCP (Model Context Protocol)
+- **Autenticación**: Azure DevOps PAT (Personal Access Token)
+- **Build**: Gradle
+- **Testing**: JUnit 5
+- **Configuración**: YAML/JSON
+- **Scope**: Todo lo documentado en `api_doc/` (orden alfabético)
 
-## Variables de entorno y Bases
-- Requeridas: `AZURE_DEVOPS_ORGANIZATION`, `AZURE_DEVOPS_PAT`
-- Opcionales con default: `AZURE_DEVOPS_API_VERSION=7.2-preview.1`, `AZURE_DEVOPS_VSSPS_API_VERSION=7.1`
-- Bases:
-  - `DEVOPS_BASE=https://dev.azure.com/${AZURE_DEVOPS_ORGANIZATION}` (proyecto/organización)
-  - `VSSPS_BASE=https://app.vssps.visualstudio.com` (Accounts/Profiles)
-- Seguridad: nunca registrar el PAT.
+## Configuración del Entorno
 
-## Flujo de trabajo obligatorio
-1) Elegir endpoint en `api_doc/` (y sus subsecciones referenciadas).
-2) Crear script(s) cURL de validación en `scripts/curl/<area>/`, usando `_env.sh`.
-3) Ejecutar y ajustar hasta validar (sin 4xx/5xx con datos válidos).
-4) Implementar herramienta MCP usando el cliente unificado.
-5) Añadir tests mínimos, documentar uso y actualizar progreso.
+### Variables Requeridas
+```bash
+AZURE_DEVOPS_ORGANIZATION    # Nombre de la organización
+AZURE_DEVOPS_PAT            # Personal Access Token
+```
+
+### Variables Opcionales (con defaults)
+```bash
+AZURE_DEVOPS_API_VERSION=7.2-preview.1
+AZURE_DEVOPS_VSSPS_API_VERSION=7.1
+```
+
+### URLs Base
+- **DevOps**: `https://dev.azure.com/${AZURE_DEVOPS_ORGANIZATION}` (proyectos/organización)
+- **VSSPS**: `https://app.vssps.visualstudio.com` (Accounts/Profiles)
+
+### Seguridad
+- **NUNCA** registrar el PAT en logs o archivos
+- Usar variables de entorno para credenciales
+
+## Flujo de Desarrollo Obligatorio
+
+### 1. Selección de Endpoint
+- Elegir de `api_doc/` y subsecciones referenciadas
+- Seguir orden alfabético de implementación
+
+### 2. Validación con cURL
+- Crear script en `scripts/curl/<area>/`
+- Usar `_env.sh` para configuración
+- Ejecutar hasta validar (sin 4xx/5xx con datos válidos)
+
+### 3. Implementación MCP
+- Crear herramienta usando cliente unificado
+- Implementar helper con lógica de negocio
+- Tool solo como adaptador MCP
+
+### 4. Validación Final
+- Tests mínimos en verde
+- Documentar uso
+- Actualizar progreso
 
 ## Reglas para scripts cURL
 - Ubicación: `scripts/curl/<area>/<operacion>.sh`.
@@ -82,23 +116,19 @@ Actualizar los demás tools para que también llamen al helper.
   - Profile: `azuredevops_profile_get_my_memberid`.
 - Migración: renombrar herramientas existentes que no cumplan el estándar y actualizar tests/documentación.
 
-## Manejo genérico de errores HTTP (Azure DevOps)
-- El cliente `AzureDevOpsClientService` captura respuestas HTTP de error y las devuelve con estructura enriquecida:
-  - `isHttpError: true`, `httpStatus`, `httpReason` y el cuerpo JSON original (por ejemplo: `message`, `typeKey`, `typeName`, `errorCode`).
-- `AbstractAzureDevOpsTool` expone `tryFormatRemoteError(Map)` para formatear estos errores en texto claro para el agente.
-- Reglas para herramientas:
-  - Tras cada llamada a la API, invocar `tryFormatRemoteError(resp)`; si devuelve texto, retornar `success(textoError)` para mostrar un mensaje consistente al agente (sin stack traces).
-  - Mantener el mismo formato en todas las herramientas para errores provenientes de Azure DevOps.
-- Ejemplo de error formateado (del endpoint Boards):
-  - Entrada JSON: `{ "message": "TF400499: You have not set your team field.", "typeKey": "InvalidTeamSettingsException", ... }`
-  - Salida al agente: `Error remoto: TF400499: You have not set your team field. (type: InvalidTeamSettingsException)`
+## Manejo de Errores HTTP
+- El cliente `AzureDevOpsClientService` captura respuestas HTTP de error con estructura enriquecida:
+  - `isHttpError: true`, `httpStatus`, `httpReason` y cuerpo JSON original
+- `AbstractAzureDevOpsTool` expone `tryFormatRemoteError(Map)` para formatear errores
+- Tras cada llamada a la API, invocar `tryFormatRemoteError(resp)` para mantener formato consistente
 
-## Testing mínimo por herramienta
-- Validar definición (nombre, descripción, schema) y parámetros obligatorios (`project`).
-- (Opcional) Test de formateo con datos simulados si la lógica lo amerita.
+## Testing y Validación
+- **NO crear pruebas unitarias** a menos que sea explícitamente solicitado
+- Validar funcionamiento mediante scripts cURL y pruebas manuales
+- Verificar definición (nombre, descripción, schema) y parámetros obligatorios
 
-## Criterios de Hecho
-- Script(s) cURL creados y validados (sin 4xx/5xx con datos válidos).
-- Herramienta MCP implementa la misma ruta y parámetros que el script validado.
-- Tests mínimos en verde y documentación/progreso actualizados.
+## Criterios de Completitud
+- Script(s) cURL creados y validados (sin 4xx/5xx con datos válidos)
+- Herramienta MCP implementa la misma ruta y parámetros que el script validado
+- Tests mínimos en verde y documentación/progreso actualizados
 
