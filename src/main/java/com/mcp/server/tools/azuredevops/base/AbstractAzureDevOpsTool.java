@@ -61,6 +61,8 @@ public abstract class AbstractAzureDevOpsTool implements McpTool {
         Map<String,Object> m = new HashMap<>();
         m.put("isError", true);
         m.put("error", msg);
+    // Incluir mensaje también en content para visualización uniforme en el cliente
+    m.put("content", java.util.List.of(java.util.Map.of("type","text","text", msg)));
         return m;
     }
 

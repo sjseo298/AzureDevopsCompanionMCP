@@ -11,7 +11,7 @@ public class WitWorkItemsListHelper {
     public WitWorkItemsListHelper(AzureDevOpsClientService client) { this.client = client; }
 
     public Map<String,Object> list(Map<String,Object> args) {
-        String project = Objects.toString(args.get("project"),"");
+    String project = Objects.toString(args.get("project"),""); // puede estar vacío (nivel organización)
         String ids = Objects.toString(args.get("ids"),"").trim();
         String fields = opt(args,"fields");
         String expand = opt(args,"expand");

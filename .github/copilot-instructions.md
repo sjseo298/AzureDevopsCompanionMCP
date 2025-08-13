@@ -68,6 +68,13 @@ AZURE_DEVOPS_VSSPS_API_VERSION=7.1
 - Documentar uso
 - Actualizar progreso
 
+## Recarga del Servidor MCP
+Siempre que se realice un cambio en el código (nuevos helpers, tools, ajustes de cliente, etc.):
+1. Ejecutar build: `./gradlew clean build`.
+2. Reiniciar el servidor MCP para que los cambios queden activos.
+3. Volver a invocar el tool afectado y (si aplica) el script cURL correspondiente para validar.
+Esta notificación debe recordarse en cada respuesta tras aplicar cambios.
+
 ## Reglas para scripts cURL
 - Ubicación: `scripts/curl/<area>/<operacion>.sh`.
 - Incluir `scripts/curl/_env.sh` (valida variables, define `curl_json`, `DEVOPS_BASE`, `VSSPS_BASE`).

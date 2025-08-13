@@ -28,6 +28,10 @@ public class WorkItemCreateTool extends AbstractAzureDevOpsTool {
     @Override public String getName() { return NAME; }
     @Override public String getDescription() { return DESC; }
 
+    // Permitimos omitir project si se pasa parentId (se inferirá). La validación específica se hace en executeInternal.
+    @Override
+    protected boolean isProjectRequired() { return false; }
+
     @Override
     public Map<String,Object> getInputSchema() {
         Map<String,Object> props = new LinkedHashMap<>();
@@ -51,7 +55,8 @@ public class WorkItemCreateTool extends AbstractAzureDevOpsTool {
         return Map.of(
             "type","object",
             "properties", props,
-            "required", List.of("project","type","title")
+            // project ya no es obligatorio si hay parentId para inferir
+            "required", List.of("type","title")
         );
     }
 
@@ -60,11 +65,17 @@ public class WorkItemCreateTool extends AbstractAzureDevOpsTool {
         String project = Objects.toString(args.get("project"),"");
         String type = Objects.toString(args.get("type"),"");
         String title = Objects.toString(args.get("title"),"");
-        if (project.isEmpty() || type.isEmpty() || title.isEmpty()) {
-            return error("Faltan parámetros obligatorios: project, type, title");
+    // Permitimos project vacío si se provee parentId (se intentará inferir del padre)
+        Object parentIdObj = args.get("parentId");
+        if (((project == null || project.isEmpty()) && parentIdObj == null) || type.isEmpty() || title.isEmpty()) {
+            return error("Faltan parámetros obligatorios: type, title y project (o parentId para inferirlo)");
         }
         try {
             Map<String,Object> resp = helper.createWorkItem(args);
+            // Manejo de error local (inferir proyecto u otros)
+            if (Boolean.TRUE.equals(resp.get("isError")) && resp.get("message") != null) {
+                return error(resp.get("message").toString());
+            }
             String formattedErr = tryFormatRemoteError(resp);
             boolean raw = Boolean.TRUE.equals(args.get("raw"));
             boolean validateOnly = Boolean.TRUE.equals(args.get("validateOnly"));
