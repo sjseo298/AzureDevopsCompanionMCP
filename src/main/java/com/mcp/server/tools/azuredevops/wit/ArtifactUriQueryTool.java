@@ -13,8 +13,9 @@ import java.util.*;
 /**
  * Tool: azuredevops_wit_artifact_uri_query
  * Endpoint org-level: POST /_apis/wit/artifacturiquery
+ * Deshabilitado
  */
-@Component
+
 public class ArtifactUriQueryTool extends AbstractAzureDevOpsTool {
 
     private static final String NAME = "azuredevops_wit_artifact_uri_query";
