@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Script derivado de api_doc/wit_sections/work_items.md
 # Operación: Get Work Item (GET)
-# Nivel: Proyecto
+# Nivel: Proyecto (nota: también funciona a nivel organización si se omite --project)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -12,12 +12,12 @@ source "${ROOT_DIR}/_env.sh"
 
 usage() {
   cat <<'USAGE'
-Uso: work_items_get.sh --project <project> --id <id> [--fields <listaCampos>] [--expand <None|Relations|Links|All>] [--as-of <fechaISO>] [--api-version <ver>] [--raw]
+Uso: work_items_get.sh [--project <project>] --id <id> [--fields <listaCampos>] [--expand <None|Relations|Links|All>] [--as-of <fechaISO>] [--api-version <ver>] [--raw]
 
 Fuente: api_doc/wit_sections/work_items.md
 
 Parámetros:
-  --project       Proyecto (obligatorio)
+  --project       Proyecto (opcional; si se omite, consulta por ID a nivel organización)
   --id            ID del work item (obligatorio)
   --fields        Lista separada por comas de referenceNames a devolver
   --expand        None|Relations|Links|All (opcional) (se envía como $expand en la URL)
@@ -28,7 +28,8 @@ Parámetros:
 
 Ejemplos:
   scripts/curl/wit/work_items_get.sh --project Proj --id 123
-  scripts/curl/wit/work_items_get.sh --project Proj --id 123 --fields System.Id,System.Title,System.State --expand Relations
+  scripts/curl/wit/work_items_get.sh --id 123                               # nivel organización (sin proyecto)
+  scripts/curl/wit/work_items_get.sh --project "Proj con espacios" --id 123 --fields System.Id,System.Title,System.State --expand Relations
 USAGE
 }
 
@@ -54,11 +55,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -z "$PROJECT" ]] && echo "Falta --project" >&2 && usage && exit 2
 [[ -z "$ID" ]] && echo "Falta --id" >&2 && usage && exit 2
 
-ENC_PROJECT=$(jq -rn --arg s "$PROJECT" '$s|@uri')
-URL="${DEVOPS_BASE}/${ENC_PROJECT}/_apis/wit/workitems/${ID}?api-version=${API_VER}"
+if [[ -n "$PROJECT" ]]; then
+  ENC_PROJECT=$(jq -rn --arg s "$PROJECT" '$s|@uri')
+  URL="${DEVOPS_BASE}/${ENC_PROJECT}/_apis/wit/workitems/${ID}?api-version=${API_VER}"
+else
+  # Modo organización: sin segmento de proyecto
+  URL="${DEVOPS_BASE}/_apis/wit/workitems/${ID}?api-version=${API_VER}"
+fi
 
 if [[ -n "$FIELDS" ]]; then
   ENC_FIELDS=$(jq -rn --arg s "$FIELDS" '$s|@uri')
