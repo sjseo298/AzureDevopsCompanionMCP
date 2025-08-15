@@ -81,8 +81,8 @@ public class CoreTeamsHelper {
     public Map<String,String> buildListProjectTeamsQuery(Object topObj, Object skipObj) {
         Map<String,String> q = new LinkedHashMap<>();
         q.put("api-version","7.2-preview.3");
-        if (topObj != null) q.put("$top", topObj.toString());
-        if (skipObj != null) q.put("$skip", skipObj.toString());
+        if (topObj != null) q.put("top", topObj.toString());
+        if (skipObj != null) q.put("skip", skipObj.toString());
         return q;
     }
 
