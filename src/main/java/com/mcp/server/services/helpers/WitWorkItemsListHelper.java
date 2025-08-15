@@ -23,7 +23,7 @@ public class WitWorkItemsListHelper {
         Map<String,String> q = new LinkedHashMap<>();
         q.put("ids", ids);
         if (fields != null && !fields.isBlank()) q.put("fields", fields);
-        if (expand != null && !expand.isBlank()) q.put("expand", expand);
+        if (expand != null && !expand.isBlank()) q.put("$expand", expand);
         if (asOf != null && !asOf.isBlank()) q.put("asOf", asOf);
         q.put("api-version", apiVersion);
         return client.getWitApiWithQuery(project, null, "workitems", q, apiVersion);
