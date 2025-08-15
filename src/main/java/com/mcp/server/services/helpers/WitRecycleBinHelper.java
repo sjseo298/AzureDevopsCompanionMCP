@@ -50,6 +50,17 @@ public class WitRecycleBinHelper {
         return azureService.getWitApi(project,null,"recyclebin");
     }
 
+    public Map<String,Object> listWithPagination(String project, Object skip, Object top) {
+        Map<String,String> query = new LinkedHashMap<>();
+        if (skip != null) query.put("$skip", skip.toString());
+        if (top != null) query.put("$top", top.toString());
+        if (query.isEmpty()) {
+            return azureService.getWitApi(project,null,"recyclebin");
+        } else {
+            return azureService.getWitApiWithQuery(project,null,"recyclebin", query, "7.2-preview");
+        }
+    }
+
     public String formatDestroyResponse(Map<String,Object> resp) {
         if (Boolean.TRUE.equals(resp.get("isHttpError"))) {
             Object status = resp.get("httpStatus");

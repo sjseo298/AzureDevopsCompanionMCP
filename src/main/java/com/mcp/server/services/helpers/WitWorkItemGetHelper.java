@@ -30,8 +30,8 @@ public class WitWorkItemGetHelper {
 
         Map<String,String> q = new LinkedHashMap<>();
         if (fields != null && !fields.isBlank()) q.put("fields", fields);
-        // Nota: En scripts cURL se usa $expand; en helpers mantenemos 'expand' por consistencia interna
-        if (expand != null && !expand.isBlank()) q.put("expand", expand);
+        // Nota: Azure DevOps requiere el parámetro como $expand (con signo de dólar)
+        if (expand != null && !expand.isBlank()) q.put("$expand", expand);
         if (asOf != null && !asOf.isBlank()) q.put("asOf", asOf);
         q.put("api-version", apiVersion);
 
