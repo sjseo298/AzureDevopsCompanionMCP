@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Helper para operaciones de adjuntos (attachments) a nivel organización.
@@ -46,6 +48,34 @@ public class WitAttachmentsHelper {
     return azureService.postCoreBinary("wit/attachments", query, data, "7.2-preview", ct);
     }
 
+    /**
+     * Asocia un attachment recién creado (url completa) a un Work Item agregando relación AttachedFile.
+     * Devuelve respuesta del PATCH del work item o un Map con error.
+     */
+    public Map<String,Object> linkAttachmentToWorkItem(String project, int workItemId, String attachmentUrl, String comment, String apiVersion) {
+        if (project == null || project.isBlank()) {
+            return Map.of("isHttpError", true, "message", "'project' es requerido para asociar el adjunto");
+        }
+        if (attachmentUrl == null || attachmentUrl.isBlank()) {
+            return Map.of("isHttpError", true, "message", "'attachmentUrl' vacío");
+        }
+        List<Map<String,Object>> patch = new ArrayList<>();
+        Map<String,Object> rel = new LinkedHashMap<>();
+        rel.put("rel", "AttachedFile");
+        rel.put("url", attachmentUrl.trim());
+        if (comment != null && !comment.isBlank()) {
+            rel.put("attributes", Map.of("comment", comment));
+        }
+        patch.add(Map.of(
+            "op", "add",
+            "path", "/relations/-",
+            "value", rel
+        ));
+        Map<String,String> query = new LinkedHashMap<>();
+        query.put("api-version", apiVersion != null && !apiVersion.isBlank() ? apiVersion : "7.2-preview");
+        return azureService.patchWitApiWithQuery(project, null, "workitems/"+workItemId, query, patch, apiVersion, MediaType.valueOf("application/json-patch+json"));
+    }
+
     public String formatCreateResponse(Map<String,Object> data) {
         if (data == null || data.isEmpty()) return "(Respuesta vacía)";
         String id = Objects.toString(data.get("id"), null);
@@ -64,8 +94,28 @@ public class WitAttachmentsHelper {
         if (id == null || id.isBlank()) throw new IllegalArgumentException("'id' es requerido");
     }
 
+    /**
+     * Elimina un attachment. Requiere proyecto para el endpoint.
+     * @param project Nombre del proyecto
+     * @param id ID del attachment
+     * @return Respuesta del DELETE
+     */
+    public Map<String,Object> deleteAttachment(String project, String id) {
+        if (project == null || project.isBlank()) {
+            // Fallback al método sin proyecto (puede fallar en algunos casos)
+            return azureService.deleteCoreApi("wit/attachments/"+id.trim(), null, "7.2-preview");
+        }
+        return azureService.deleteWitApiWithQuery(project, null, "attachments/"+id.trim(), 
+            Map.of("api-version", "7.2-preview"), "7.2-preview");
+    }
+
+    /**
+     * Método legacy - elimina attachment sin especificar proyecto
+     * @deprecated Usar deleteAttachment(project, id) preferentemente
+     */
+    @Deprecated
     public Map<String,Object> deleteAttachment(String id) {
-        return azureService.deleteCoreApi("wit/attachments/"+id.trim(), null, null);
+        return deleteAttachment(null, id);
     }
 
     public String formatDeleteResponse(Map<String,Object> resp) {
