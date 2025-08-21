@@ -72,7 +72,20 @@ public class StdioTransportHandler implements CommandLineRunner {
         }
 
         try {
-            System.err.println("Processing message: " + message);
+            // Check if this is an HTTP request (health check)
+            if (isHttpRequest(message)) {
+                handleHttpRequest(message, writer);
+                return;
+            }
+            
+            // Check if this looks like JSON
+            if (!isJsonMessage(message)) {
+                System.err.println("Received non-JSON message, ignoring: " + 
+                    (message.length() > 50 ? message.substring(0, 50) + "..." : message));
+                return;
+            }
+            
+            System.err.println("Processing JSON message: " + message);
             
             // First check if this is a notification or a request by looking for an ID
             boolean hasId = message.contains("\"id\":");
@@ -114,6 +127,48 @@ public class StdioTransportHandler implements CommandLineRunner {
             System.err.println("Error in processMessage: " + e.getMessage());
             e.printStackTrace(System.err);
             throw e;
+        }
+    }
+    
+    private boolean isHttpRequest(String message) {
+        return message.startsWith("GET ") || message.startsWith("POST ") || 
+               message.startsWith("PUT ") || message.startsWith("DELETE ") ||
+               message.startsWith("HEAD ") || message.startsWith("OPTIONS ") ||
+               message.contains("HTTP/");
+    }
+    
+    private boolean isJsonMessage(String message) {
+        String trimmed = message.trim();
+        return (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+               (trimmed.startsWith("[") && trimmed.endsWith("]"));
+    }
+    
+    private void handleHttpRequest(String request, PrintWriter writer) {
+        try {
+            System.err.println("Handling HTTP request: " + 
+                (request.length() > 100 ? request.substring(0, 100) + "..." : request));
+            
+            if (request.contains("GET /health") || request.contains("GET /mcp/health")) {
+                // Simple health check response
+                writer.println("HTTP/1.1 200 OK");
+                writer.println("Content-Type: application/json");
+                writer.println("Content-Length: 25");
+                writer.println();
+                writer.println("{\"status\":\"healthy\"}");
+                writer.flush();
+                System.err.println("Health check response sent");
+            } else {
+                // For other HTTP requests, send a simple response
+                String response = "HTTP/1.1 400 Bad Request\r\n" +
+                                 "Content-Type: text/plain\r\n" +
+                                 "Content-Length: 47\r\n\r\n" +
+                                 "This is an MCP server, not an HTTP server.\r\n";
+                writer.print(response);
+                writer.flush();
+                System.err.println("HTTP 400 response sent for non-health request");
+            }
+        } catch (Exception e) {
+            System.err.println("Error handling HTTP request: " + e.getMessage());
         }
     }
     

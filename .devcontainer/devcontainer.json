@@ -1,7 +1,7 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
 {
-	"name": "Ubuntu",
+	"name": "Ubuntu with Docker",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"image": "mcr.microsoft.com/devcontainers/base:noble",
 	"features": {
@@ -14,20 +14,37 @@
 			"mavenVersion": "latest",
 			"antVersion": "latest",
 			"groovyVersion": "latest"
+		},
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+			"moby": false,
+			"dockerDashComposeVersion": "v2",
+			"installDockerBuildx": true
 		}
-	}
-
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
+	},
+	
+	// Mount Docker socket from host to enable Docker-outside-of-Docker
+	"mounts": [
+		"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+	],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
+	"forwardPorts": [8080, 8081, 8082],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "uname -a",
+	"postCreateCommand": "sudo chmod 666 /var/run/docker.sock && docker --version && docker-compose --version && echo 'Docker and Docker Compose are available!'",
 
 	// Configure tool-specific properties.
-	// "customizations": {},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-vscode.vscode-json",
+				"redhat.java",
+				"vscjava.vscode-java-pack",
+				"ms-azuretools.vscode-docker",
+				"ms-vscode.remote-containers"
+			]
+		}
+	}
 
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"

@@ -1,0 +1,134 @@
+INSTRUCCIONES SECUENCIALES PARA ACTUALIZAR FEATURE 875205 Y SUS TAREAS (2 SEMANAS, 21 HORAS TOTALES)
+
+PREMISAS
+- 1 punto de esfuerzo = 1 hora.
+- Duración total planificada: 2 semanas (21 horas) para el Feature 875205.
+- Distribución propuesta de horas (suma = 21):
+  * Tarea 875208: 8h
+  * Tarea 875226: 5h
+  * Tarea 877023: 8h (5h ya ejecutadas + 3h pendientes)
+- No se crean nuevas tareas de nivel Tarea; se gestionan Subtareas para granularidad semanal / diaria.
+- Solo se referencia el proceso y artefactos del proyecto (no se mencionan nombres de archivos específicos tipo .md en comentarios externos).
+
+---
+PROGRESO (última actualización 2025-08-15)
+- Paso 4: Criterios de aceptación añadidos al Feature (rev 9).
+- Paso 6: Comentario inicial de avance registrado (comentario id 19754837).
+- Paso 7-12: Tarea 875208 actualizada (rev 9) con descripción, Acceptance Criteria separados, estado 'En progreso', subtareas creadas (comentario id 19754948, IDs 883653, 883655, 883656, 883657).
+- Pasos 13-17: Tarea 875226 actualizada (rev 3) con puntos de esfuerzo=5, descripción/criterios y subtareas creadas (IDs 883658, 883659, 883660, 883661) y comentario planificación.
+- Pasos 18-25: Tarea 877023 actualizada (rev 5) puntos de esfuerzo=8, estado 'En progreso', subtareas históricas y pendientes creadas (IDs 883663, 883664, 883665, 883666, 883667, 883668) y comentario planificación (id 19754999).
+- Paso 26: Comentario de sincronización agregado al Feature (comentario id 19755061).
+- Próximos pasos: Ejecutar subtareas pendientes (métricas, edge cases, e2e), actualizar porcentajes (paso 29) y preparar validación integral (pasos 31-33) antes de comentario final del Feature.
+    * Ejecución iniciada: Subtarea métricas (ID 883666) puesta 'En progreso' (comentario avance id 19755082, 10%).
+    * Ejecución iniciada: Subtarea edge cases (ID 883667) puesta 'En progreso' (comentario avance id 19755090, 8%).
+
+1. Verificar capacidad personal de las próximas 2 semanas y confirmar que 21h caben dentro de la disponibilidad real (si no, reajustar antes de continuar).
+2. Abrir el Feature 875205 en Azure DevOps.
+3. Revisar que el responsable asignado (Owner) sea correcto; si no, reasignar.
+4. Actualizar la Descripción del Feature agregando sección "Criterios de Aceptación del Feature" con:
+   - Entregable 1: Conjunto completo de artefactos de parametrización del asistente (reglas por dominio, prompts base, estructura de configuración segmentada por dominios de arquitectura).
+   - Entregable 2: Integración funcional del asistente de validación invocable manualmente desde el entorno del desarrollador, generando reporte clasificado (Errores / Advertencias / Sugerencias) y categorías acordadas.
+   - Entregable 3: Mecanismo de distribución interna (repositorio / local reusable) con instrucciones de instalación y actualización.
+   - Criterio global de calidad: Reporte sin fallos de parsing para un conjunto de especificaciones de prueba y con resumen cuantitativo por severidad.
+   - Done global: Todos los subtotales de horas ejecutados, sin impedimentos abiertos, y evidencia en comentarios de validación end-to-end.
+5. Guardar cambios del Feature.
+6. Agregar comentario al Feature con formato:
+   Fecha: YYYY-MM-DD
+   Resumen semana actual: (breve detalle de lo ya construido en integración y reglas iniciales)
+   Horas consumidas: 5
+   Horas restantes: 16
+   Riesgos: (ej. falta de definición final de ubicación de distribución si aplica)
+   Próximos pasos (lista de siguientes subtareas por ejecutar)
+   Impedimentos: (vacío si ninguno)
+7. Ir a la Tarea 875208.
+8. Establecer Puntos de Esfuerzo = 8.
+9. Actualizar la Tarea 875208 separando correctamente Descripción y Criterios de Aceptación (campo dedicado):
+     Descripción (breve): Construir los artefactos de parametrización del asistente: estructura por dominios, prompts base y reglas iniciales; elaborar matriz cobertura dominios vs checks.
+     Criterios de Aceptación (refinados y medibles):
+         1. Estructura creada con carpetas/secciones por dominios: seguridad, observabilidad, diseño REST, versionado, gestión de errores, documentación/modelos, gobernanza.
+         2. Cada dominio con ≥3 reglas iniciales, sin duplicados ni mezcla de dominios.
+         3. Cada regla incluye propósito (≤120 caracteres) y nivel (Error/Advertencia/Sugerencia).
+         4. Ejecución de prueba: asistente carga la configuración sin errores y se registra en reporte de progreso (resultado y duración).
+         5. Matriz cobertura (Dominio | # Reglas | Gaps) publicada en reporte de progreso; al menos 1 gap identificado si aplica.
+         6. Convención de nombres definida y aplicada (documentada en reporte de progreso) para dominios y reglas.
+         7. No se modifica código núcleo para incorporar reglas (confirmado en reporte de progreso final).
+         8. Reporte de progreso final con timestamp, tabla cobertura final, resultado de carga y próximos pasos sugeridos.
+     Definición de Done: Cumplidos criterios 1–8 y reporte de progreso final registrado.
+10. Crear Subtareas de la 875208 con estimación (Remaining Work) y Acceptance Criteria: (COMPLETADO - IDs incluidos)
+    - Definir estructura de configuración y prompts base (ID 883653, 2h) | A/C: Estructura aprobada y cargable por el asistente sin errores.
+    - Generar reglas por dominios de arquitectura (ID 883655, 2h) | A/C: Cada dominio con lista inicial de checks; sin duplicados.
+    - Implementar script/local pipeline de orquestación (ID 883656, 2h) | A/C: Ejecución manual produce salida estructurada.
+    - Validar cobertura inicial (matriz dominios vs checks) (ID 883657, 2h) | A/C: Matriz documentada en comentario y gaps identificados.
+11. Marcar el estado de las Subtareas creadas como To Do / New (todas) y dejar Tarea 875208 en estado En progreso solo cuando inicie la primera ejecución.
+12. Agregar comentario a la Tarea 875208 con formato estándar (ver paso 6) indicando que se definieron horas y subtareas.
+13. Ir a la Tarea 875226.
+14. Establecer Puntos de Esfuerzo = 5.
+15. Actualizar Descripción con secciones:
+    Alcance: Preparar mecanismo de distribución interna (ubicación central, estructura reutilizable, convenciones de versionado y adopción) y garantizar reproducibilidad local.
+    Criterios de Aceptación:
+      - Ubicación definida y accesible para el equipo.
+      - Estructura lista para clonación/descarga rápida.
+      - Instrucciones de instalación y actualización claras.
+      - Estrategia de versionado inicial (etiqueta/tag o convención) definida.
+      - Validación en un entorno limpio confirmada en comentario.
+16. Crear Subtareas de la 875226: (COMPLETADO - IDs incluidos)
+    - Estructurar carpeta de distribución y licenciamiento (ID 883658, 1h) | A/C: Carpeta base con metadatos y licencia interna listos.
+    - Documentar proceso de instalación y uso (ID 883659, 2h) | A/C: Pasos para instalar y ejecutar sin ambigüedades.
+    - Validar reproducibilidad en entorno limpio (ID 883660, 1h) | A/C: Ejecución exitosa documentada con resultado resumido.
+    - Configurar esquema de versionado inicial (ID 883661, 1h) | A/C: Convención aprobada y registrada en comentario.
+17. Agregar comentario a la Tarea 875226 con formato estándar estableciendo plan y horas.
+18. Ir a la Tarea 877023.
+19. Verificar Puntos de Esfuerzo actuales = 5 (mantener para parte ya ejecutada) y añadir subtareas restantes para completar 8h totales (3h adicionales planificadas).
+20. Actualizar Descripción (si no está) añadiendo sección "Estado Parcial" con lo ya logrado: invocación manual disponible, clasificación por categorías funcionando, separación de reglas de la lógica, reporte básico generado.
+21. Crear Subtareas (si no existen) para lo realizado (marcarlas Done con horas completas): (COMPLETADO - IDs incluidos)
+    - Configurar invocación manual en el entorno (ID 883663, 1h) | Estado (marcar Done al registrar trabajo).
+    - Implementar clasificación y plantilla de reporte (ID 883664, 2h) | Estado Done planificado.
+    - Separar reglas de la lógica núcleo (ID 883665, 2h) | Estado Done planificado.
+22. Crear Subtareas pendientes (estado To Do): (COMPLETADO - IDs incluidos)
+    - Añadir métricas resumen por severidad (ID 883666, 1h) | A/C: Reporte incluye tabla de conteos.
+    - Manejar edge cases de parsing y errores silenciosos (ID 883667, 1h) | A/C: Casos inválidos generan mensajes claros sin fallo crítico.
+    - Prueba integral end-to-end y ajuste final (ID 883668, 1h) | A/C: Ejecución completa produce reporte sin errores y se deja evidencia.
+23. Totalizar horas de subtareas de la 877023 = 8 (5h completadas + 3h pendientes) y reflejarlo en campo Remaining Work (3h) si se usa.
+24. Cambiar estado de la Tarea 877023 a En progreso (si no lo está) y marcar subtareas done según corresponda.
+25. Agregar comentario a la Tarea 877023 con formato estándar: detallar subtareas completadas, hallazgos preliminares y próximos pasos.
+26. Regresar al Feature 875205 y agregar comentario de sincronización post-desglose:
+    - Horas asignadas por tarea.
+    - Subtareas creadas.
+    - Riesgos (ej. dependencia de aprobación de ubicación final de distribución).
+    - Plan de la semana (lista de subtareas a ejecutar).
+27. Validar que la suma de Puntos de Esfuerzo de Tareas (8 + 5 + 8) = 21 (igual al Feature). Si difiere, ajustar antes de avanzar.
+28. Registrar cualquier impedimento encontrado (ej. acceso a repositorio central) agregando comentario en la Tarea afectada y mencionando responsables.
+29. Al finalizar la semana 1: actualizar comentarios en cada Tarea con porcentaje de avance (basado en horas reales invertidas vs estimadas) y estado de riesgos.
+30. Al iniciar semana 2: revisar horas remanentes; si se agregan nuevas necesidades no previstas, crear subtarea adicional bajo la Tarea correspondiente y compensar quitando horas en otra (mantener 21 total) dejando comentario justificativo.
+31. Completar ejecución de subtareas pendientes de la 877023 en orden: métricas resumen -> edge cases -> prueba end-to-end.
+32. Ejecutar validación integral: correr el pipeline local con al menos 2 especificaciones (una simple y una compleja) y resumir resultados (conteos de severidades) en comentario de la 877023.
+33. Cerrar subtareas de la 875208 conforme se finalicen: actualizar comentario con matriz dominios vs checks y listar gaps.
+34. Cerrar subtareas de la 875226: documentar en comentario la convención de versionado y la verificación de instalación reproducible.
+35. Cuando todas las subtareas de las 3 Tareas estén en Done y criterios del Feature satisfechos, agregar comentario final al Feature:
+    - Lista de entregables confirmados.
+    - Evidencia resumida de validación end-to-end (conteos severidades, ausencia de errores críticos).
+    - Horas reales consumidas (desglose por tarea) y variaciones (>10% justificar).
+    - Confirmación de ausencia de impedimentos abiertos.
+36. Cambiar estado del Feature a Done (o equivalente) según flujo del proyecto.
+37. Notificar al stakeholder (mencionar en comentario si la política lo permite) confirmando disponibilidad para adopción.
+38. Archivar (si procede) cualquier impedimento resuelto marcándolo como tal en comentarios finales de tareas.
+39. Revisar tablero Kanban y asegurarse que las columnas reflejan el estado final (subtareas cerradas, tareas completas, Feature en Done).
+40. Registrar lecciones aprendidas en comentario final del Feature (breve: qué funcionó, qué mejorar).
+41. Fin del proceso.
+
+FORMATO SUGERIDO DE COMENTARIO (copiar en cada actualización):
+Fecha: YYYY-MM-DD
+Avance: (resumen de subtareas completadas)
+Horas consumidas acumuladas / plan: X / Y
+Porcentaje avance: (X/Y * 100)%
+Riesgos: (lista o 'Ninguno')
+Impedimentos: (lista o 'Ninguno')
+Próximos pasos: (subtareas previstas siguientes 2-3)
+Notas: (opcional)
+
+NOTAS DE GOBERNANZA
+- Mantener comentarios breves y estructurados evita pérdida de contexto.
+- Cualquier cambio en alcance debe reflejarse primero en descripción de la Tarea/Subtarea y luego en comentario justificando.
+- Si una subtarea excede 1 día de trabajo, dividir en dos para mantener granularidad de seguimiento.
+
+FIN
