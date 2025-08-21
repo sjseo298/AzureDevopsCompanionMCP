@@ -72,6 +72,98 @@ log_error() {
   echo -e "${RED}[$(date +'%H:%M:%S')] ❌ $1${NC}" >&2
 }
 
+# Función para modo interactivo
+interactive_mode() {
+  echo -e "${BLUE}🧪 Test Interactivo de Imagen Docker MCP Azure DevOps${NC}"
+  echo ""
+  
+  # Mostrar imágenes disponibles
+  echo -e "${YELLOW}🐳 Imágenes Docker disponibles:${NC}"
+  local images=($(docker images --format "table {{.Repository}}:{{.Tag}}" | grep mcp-azure-devops | grep -v REPOSITORY || true))
+  
+  if [[ ${#images[@]} -eq 0 ]]; then
+    log_error "No se encontraron imágenes mcp-azure-devops"
+    echo "Ejecuta primero: ./scripts/build-docker-image.sh"
+    exit 1
+  fi
+  
+  local i=1
+  for image in "${images[@]}"; do
+    local size=$(docker images --format "table {{.Size}}" "$image" | tail -n1)
+    echo "$i) $image ($size)"
+    ((i++))
+  done
+  echo ""
+  
+  # Seleccionar imagen
+  while true; do
+    read -p "🔸 Selecciona la imagen a probar (1-${#images[@]}) [default: 1]: " image_choice
+    image_choice=${image_choice:-1}
+    
+    if [[ "$image_choice" =~ ^[0-9]+$ ]] && [[ "$image_choice" -ge 1 ]] && [[ "$image_choice" -le ${#images[@]} ]]; then
+      IMAGE_NAME="${images[$((image_choice-1))]}"
+      break
+    else
+      echo -e "${RED}Opción inválida. Por favor selecciona un número entre 1 y ${#images[@]}.${NC}"
+    fi
+  done
+  
+  # Seleccionar modo de test
+  echo ""
+  echo -e "${YELLOW}🎯 Modos de test disponibles:${NC}"
+  echo "1) stdio - Probar modo STDIO (para clientes MCP locales)"
+  echo "2) http  - Probar modo HTTP (para acceso web)"
+  echo "3) all   - Probar ambos modos"
+  echo ""
+  
+  while true; do
+    read -p "🔸 Selecciona el modo de test (1-3) [default: 1]: " mode_choice
+    mode_choice=${mode_choice:-1}
+    
+    case $mode_choice in
+      1) TEST_MODE="stdio"; break;;
+      2) TEST_MODE="http"; break;;
+      3) TEST_MODE="all"; break;;
+      *) echo -e "${RED}Opción inválida. Por favor selecciona 1, 2 o 3.${NC}";;
+    esac
+  done
+  
+  # Configuración adicional
+  echo ""
+  echo -e "${YELLOW}⚙️  Configuración adicional:${NC}"
+  
+  if [[ "$TEST_MODE" == "http" || "$TEST_MODE" == "all" ]]; then
+    read -p "🌐 Puerto para modo HTTP [default: 8080]: " port_input
+    HTTP_PORT=${port_input:-8080}
+  fi
+  
+  read -p "⏱️  Timeout en segundos [default: 30]: " timeout_input
+  TIMEOUT=${timeout_input:-30}
+  
+  read -p "📄 Archivo .env con credenciales [default: .env]: " env_input
+  ENV_FILE=${env_input:-.env}
+  
+  echo ""
+  echo -e "${GREEN}✅ Configuración de test completada:${NC}"
+  echo -e "   🐳 Imagen: ${IMAGE_NAME}"
+  echo -e "   🎯 Modo: ${TEST_MODE}"
+  [[ "$TEST_MODE" == "http" || "$TEST_MODE" == "all" ]] && echo -e "   🌐 Puerto: ${HTTP_PORT}"
+  echo -e "   ⏱️  Timeout: ${TIMEOUT}s"
+  echo -e "   📄 Archivo .env: ${ENV_FILE}"
+  echo ""
+  
+  read -p "¿Continuar con el test? (Y/n): " confirm
+  if [[ $confirm =~ ^[Nn]$ ]]; then
+    echo -e "${YELLOW}Test cancelado por el usuario.${NC}"
+    exit 0
+  fi
+}
+
+# Verificar si se ejecuta sin argumentos (modo interactivo)
+if [[ $# -eq 0 ]]; then
+  interactive_mode
+fi
+
 # Verificar que Docker esté funcionando
 if ! docker --version >/dev/null 2>&1; then
   log_error "Docker no está disponible o no está funcionando"

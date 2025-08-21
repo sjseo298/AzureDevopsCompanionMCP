@@ -1,171 +1,122 @@
-# Scripts del Proyecto MCP Azure DevOps
+# 🚀 Scripts Interactivos MCP Azure DevOps
 
-Esta carpeta contiene scripts útiles para el desarrollo, construcción y testing del servidor MCP Azure DevOps.
+Esta carpeta contiene scripts interactivos para gestionar las imágenes Docker del servidor MCP Azure DevOps.
 
-## 📜 Scripts Disponibles
+## 📋 Scripts Disponibles
 
-### 🐳 Docker
+### 🎯 Script Principal
+- **`mcp-docker-helper.sh`** - Menú principal interactivo con todas las opciones
 
-#### `build-docker-image.sh`
-Construye la imagen Docker del servidor MCP según las especificaciones del README principal.
+### 🔨 Scripts de Construcción
+- **`build-docker-image.sh`** - Construcción interactiva de imágenes Docker
+- **`test-docker-image.sh`** - Testing interactivo de imágenes construidas
 
-**Uso básico:**
+## 🚀 Uso Rápido
+
 ```bash
+# Ejecutar el helper principal (recomendado)
+./scripts/mcp-docker-helper.sh
+
+# O ejecutar scripts individuales de forma interactiva
 ./scripts/build-docker-image.sh
-```
-
-**Opciones avanzadas:**
-```bash
-# Construcción limpia con tests
-./scripts/build-docker-image.sh --clean --test
-
-# Con tag personalizado
-./scripts/build-docker-image.sh --tag myregistry.io/mcp-azure-devops:v1.0.0
-
-# Sin caché
-./scripts/build-docker-image.sh --no-cache
-
-# Para push a registry
-./scripts/build-docker-image.sh --registry ghcr.io --push --tag ghcr.io/usuario/mcp-azure-devops:latest
-```
-
-#### `test-docker-image.sh`
-Prueba la imagen Docker construida para verificar que funciona correctamente.
-
-**Uso:**
-```bash
-# Probar modo STDIO
 ./scripts/test-docker-image.sh
-
-# Probar modo HTTP
-./scripts/test-docker-image.sh --mode http
-
-# Probar ambos modos
-./scripts/test-docker-image.sh --mode all
-
-# Con imagen específica
-./scripts/test-docker-image.sh --image mcp-azure-devops:custom
 ```
 
-### 🔄 Workflow Típico
+## 📊 Tipos de Imágenes Disponibles
 
-1. **Después de cambios en el código:**
-   ```bash
-   # Reconstruir imagen
-   ./scripts/build-docker-image.sh --clean
-   
-   # Probar que funciona
-   ./scripts/test-docker-image.sh --mode all
-   ```
+| Imagen | Tamaño | Optimización | Descripción |
+|--------|--------|--------------|-------------|
+| `mcp-azure-devops:latest` | ~473MB | Estándar | Versión base con todas las dependencias |
+| `mcp-azure-devops:slim` | ~358MB | Alpine Linux | Versión optimizada (↓24%) |
+| `mcp-azure-devops:ultra` | ~191MB | JRE Customizado | Ultra-optimizada (↓60%) |
 
-2. **Para producción:**
-   ```bash
-   # Construcción para producción
-   ./scripts/build-docker-image.sh \
-     --no-cache \
-     --tag mcp-azure-devops:$(date +%Y%m%d-%H%M%S) \
-     --test
-   ```
+## �� Modo Interactivo
 
-3. **Para development/testing:**
-   ```bash
-   # Construcción rápida
-   ./scripts/build-docker-image.sh --test
-   ```
+Todos los scripts funcionan en **modo interactivo** cuando se ejecutan sin parámetros:
 
-### 📋 Requisitos
-
-- **Docker**: Para construcción y testing de imágenes
-- **bash**: Todos los scripts requieren bash
-- **curl**: Para tests HTTP
-- **jq**: Para JSON processing (ya incluido en la imagen)
-- **netstat**: Para verificar puertos (generalmente disponible)
-
-### 🔧 Variables de Entorno
-
-Los scripts respetan las siguientes variables de entorno si están definidas:
-
-- `DOCKER_REGISTRY`: Registry por defecto para push
-- `MCP_IMAGE_TAG`: Tag por defecto para la imagen
-- `MCP_HTTP_PORT`: Puerto por defecto para modo HTTP
-
-Ejemplo:
+### 🔨 Build Interactivo
 ```bash
-export DOCKER_REGISTRY="ghcr.io/miusuario"
-export MCP_IMAGE_TAG="mcp-azure-devops:dev"
-./scripts/build-docker-image.sh --push
-```
-
-### 🚨 Troubleshooting
-
-#### Error: "Docker no está disponible"
-```bash
-# Verificar Docker
-docker --version
-
-# En sistemas Linux, agregar usuario al grupo docker
-sudo usermod -aG docker $USER
-# Luego logout/login
-```
-
-#### Error: "Imagen no encontrada"
-```bash
-# Listar imágenes disponibles
-docker images | grep mcp
-
-# Construir imagen si no existe
 ./scripts/build-docker-image.sh
 ```
+- Selección visual de Dockerfile (estándar/slim/ultra)
+- Configuración de tag automática
+- Opciones de limpieza y cache
+- Test post-construcción opcional
 
-#### Error: "Puerto en uso" (modo HTTP)
+### 🧪 Test Interactivo
 ```bash
-# Ver qué está usando el puerto
-netstat -an | grep :8080
+./scripts/test-docker-image.sh
+```
+- Detección automática de imágenes disponibles
+- Selección de modos de test (STDIO/HTTP/ALL)
+- Configuración de puertos y timeouts
 
-# Usar puerto alternativo
-./scripts/test-docker-image.sh --mode http --port 8090
+### 🎯 Helper Principal
+```bash
+./scripts/mcp-docker-helper.sh
+```
+- Menú completo con todas las operaciones
+- Vista general de imágenes disponibles
+- Ejecución rápida de contenedores
+- Limpieza y documentación
+
+## 📖 Ejemplos de Uso
+
+### Construir imagen ultra-optimizada:
+```bash
+$ ./scripts/build-docker-image.sh
+# Seleccionar opción 3 (Dockerfile.ultra)
+# Tag automático: mcp-azure-devops:ultra
 ```
 
-#### Error: "Timeout en tests"
+### Probar imagen con credenciales:
 ```bash
-# Aumentar timeout
-./scripts/test-docker-image.sh --timeout 60
-
-# Ver logs de contenedor para debugging
-docker logs <container_id>
+$ ./scripts/test-docker-image.sh  
+# Seleccionar imagen ultra
+# Modo STDIO con archivo .env
 ```
 
-### 💡 Tips
+### Ejecutar servidor rápidamente:
+```bash
+$ ./scripts/mcp-docker-helper.sh
+# Opción 6: Ejecutar imagen rápidamente
+# Seleccionar ultra + modo STDIO/HTTP
+```
 
-1. **Construcción más rápida**: Si solo cambiaste código Java, la construcción será más rápida por el cache de Docker.
+## ⚙️ Configuración
 
-2. **Debugging**: Si algo falla, usa `--test` para ver más información:
-   ```bash
-   ./scripts/build-docker-image.sh --test
-   ```
+Los scripts requieren un archivo `.env` en la raíz del proyecto:
 
-3. **Limpieza**: Para liberar espacio en disco:
-   ```bash
-   ./scripts/build-docker-image.sh --clean
-   
-   # O más agresivo
-   docker system prune -a
-   ```
+```env
+AZURE_DEVOPS_ORGANIZATION=tu-organizacion
+AZURE_DEVOPS_PAT=tu-personal-access-token
+```
 
-4. **Multiple tags**: Puedes crear múltiples tags:
-   ```bash
-   ./scripts/build-docker-image.sh --tag mcp-azure-devops:latest
-   docker tag mcp-azure-devops:latest mcp-azure-devops:stable
-   ```
+## 🔧 Funcionalidades Avanzadas
 
-5. **CI/CD Integration**: Los scripts son compatibles con pipelines de CI/CD:
-   ```bash
-   # En pipeline
-   ./scripts/build-docker-image.sh --quiet --no-cache --tag $CI_REGISTRY/$CI_PROJECT_PATH:$CI_COMMIT_SHA --push
-   ```
+- **Auto-detección** de imágenes disponibles
+- **Validación** de configuración antes de construir
+- **Limpieza inteligente** de imágenes obsoletas
+- **Tests automáticos** post-construcción
+- **Documentación integrada** con ejemplos
+- **Ejecución rápida** para desarrollo
 
-### 🔗 Enlaces Relacionados
+## 🎨 Características Visuales
 
-- [README principal](../README.md) - Documentación completa del proyecto
-- [Dockerfile](../Dockerfile) - Definición de la imagen Docker  
-- [docker/](../docker/) - Scripts internos del contenedor
+- ✅ **Colores** para mejor legibilidad
+- 📊 **Información de tamaños** en tiempo real  
+- 🎯 **Menús numerados** fáciles de usar
+- ⏱️ **Timestamps** en todas las operaciones
+- 🚀 **Banners** y separadores visuales
+
+## 📜 Scripts Adicionales
+
+### 🐚 Shell Scripts (curl/)
+- `work_item_attachment_add.sh` - Test de adjuntar archivos
+- `attachments_delete.sh` - Test de eliminación de attachments  
+
+### 🐍 Python Scripts (python/)
+- `list_work_items.py` - Listar work items con filtros
+- `export_work_items.py` - Exportar work items a CSV/JSON
+
+¡Disfruta del desarrollo con MCP Azure DevOps! 🎉

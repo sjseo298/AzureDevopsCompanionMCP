@@ -1,0 +1,70 @@
+# Dockerfile optimizado - MCP Azure DevOps Server
+# Optimizado para reducir tamaño manteniendo compatibilidad
+
+# ========================================
+# Etapa 1: Construcción (sin cambios)
+# ========================================
+FROM gradle:8.5-jdk21 AS builder
+
+WORKDIR /app
+
+# Copiar dependencias primero para mejor cache
+COPY build.gradle gradle.properties ./
+COPY gradle/ gradle/
+COPY gradlew gradlew.bat ./
+
+# Copiar código fuente y construir
+COPY src/ src/
+RUN gradle clean build -x test --no-daemon
+
+# ========================================
+# Etapa 2: Imagen runtime optimizada
+# ========================================
+FROM eclipse-temurin:21-jre
+
+# Combinar comandos RUN para reducir capas y tamaño
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    socat \
+    netcat-openbsd \
+    curl \
+    bash \
+    jq && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+    # Crear usuario en el mismo comando
+    groupadd -g 1001 mcpuser && \
+    useradd -d /home/mcpuser -m -u 1001 -g mcpuser mcpuser && \
+    # Crear directorios
+    mkdir -p /app /app/logs && \
+    chown -R mcpuser:mcpuser /app
+
+USER mcpuser
+WORKDIR /app
+
+# Copiar solo el JAR (más eficiente que copiarlo desde build/libs/*.jar)
+COPY --from=builder --chown=mcpuser:mcpuser /app/build/libs/*.jar app.jar
+
+# Variables de entorno optimizadas para menor uso de memoria
+ENV JAVA_OPTS="-XX:+UseG1GC -XX:MaxRAMPercentage=75 -Xms128m -Djava.security.egd=file:/dev/./urandom -XX:+TieredCompilation -XX:TieredStopAtLevel=1" \
+    MCP_MODE="stdio" \
+    AZURE_DEVOPS_API_VERSION="7.2-preview.1" \
+    AZURE_DEVOPS_VSSPS_API_VERSION="7.1"
+
+# Solo los puertos que realmente usamos
+EXPOSE 8080
+
+# Scripts de entrada (copiar después del JAR para mejor cache)
+COPY --chown=mcpuser:mcpuser docker/ docker/
+
+# Hacer ejecutables los scripts en una sola capa
+USER root
+RUN chmod +x docker/*.sh
+USER mcpuser
+
+# Health check más eficiente (sin netstat)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=45s --retries=3 \
+  CMD curl -f http://localhost:8080 --max-time 5 || exit 1
+
+ENTRYPOINT ["docker/entrypoint.sh"]
+CMD ["stdio"]
