@@ -1,12 +1,12 @@
 package com.mcp.server.tools.azuredevops.wit;
 
-
 import com.mcp.server.services.AzureDevOpsClientService;
 import com.mcp.server.tools.azuredevops.base.AbstractAzureDevOpsTool;
 import com.mcp.server.services.helpers.WitAttachmentsHelper;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+
+import java.util.*;
 
 import java.util.*;
 
@@ -41,6 +41,7 @@ public class AttachmentsDeleteTool extends AbstractAzureDevOpsTool {
     public Map<String, Object> getInputSchema() {
         Map<String,Object> props = new LinkedHashMap<>();
         props.put("id", Map.of("type","string","description","GUID del adjunto"));
+        props.put("project", Map.of("type","string","description","Nombre del proyecto (opcional pero recomendado)"));
         return Map.of("type","object","properties", props, "required", List.of("id"));
     }
 
@@ -48,7 +49,8 @@ public class AttachmentsDeleteTool extends AbstractAzureDevOpsTool {
     protected Map<String, Object> executeInternal(Map<String, Object> arguments) {
         if (azureService == null) return error("Servicio Azure DevOps no configurado en este entorno");
         String id = arguments.get("id").toString();
-        Map<String,Object> resp = attachmentsHelper.deleteAttachment(id);
+        String project = Objects.toString(arguments.get("project"), null);
+        Map<String,Object> resp = attachmentsHelper.deleteAttachment(project, id);
         String formattedErr = tryFormatRemoteError(resp);
         if (formattedErr != null) return success(formattedErr);
         String formatted = attachmentsHelper.formatDeleteResponse(resp);

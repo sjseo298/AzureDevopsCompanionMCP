@@ -222,6 +222,7 @@ El servidor proporciona acceso a más de 80 herramientas MCP que cubren:
 - `azuredevops_wit_work_item_create` - Crea work item  
 - `azuredevops_wit_work_item_update` - Actualiza work item
 - `azuredevops_wit_wiql_by_query` - Ejecuta consulta WIQL
+- `azuredevops_wit_work_item_attachment_add` - Sube y adjunta archivo (operación atómica con rollback)
 
 ### Work Management
 - `azuredevops_work_get_boards` - Lista tableros
@@ -242,6 +243,22 @@ echo '{"jsonrpc":"2.0","method":"tools/call","id":2,"params":{"name":"azuredevop
 ```
 
 ### Ejecutar consulta WIQL
+### Adjuntar archivo a un Work Item (nuevo flujo unificado)
+Operación atómica: si la asociación falla se elimina el archivo temporal.
+```bash
+echo '{"jsonrpc":"2.0","method":"tools/call","id":4,"params":{"name":"azuredevops_wit_work_item_attachment_add","arguments":{"project":"MiProyecto","workItemId":123,"fileName":"evidencia.txt","dataBase64":"'"$(printf 'Hola mundo' | base64 -w0)"'","comment":"Evidencia de prueba"}}}' | docker run -i --env-file .env mcp-azure-devops stdio
+```
+Respuesta típica (éxito):
+```
+=== Attachment Adjuntado ===
+
+WorkItem: 123
+Archivo: evidencia.txt
+URL: https://dev.azure.com/.../attachments/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+Comentario: Evidencia de prueba
+```
+Si falla la asociación, el tool hará rollback y devolverá error explicando el detalle.
+
 ```bash
 echo '{"jsonrpc":"2.0","method":"tools/call","id":3,"params":{"name":"azuredevops_wit_wiql_by_query","arguments":{"project":"MiProyecto","wiql":"SELECT [System.Id], [System.Title] FROM workitems WHERE [System.WorkItemType] = '\''User Story'\'' AND [System.State] = '\''Active'\''"}}}'  | docker run -i --env-file .env mcp-azure-devops stdio
 ```
@@ -388,9 +405,8 @@ curl_json "${DEVOPS_BASE}/_apis/my/endpoint?api-version=${AZURE_DEVOPS_API_VERSI
 ./scripts/curl/area/my_endpoint.sh
 
 # Rebuild y test
-./gradlew clean build
-docker build -t mcp-azure-devops .
-docker run -i --env-file .env mcp-azure-devops stdio
+./scripts/rebuild_image.sh
+docker run -i --env-file .env mcp-azure-devops:latest stdio
 ```
 
 ## 📄 Licencia
