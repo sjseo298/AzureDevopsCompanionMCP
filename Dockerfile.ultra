@@ -1,0 +1,104 @@
+# Dockerfile ultra-optimizado - MCP Azure DevOps Server
+# Objetivo: reducir a ~150MB o menos usando técnicas avanzadas
+
+# ========================================
+# Etapa 1: Construcción con cache optimizado
+# ========================================
+FROM gradle:8.5-jdk21-alpine AS dependencies
+
+WORKDIR /app
+
+# Solo archivos de dependencias para máximo cache
+COPY build.gradle gradle.properties ./
+COPY gradle/ gradle/
+
+# Pre-descargar dependencias (se cachea hasta que cambien)
+RUN gradle dependencies --no-daemon --refresh-dependencies
+
+# ========================================
+# Etapa 2: Construcción de la aplicación
+# ========================================  
+FROM dependencies AS builder
+
+# Copiar código y construir
+COPY src/ src/
+RUN gradle clean build -x test --no-daemon && \
+    # Verificar construcción
+    ls -la build/libs/
+
+# ========================================
+# Etapa 3: Análisis y optimización de dependencias
+# ========================================
+FROM eclipse-temurin:21-jdk-alpine AS analyzer
+
+WORKDIR /opt
+
+# Copiar JAR para análisis
+COPY --from=builder /app/build/libs/*.jar app.jar
+
+# Usar jlink para crear JRE customizado con módulos esenciales
+RUN jlink \
+        --add-modules java.base,java.logging,java.xml,java.desktop,java.naming,java.security.jgss,java.sql,java.management,java.instrument,jdk.crypto.cryptoki,jdk.crypto.ec,java.net.http \
+        --strip-debug \
+        --no-man-pages \
+        --no-header-files \
+        --compress=2 \
+        --output /custom-jre
+
+# Extraer aplicación en capas
+RUN java -Djarmode=layertools -jar app.jar extract
+
+# ========================================
+# Etapa 4: Imagen final ultra-mínima
+# ========================================
+FROM alpine:3.18
+
+# Instalar solo lo absolutamente esencial
+RUN apk add --no-cache \
+    bash \
+    curl \
+    socat && \
+    # Crear usuario
+    addgroup -g 1001 mcpuser && \
+    adduser -D -u 1001 -G mcpuser mcpuser && \
+    # Crear directorios
+    mkdir -p /app && \
+    chown mcpuser:mcpuser /app
+
+# Copiar JRE customizado
+COPY --from=analyzer /custom-jre /jre
+
+# Verificar JRE customizado
+RUN /jre/bin/java -version
+
+WORKDIR /app
+USER mcpuser
+
+# Copiar aplicación en capas para cache óptimo
+COPY --from=analyzer --chown=mcpuser:mcpuser /opt/dependencies/ ./
+COPY --from=analyzer --chown=mcpuser:mcpuser /opt/spring-boot-loader/ ./  
+COPY --from=analyzer --chown=mcpuser:mcpuser /opt/snapshot-dependencies/ ./
+COPY --from=analyzer --chown=mcpuser:mcpuser /opt/application/ ./
+
+# Variables optimizadas para memoria mínima
+ENV PATH="/jre/bin:${PATH}" \
+    JAVA_OPTS="-XX:+UseSerialGC -XX:MaxRAMPercentage=70 -Xms64m -XX:+TieredCompilation -XX:TieredStopAtLevel=1" \
+    MCP_MODE="stdio" \
+    AZURE_DEVOPS_API_VERSION="7.2-preview.1" \
+    AZURE_DEVOPS_VSSPS_API_VERSION="7.1"
+
+EXPOSE 8080
+
+# Scripts esenciales
+COPY --chown=mcpuser:mcpuser docker/entrypoint.sh docker/
+
+USER root
+RUN chmod +x docker/entrypoint.sh
+USER mcpuser
+
+# Health check minimalista
+HEALTHCHECK --interval=45s --timeout=3s --start-period=20s --retries=2 \
+  CMD curl -f http://localhost:8080 || exit 1
+
+ENTRYPOINT ["docker/entrypoint.sh"]
+CMD ["stdio"]

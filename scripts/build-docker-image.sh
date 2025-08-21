@@ -24,6 +24,8 @@ Descripción:
 
 Opciones:
   --tag <nombre>      Nombre/tag para la imagen (default: mcp-azure-devops)
+  --dockerfile <file> Dockerfile a usar (default: Dockerfile)
+                      Opciones: Dockerfile, Dockerfile.slim, Dockerfile.ultra
   --no-cache          Construir sin usar cache de Docker
   --push              Push la imagen tras construir (requiere registry configurado)
   --registry <url>    Registry URL para push (default: ninguno)
@@ -32,28 +34,36 @@ Opciones:
   --quiet             Salida mínima (solo errores)
   --help              Mostrar esta ayuda
 
+Dockerfiles disponibles:
+  Dockerfile        - Versión estándar (~473MB)
+  Dockerfile.slim   - Versión optimizada (~200MB) - Alpine + capas
+  Dockerfile.ultra  - Versión ultra-optimizada (~150MB) - JRE customizado
+
 Ejemplos:
   ./build-docker-image.sh
-  ./build-docker-image.sh --tag myregistry.io/mcp-azure-devops:latest --push
-  ./build-docker-image.sh --no-cache --clean --test
-  ./build-docker-image.sh --registry ghcr.io --push --tag ghcr.io/usuario/mcp-azure-devops:v1.0.0
+  ./build-docker-image.sh --dockerfile Dockerfile.slim --tag mcp-azure-devops:slim
+  ./build-docker-image.sh --dockerfile Dockerfile.ultra --tag mcp-azure-devops:ultra
+  ./build-docker-image.sh --no-cache --clean --test --dockerfile Dockerfile.slim
 USAGE
 }
 
 # Configuración por defecto
 IMAGE_TAG="mcp-azure-devops"
+DOCKERFILE="Dockerfile"
 NO_CACHE=""
 PUSH_IMAGE=false
 REGISTRY=""
 CLEAN_FIRST=false
 RUN_TEST=false
 QUIET=false
+TAG_AS_LATEST=true
 DOCKER_ARGS=""
 
 # Parsear argumentos
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --tag) IMAGE_TAG="$2"; shift 2;;
+    --dockerfile) DOCKERFILE="$2"; shift 2;;
     --no-cache) NO_CACHE="--no-cache"; shift;;
     --push) PUSH_IMAGE=true; shift;;
     --registry) REGISTRY="$2"; shift 2;;
@@ -83,10 +93,109 @@ log_error() {
   echo -e "${RED}[$(date +'%H:%M:%S')] ❌ $1${NC}" >&2
 }
 
+# Función para modo interactivo
+interactive_mode() {
+  echo -e "${BLUE}🚀 Construcción Interactiva de Imagen Docker MCP Azure DevOps${NC}"
+  echo ""
+  
+  # Mostrar Dockerfiles disponibles
+  echo -e "${YELLOW}📄 Dockerfiles disponibles:${NC}"
+  echo "1) Dockerfile        - Versión estándar (~473MB)"
+  echo "2) Dockerfile.slim   - Versión optimizada (~358MB) - Alpine + capas"
+  echo "3) Dockerfile.ultra  - Versión ultra-optimizada (~191MB) - JRE customizado"
+  echo ""
+  
+  # Seleccionar Dockerfile
+  while true; do
+    read -p "🔸 Selecciona el Dockerfile (1-3) [default: 1]: " dockerfile_choice
+    dockerfile_choice=${dockerfile_choice:-1}
+    
+    case $dockerfile_choice in
+      1) DOCKERFILE="Dockerfile"; break;;
+      2) DOCKERFILE="Dockerfile.slim"; break;;
+      3) DOCKERFILE="Dockerfile.ultra"; break;;
+      *) echo -e "${RED}Opción inválida. Por favor selecciona 1, 2 o 3.${NC}";;
+    esac
+  done
+  
+  # Configurar tag basado en dockerfile
+  default_tag="mcp-azure-devops"
+  case $DOCKERFILE in
+    "Dockerfile.slim") default_tag="mcp-azure-devops:slim";;
+    "Dockerfile.ultra") default_tag="mcp-azure-devops:ultra";;
+  esac
+  
+  # Nombre de la imagen
+  read -p "🏷️  Tag de la imagen [default: $default_tag]: " user_tag
+  IMAGE_TAG=${user_tag:-$default_tag}
+  
+  # Preguntar si también tagear como latest
+  echo ""
+  read -p "🏆 ¿También tagear esta imagen como 'latest'? (Y/n): " latest_choice
+  if [[ ! $latest_choice =~ ^[Nn]$ ]]; then
+    TAG_AS_LATEST=true
+    echo -e "${GREEN}   ✅ Se tageará también como: mcp-azure-devops:latest${NC}"
+  else
+    TAG_AS_LATEST=false
+  fi
+  
+  # Opciones adicionales
+  echo ""
+  echo -e "${YELLOW}⚙️  Opciones de construcción:${NC}"
+  
+  read -p "🧹 ¿Limpiar imágenes previas? (y/N): " clean_choice
+  if [[ $clean_choice =~ ^[Yy]$ ]]; then
+    CLEAN_FIRST=true
+  fi
+  
+  read -p "🚫 ¿Construir sin cache? (y/N): " cache_choice
+  if [[ $cache_choice =~ ^[Yy]$ ]]; then
+    NO_CACHE="--no-cache"
+  fi
+  
+  read -p "🧪 ¿Ejecutar test tras la construcción? (y/N): " test_choice
+  if [[ $test_choice =~ ^[Yy]$ ]]; then
+    RUN_TEST=true
+  fi
+  
+  read -p "📤 ¿Push la imagen tras construir? (y/N): " push_choice
+  if [[ $push_choice =~ ^[Yy]$ ]]; then
+    PUSH_IMAGE=true
+    read -p "🌐 Registry URL (opcional): " registry_input
+    REGISTRY=$registry_input
+  fi
+  
+  echo ""
+  echo -e "${GREEN}✅ Configuración completada:${NC}"
+  echo -e "   📄 Dockerfile: ${DOCKERFILE}"
+  echo -e "   🏷️  Tag: ${IMAGE_TAG}"
+  if [[ "$TAG_AS_LATEST" == true ]]; then
+    echo -e "   🏆 Tag adicional: mcp-azure-devops:latest"
+  fi
+  echo -e "   🧹 Limpiar: ${CLEAN_FIRST}"
+  echo -e "   🚫 Sin cache: ${NO_CACHE:-false}"
+  echo -e "   🧪 Test: ${RUN_TEST}"
+  echo -e "   📤 Push: ${PUSH_IMAGE}"
+  [[ -n "$REGISTRY" ]] && echo -e "   🌐 Registry: ${REGISTRY}"
+  echo ""
+  
+  read -p "¿Continuar con la construcción? (Y/n): " confirm
+  if [[ $confirm =~ ^[Nn]$ ]]; then
+    echo -e "${YELLOW}Construcción cancelada por el usuario.${NC}"
+    exit 0
+  fi
+}
+
+# Verificar si se ejecuta sin argumentos (modo interactivo)
+if [[ $# -eq 0 ]]; then
+  interactive_mode
+fi
+
 # Verificar que estamos en el directorio correcto
-if [[ ! -f "${PROJECT_ROOT}/Dockerfile" ]]; then
-  log_error "No se encontró Dockerfile en ${PROJECT_ROOT}"
-  log_error "Asegúrate de ejecutar este script desde la raíz del proyecto"
+if [[ ! -f "${PROJECT_ROOT}/${DOCKERFILE}" ]]; then
+  log_error "No se encontró ${DOCKERFILE} en ${PROJECT_ROOT}"
+  log_error "Dockerfiles disponibles:"
+  ls -1 "${PROJECT_ROOT}"/Dockerfile* 2>/dev/null || log_error "No se encontraron Dockerfiles"
   exit 1
 fi
 
@@ -97,6 +206,7 @@ fi
 
 log "🚀 Iniciando construcción de imagen Docker MCP Azure DevOps"
 log "📁 Directorio del proyecto: ${PROJECT_ROOT}"
+log "📄 Dockerfile: ${DOCKERFILE}"
 log "🏷️  Tag de imagen: ${IMAGE_TAG}"
 
 cd "${PROJECT_ROOT}"
@@ -124,12 +234,11 @@ fi
 log "🔍 Verificando archivos necesarios..."
 
 REQUIRED_FILES=(
-  "Dockerfile"
+  "${DOCKERFILE}"
   "build.gradle"
   "gradle.properties"
   "src/main/java/com/mcp/server/McpServerApplication.java"
   "docker/entrypoint.sh"
-  "docker/http-wrapper.sh"
 )
 
 for file in "${REQUIRED_FILES[@]}"; do
@@ -143,22 +252,39 @@ log_success "Todos los archivos necesarios están presentes"
 
 # Construir la imagen
 log "🔨 Construyendo imagen Docker..."
-log "Comando: docker build ${NO_CACHE} -t ${IMAGE_TAG} ."
+log "Comando: docker build ${NO_CACHE} -f ${DOCKERFILE} -t ${IMAGE_TAG} ."
 
 if [[ "${QUIET}" == true ]]; then
   DOCKER_ARGS="--quiet"
 fi
 
-if ! docker build ${NO_CACHE} ${DOCKER_ARGS} -t "${IMAGE_TAG}" .; then
+if ! docker build ${NO_CACHE} ${DOCKER_ARGS} -f "${DOCKERFILE}" -t "${IMAGE_TAG}" .; then
   log_error "Falló la construcción de la imagen Docker"
   exit 1
 fi
 
 log_success "Imagen construida exitosamente: ${IMAGE_TAG}"
 
+# Tagear como latest si se solicita
+if [[ "$TAG_AS_LATEST" == true ]]; then
+  log "🏆 Tageando imagen como latest..."
+  if docker tag "${IMAGE_TAG}" "mcp-azure-devops:latest"; then
+    log_success "Imagen tageada como: mcp-azure-devops:latest"
+  else
+    log_error "Error al tagear la imagen como latest"
+  fi
+fi
+
 # Mostrar información de la imagen
 log "📊 Información de la imagen:"
-docker images "${IMAGE_TAG}" --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}"
+if [[ "$TAG_AS_LATEST" == true ]]; then
+  # Mostrar ambas imágenes
+  echo "REPOSITORY         TAG       IMAGE ID       CREATED         SIZE"
+  docker images "${IMAGE_TAG}" --format "{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}"
+  docker images "mcp-azure-devops:latest" --format "{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}"
+else
+  docker images "${IMAGE_TAG}" --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}"
+fi
 
 # Test básico si se solicita
 if [[ "${RUN_TEST}" == true ]]; then
@@ -211,12 +337,18 @@ echo
 echo -e "${BLUE}1. Crear archivo .env con tus credenciales:${NC}"
 echo "   AZURE_DEVOPS_ORGANIZATION=tu-organizacion"
 echo "   AZURE_DEVOPS_PAT=tu-personal-access-token"
+# Determinar qué tag usar en las instrucciones (preferir latest si existe)
+INSTRUCTION_TAG="${IMAGE_TAG}"
+if [[ "$TAG_AS_LATEST" == true ]]; then
+  INSTRUCTION_TAG="mcp-azure-devops:latest"
+fi
+
 echo
 echo -e "${BLUE}2. Ejecutar en modo STDIO (para clientes MCP locales):${NC}"
-echo "   docker run -i --env-file .env ${IMAGE_TAG} stdio"
+echo "   docker run -i --env-file .env ${INSTRUCTION_TAG} stdio"
 echo
 echo -e "${BLUE}3. Ejecutar en modo HTTP (para acceso remoto):${NC}"
-echo "   docker run -p 8080:8080 --env-file .env ${IMAGE_TAG} http"
+echo "   docker run -p 8080:8080 --env-file .env ${INSTRUCTION_TAG} http"
 echo
 echo -e "${BLUE}4. Configurar en mcp.json:${NC}"
 cat <<'CONFIG'
@@ -235,5 +367,5 @@ cat <<'CONFIG'
 }
 CONFIG
 
-echo -e "${YELLOW}Reemplaza 'IMAGE_TAG_HERE' con: ${IMAGE_TAG}${NC}"
+echo -e "${YELLOW}Reemplaza 'IMAGE_TAG_HERE' con: ${INSTRUCTION_TAG}${NC}"
 echo

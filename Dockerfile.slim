@@ -1,0 +1,97 @@
+# Dockerfile optimizado para tamaño mínimo - MCP Azure DevOps Server
+# Versión optimizada que puede reducir el tamaño de ~473MB a ~200MB
+
+# ========================================
+# Etapa 1: Construcción
+# ========================================
+FROM gradle:8.5-jdk21-alpine AS builder
+
+WORKDIR /app
+
+# Copiar solo archivos de dependencias primero para mejor cache
+COPY build.gradle gradle.properties ./
+COPY gradle/ gradle/
+COPY gradlew ./
+
+# Descargar dependencias (se cachea si no cambian)
+RUN gradle dependencies --no-daemon || true
+
+# Copiar código fuente y construir
+COPY src/ src/
+RUN gradle clean build -x test --no-daemon && \
+    # Verificar que el JAR se construyó
+    ls -la build/libs/ && \
+    # Crear directorio para el JAR optimizado
+    mkdir -p /app/optimized
+
+# ========================================  
+# Etapa 2: Optimización del JAR
+# ========================================
+FROM eclipse-temurin:21-jre-alpine AS optimizer
+
+WORKDIR /opt
+
+# Copiar JAR desde builder
+COPY --from=builder /app/build/libs/*.jar app.jar
+
+# Extraer JAR y optimizar (spring-boot layered jars)
+RUN java -Djarmode=layertools -jar app.jar extract && \
+    # Listar las capas extraídas
+    ls -la
+
+# ========================================
+# Etapa 3: Imagen final minimal
+# ========================================
+FROM eclipse-temurin:21-jre-alpine
+
+# Instalar solo herramientas esenciales (Alpine es mucho más pequeño)
+RUN apk add --no-cache \
+    socat \
+    netcat-openbsd \
+    curl \
+    bash \
+    jq && \
+    # Limpiar cache de apk
+    rm -rf /var/cache/apk/*
+
+# Crear usuario no-root
+RUN addgroup -g 1001 mcpuser && \
+    adduser -D -u 1001 -G mcpuser -h /home/mcpuser mcpuser
+
+# Crear directorios de trabajo
+RUN mkdir -p /app /app/logs && \
+    chown -R mcpuser:mcpuser /app
+
+WORKDIR /app
+USER mcpuser
+
+# Copiar aplicación en capas para mejor cache
+COPY --from=optimizer --chown=mcpuser:mcpuser /opt/dependencies/ ./
+COPY --from=optimizer --chown=mcpuser:mcpuser /opt/spring-boot-loader/ ./
+COPY --from=optimizer --chown=mcpuser:mcpuser /opt/snapshot-dependencies/ ./
+COPY --from=optimizer --chown=mcpuser:mcpuser /opt/application/ ./
+
+# Variables de entorno optimizadas para contenedores pequeños
+ENV JAVA_OPTS="-XX:+UseSerialGC -XX:MaxRAMPercentage=75 -Xms128m -Djava.security.egd=file:/dev/./urandom"
+ENV MCP_MODE="stdio"
+ENV AZURE_DEVOPS_API_VERSION="7.2-preview.1"
+ENV AZURE_DEVOPS_VSSPS_API_VERSION="7.1"
+
+# Puertos
+EXPOSE 8080 8081 8082
+
+# Scripts de entrada (copiar al final para mejor cache)
+COPY --chown=mcpuser:mcpuser docker/ docker/
+
+# Hacer ejecutables (necesario cambiar a root temporalmente)
+USER root
+RUN chmod +x docker/*.sh
+USER mcpuser
+
+# Health check optimizado (sin netstat pesado)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=2 \
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+# Usar el classpath expandido en lugar del JAR
+ENTRYPOINT ["docker/entrypoint.sh"]
+CMD ["stdio"]
