@@ -1,6 +1,7 @@
 package com.mcp.server.protocol.messages;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mcp.server.protocol.types.McpError;
 import java.util.Objects;
@@ -107,6 +108,7 @@ public final class McpResponse {
         return id; 
     }
     
+    @JsonIgnore
     public Object getResult() { 
         return result; 
     }
@@ -115,6 +117,7 @@ public final class McpResponse {
         return error; 
     }
     
+    @JsonIgnore
     /**
      * Indica si esta respuesta representa un éxito.
      * 
