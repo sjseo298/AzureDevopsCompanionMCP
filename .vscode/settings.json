@@ -21,5 +21,6 @@
                 "github.copilot-chat/gpt-4.1"
             ]
         }
-    }
+    },
+    "java.configuration.updateBuildConfiguration": "interactive"
 }
