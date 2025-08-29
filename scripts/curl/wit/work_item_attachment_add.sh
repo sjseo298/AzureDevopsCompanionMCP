@@ -11,7 +11,7 @@ source "${ROOT_DIR}/_env.sh"
 
 usage() {
   cat <<'USAGE'
-Uso: work_item_attachment_add.sh --project <project> --id <id> --file <ruta> \
+Uso: work_item_attachment_add.sh --project <project> --id <id> --file <ruta|file://URI|data:URI> \
   [--name <nombre>] [--comment <texto>] [--content-type <mime>] \
   [--api-version <ver>] [--raw] [--help]
 
@@ -25,7 +25,7 @@ Descripción:
 Parámetros obligatorios:
   --project     Nombre del proyecto
   --id          ID numérico del work item
-  --file        Ruta al archivo a subir
+  --file        Ruta local (p. ej. ./img.png), URI file:// (p. ej. file:///tmp/img.png) o data URI (p. ej. data:image/png;base64,AAAA...)
 
 Parámetros opcionales:
   --name        Nombre a usar (por defecto basename del archivo)
@@ -74,8 +74,34 @@ fi
 if [[ -z "${FILE}" ]]; then
   echo "Falta --file (obligatorio)" >&2; usage; exit 2
 fi
+
+# Normalizar FILE: soportar file:// y data:
+FILE_INPUT="${FILE}"
+TMP_FILE=""
+cleanup() { if [[ -n "${TMP_FILE}" && -f "${TMP_FILE}" ]]; then rm -f -- "${TMP_FILE}"; fi }
+trap cleanup EXIT
+
+if [[ "${FILE_INPUT}" == file://* ]]; then
+  # Convertir a ruta local básica (sin decodificación de %20); suficiente para la mayoría de casos
+  FILE="${FILE_INPUT#file://}"
+elif [[ "${FILE_INPUT}" == data:* ]]; then
+  # Manejo de data URI (soporta ;base64); volcamos a archivo temporal
+  META_AND_DATA="${FILE_INPUT#data:}"
+  META="${META_AND_DATA%%,*}"
+  DATA_PART="${META_AND_DATA#*,}"
+  if [[ "${META}" == *";base64"* ]]; then
+    TMP_FILE="$(mktemp)"
+    # Evitar interpretar '-' como stdin; usar printf para datos crudos
+    printf '%s' "${DATA_PART}" | base64 -d > "${TMP_FILE}"
+  else
+    TMP_FILE="$(mktemp)"
+    printf '%s' "${DATA_PART}" > "${TMP_FILE}"
+  fi
+  FILE="${TMP_FILE}"
+fi
+
 if [[ ! -f "${FILE}" ]]; then
-  echo "No existe el archivo: ${FILE}" >&2; exit 3
+  echo "No existe el archivo: ${FILE_INPUT}" >&2; exit 3
 fi
 
 # Validar que ID sea numérico
@@ -92,8 +118,8 @@ PROJECT_ENCODED="$(jq -rn --arg s "${PROJECT}" '$s|@uri')"
 ID_ENCODED="$(jq -rn --arg s "${ID}" '$s|@uri')"
 NAME_ENCODED="$(jq -rn --arg s "${NAME}" '$s|@uri')"
 
-# Para el endpoint de Azure DevOps attachments, siempre usar application/octet-stream
-# El tipo de archivo se detecta automáticamente por el servidor
+# Para el endpoint de Azure DevOps attachments, usar application/octet-stream por defecto.
+# Puedes forzar con --content-type si lo conoces.
 if [[ -z "${CONTENT_TYPE}" ]]; then
   CONTENT_TYPE="application/octet-stream"
 fi
@@ -106,7 +132,8 @@ echo "Nombre: ${NAME}" >&2
 echo "Content-Type: ${CONTENT_TYPE}" >&2
 
 # Paso 1: Subir el archivo
-UPLOAD_URL="${DEVOPS_BASE}/_apis/wit/attachments?fileName=${NAME_ENCODED}&api-version=7.2-preview"
+# Usar la versión de API por defecto del entorno para consistencia
+UPLOAD_URL="${DEVOPS_BASE}/_apis/wit/attachments?fileName=${NAME_ENCODED}&api-version=${AZURE_DEVOPS_API_VERSION}"
 
 echo "Subiendo archivo..." >&2
 UPLOAD_RESPONSE=$(curl -sS -w "\n%{http_code}" \

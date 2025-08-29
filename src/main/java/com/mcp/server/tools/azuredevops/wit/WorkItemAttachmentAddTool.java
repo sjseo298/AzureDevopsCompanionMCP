@@ -10,8 +10,9 @@ import java.util.*;
 
 /**
  * Tool MCP: azuredevops_wit_work_item_attachment_add
- * Sube un archivo (base64) y lo asocia inmediatamente a un Work Item como AttachedFile.
- * Reemplaza los antiguos tools separados (create/get/delete) simplificando el flujo.
+ * Adjunta un archivo a un Work Item. Ahora acepta una URI de archivo (p. ej. file:///path/a.docx o ruta local)
+ * y el tool se encarga de leerlo, (opcionalmente) inferir content-type y subirlo.
+ * También mantiene compatibilidad con dataBase64 (deprecated).
  * Endpoint 1: POST /_apis/wit/attachments?fileName={name}&api-version=7.2-preview
  * Endpoint 2: PATCH /{project}/_apis/wit/workitems/{id} (JSON Patch add relation)
  */
@@ -37,13 +38,27 @@ public class WorkItemAttachmentAddTool extends AbstractAzureDevOpsTool {
         String project = Objects.toString(args.get("project"), "").trim();
         Object wiObj = args.get("workItemId");
         String fileName = Objects.toString(args.get("fileName"), null);
-        String dataB64 = Objects.toString(args.get("dataBase64"), null);
+        String dataB64 = Objects.toString(args.get("dataBase64"), null); // legacy
+        String fileUri = Objects.toString(args.get("fileUri"), null);
         if (project.isEmpty()) throw new IllegalArgumentException("'project' es requerido");
         if (wiObj == null) throw new IllegalArgumentException("'workItemId' es requerido");
         int id;
         try { id = Integer.parseInt(wiObj.toString()); } catch (NumberFormatException e) { throw new IllegalArgumentException("'workItemId' inválido"); }
         if (id <= 0) throw new IllegalArgumentException("'workItemId' debe ser > 0");
-        attachmentsHelper.validateCreate(fileName, dataB64);
+        // Validación: preferir fileUri. Si no viene, permitir dataBase64 (deprecated)
+        if ((fileUri == null || fileUri.isBlank()) && (dataB64 == null || dataB64.isBlank())) {
+            throw new IllegalArgumentException("Se requiere 'fileUri' o, en modo legacy, 'dataBase64'.");
+        }
+        if (fileUri != null && fileUri.isBlank()) {
+            throw new IllegalArgumentException("'fileUri' no puede ser vacío si se especifica.");
+        }
+        if ((fileName == null || fileName.isBlank()) && (fileUri == null || fileUri.isBlank())) {
+            throw new IllegalArgumentException("'fileName' es requerido cuando no se puede inferir desde 'fileUri'.");
+        }
+        // Si el llamado usa el modo legacy, validar base64 como antes
+        if (dataB64 != null && !dataB64.isBlank()) {
+            attachmentsHelper.validateCreate(fileName, dataB64);
+        }
     }
 
     @Override
@@ -51,8 +66,9 @@ public class WorkItemAttachmentAddTool extends AbstractAzureDevOpsTool {
         Map<String,Object> props = new LinkedHashMap<>();
         props.put("project", Map.of("type","string","description","Nombre o ID del proyecto (requerido)"));
         props.put("workItemId", Map.of("type","integer","description","ID numérico del work item (requerido)"));
-        props.put("fileName", Map.of("type","string","description","Nombre del archivo a adjuntar"));
-        props.put("dataBase64", Map.of("type","string","description","Contenido base64 del archivo"));
+        props.put("fileName", Map.of("type","string","description","Nombre del archivo a adjuntar (si no se provee, se infiere de fileUri si es posible)"));
+        props.put("fileUri", Map.of("type","string","description","URI o ruta del archivo a adjuntar (p. ej. file:///tmp/x.png o /tmp/x.png). Recomendado."));
+        props.put("dataBase64", Map.of("type","string","description","[DEPRECATED] Contenido base64 del archivo (solo para compatibilidad)"));
         props.put("contentType", Map.of("type","string","description","MIME type. Default application/octet-stream"));
         props.put("comment", Map.of("type","string","description","Comentario opcional de la relación"));
         props.put("apiVersion", Map.of("type","string","description","Override api-version para PATCH (default 7.2-preview)","default","7.2-preview"));
@@ -60,7 +76,8 @@ public class WorkItemAttachmentAddTool extends AbstractAzureDevOpsTool {
         return Map.of(
             "type","object",
             "properties", props,
-            "required", List.of("project","workItemId","fileName","dataBase64")
+            // Requerimos project/workItemId. fileUri es el camino recomendado; fileName puede inferirse.
+            "required", List.of("project","workItemId")
         );
     }
 
@@ -68,16 +85,42 @@ public class WorkItemAttachmentAddTool extends AbstractAzureDevOpsTool {
     protected Map<String, Object> executeInternal(Map<String, Object> arguments) {
         String project = Objects.toString(arguments.get("project"), "").trim();
         int workItemId = Integer.parseInt(arguments.get("workItemId").toString());
-        String fileName = arguments.get("fileName").toString();
-        String dataB64 = arguments.get("dataBase64").toString();
+        String fileName = Objects.toString(arguments.get("fileName"), null);
+        String dataB64 = Objects.toString(arguments.get("dataBase64"), null); // legacy
+        String fileUri = Objects.toString(arguments.get("fileUri"), null);
         String comment = Objects.toString(arguments.get("comment"), null);
         String apiVersion = Objects.toString(arguments.getOrDefault("apiVersion", "7.2-preview"));
         boolean raw = Boolean.TRUE.equals(arguments.get("raw"));
 
-        byte[] data = attachmentsHelper.decodeBase64(dataB64);
-        String ctStr = attachmentsHelper.sanitizeContentType(
-            arguments.get("contentType") == null ? null : arguments.get("contentType").toString()
-        );
+        byte[] data;
+        String ctStr;
+        // Fuente preferida: fileUri -> leer bytes. Si no, dataBase64 (legacy)
+        if (fileUri != null && !fileUri.isBlank()) {
+            ReadResult rr;
+            try {
+                rr = readFromUri(fileUri.trim());
+            } catch (Exception ex) {
+                return error("No se pudo leer 'fileUri': " + ex.getMessage());
+            }
+            data = rr.bytes;
+            // Inferir fileName si falta
+            if ((fileName == null || fileName.isBlank()) && rr.suggestedFileName != null) {
+                fileName = rr.suggestedFileName;
+            }
+            String ctInput = Objects.toString(arguments.get("contentType"), null);
+            ctStr = attachmentsHelper.sanitizeContentType(ctInput != null ? ctInput : rr.contentType);
+        } else if (dataB64 != null && !dataB64.isBlank()) {
+            data = attachmentsHelper.decodeBase64(dataB64);
+            ctStr = attachmentsHelper.sanitizeContentType(
+                arguments.get("contentType") == null ? null : arguments.get("contentType").toString()
+            );
+        } else {
+            return error("Debe proporcionar 'fileUri' o 'dataBase64'.");
+        }
+
+        if (fileName == null || fileName.isBlank()) {
+            return error("'fileName' no pudo inferirse; proporciónelo explícitamente.");
+        }
 
         Map<String,Object> createResp = attachmentsHelper.createAttachment(fileName, data, ctStr);
         String createErrFmt = tryFormatRemoteError(createResp);
@@ -163,5 +206,77 @@ public class WorkItemAttachmentAddTool extends AbstractAzureDevOpsTool {
         sb.append("URL: ").append(attachmentUrl).append("\n");
         if (comment != null && !comment.isBlank()) sb.append("Comentario: ").append(comment).append("\n");
         return success(sb.toString());
+    }
+
+    // --- Utilidades locales ---
+    private static class ReadResult {
+        final byte[] bytes;
+        final String contentType; // puede ser null si no se pudo inferir
+        final String suggestedFileName; // puede ser null
+        ReadResult(byte[] b, String ct, String name) { this.bytes = b; this.contentType = ct; this.suggestedFileName = name; }
+    }
+
+    private ReadResult readFromUri(String uriOrPath) throws Exception {
+        // Soporta:
+        // - data:[<mediatype>][;base64],<data>
+        // - file:///absoluto o ruta local absoluta/relativa
+        String lower = uriOrPath.toLowerCase(Locale.ROOT);
+        if (lower.startsWith("data:")) {
+            // data URI
+            int comma = uriOrPath.indexOf(',');
+            if (comma < 0) throw new IllegalArgumentException("Data URI inválida (sin ',')");
+            String meta = uriOrPath.substring(5, comma); // sin 'data:'
+            String payload = uriOrPath.substring(comma + 1);
+            boolean isB64 = meta.contains(";base64");
+            String ct = null;
+            if (!meta.isBlank()) {
+                String mt = meta.replace(";base64", "");
+                ct = mt.isBlank() ? null : mt;
+            }
+            byte[] bytes = isB64 ? java.util.Base64.getDecoder().decode(payload) : payload.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            String suggested = null;
+            if (ct != null) {
+                String ext = guessExtensionFromContentType(ct);
+                if (ext != null) suggested = "attachment" + ext;
+            }
+            return new ReadResult(bytes, ct, suggested);
+        }
+
+        java.nio.file.Path path;
+        try {
+            if (lower.startsWith("file:")) {
+                java.net.URI u = new java.net.URI(uriOrPath);
+                path = java.nio.file.Paths.get(u);
+            } else {
+                path = java.nio.file.Paths.get(uriOrPath);
+            }
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("URI de archivo no válida: " + ex.getMessage(), ex);
+        }
+        if (!java.nio.file.Files.exists(path)) {
+            throw new java.io.FileNotFoundException("No existe el archivo: " + path);
+        }
+        byte[] bytes = java.nio.file.Files.readAllBytes(path);
+        String name = path.getFileName() != null ? path.getFileName().toString() : null;
+        String ct;
+        try {
+            ct = java.nio.file.Files.probeContentType(path);
+        } catch (Exception ignore) {
+            ct = null;
+        }
+        return new ReadResult(bytes, ct, name);
+    }
+
+    private String guessExtensionFromContentType(String ct) {
+        if (ct == null) return null;
+        // Mapeo mínimo; si se requiere algo más robusto, usar biblioteca mime-types.
+        switch (ct) {
+            case "image/png": return ".png";
+            case "image/jpeg": return ".jpg";
+            case "image/gif": return ".gif";
+            case "application/pdf": return ".pdf";
+            case "text/plain": return ".txt";
+            default: return null;
+        }
     }
 }
