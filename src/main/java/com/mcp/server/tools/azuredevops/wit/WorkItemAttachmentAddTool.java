@@ -10,9 +10,11 @@ import java.util.*;
 
 /**
  * Tool MCP: azuredevops_wit_work_item_attachment_add
- * Adjunta un archivo a un Work Item. Ahora acepta una URI de archivo (p. ej. file:///path/a.docx o ruta local)
- * y el tool se encarga de leerlo, (opcionalmente) inferir content-type y subirlo.
- * También mantiene compatibilidad con dataBase64 (deprecated).
+ * Adjunta un archivo a un Work Item. Acepta:
+ *  - dataUrl (data: URI inline)
+ *  - filePath (ruta local o URI file://)
+ *  - dataBase64 (LEGACY)
+ * El tool se encarga de leer bytes, inferir content-type cuando es posible y subirlo.
  * Endpoint 1: POST /_apis/wit/attachments?fileName={name}&api-version=7.2-preview
  * Endpoint 2: PATCH /{project}/_apis/wit/workitems/{id} (JSON Patch add relation)
  */
@@ -38,18 +40,22 @@ public class WorkItemAttachmentAddTool extends AbstractAzureDevOpsTool {
         String project = Objects.toString(args.get("project"), "").trim();
         Object wiObj = args.get("workItemId");
         String fileName = Objects.toString(args.get("fileName"), null);
-        String dataB64 = Objects.toString(args.get("dataBase64"), null); // legacy
-        String dataUrl = Objects.toString(args.get("dataUrl"), null); // data: URI inline en el payload JSON
+    String dataB64 = Objects.toString(args.get("dataBase64"), null); // legacy
+    String dataUrl = Objects.toString(args.get("dataUrl"), null); // data: URI inline en el payload JSON
+    String filePath = Objects.toString(args.get("filePath"), null); // ruta local o file://
         if (project.isEmpty()) throw new IllegalArgumentException("'project' es requerido");
         if (wiObj == null) throw new IllegalArgumentException("'workItemId' es requerido");
         int id;
         try { id = Integer.parseInt(wiObj.toString()); } catch (NumberFormatException e) { throw new IllegalArgumentException("'workItemId' inválido"); }
         if (id <= 0) throw new IllegalArgumentException("'workItemId' debe ser > 0");
-        // Validación: admitir dataUrl (data:) o dataBase64 legacy
-        if ((dataUrl == null || dataUrl.isBlank()) && (dataB64 == null || dataB64.isBlank())) {
-            throw new IllegalArgumentException("Se requiere 'dataUrl' (data: URI inline) o, en modo legacy, 'dataBase64'.");
+        // Validación: admitir dataUrl (data:), filePath (ruta local/file://) o dataBase64 (legacy)
+        boolean hasDataUrl = dataUrl != null && !dataUrl.isBlank();
+        boolean hasFilePath = filePath != null && !filePath.isBlank();
+        boolean hasB64 = dataB64 != null && !dataB64.isBlank();
+        if (!(hasDataUrl || hasFilePath || hasB64)) {
+            throw new IllegalArgumentException("Se requiere 'dataUrl' (data: URI inline), 'filePath' (ruta local/file://) o, en modo legacy, 'dataBase64'.");
         }
-        if (dataB64 != null && !dataB64.isBlank() && (fileName == null || fileName.isBlank())) {
+        if (hasB64 && (fileName == null || fileName.isBlank())) {
             throw new IllegalArgumentException("'fileName' es requerido cuando se usa 'dataBase64'.");
         }
     }
@@ -59,8 +65,9 @@ public class WorkItemAttachmentAddTool extends AbstractAzureDevOpsTool {
         Map<String,Object> props = new LinkedHashMap<>();
         props.put("project", Map.of("type","string","description","Nombre o ID del proyecto (requerido)"));
         props.put("workItemId", Map.of("type","integer","description","ID numérico del work item (requerido)"));
-    props.put("fileName", Map.of("type","string","description","Nombre del archivo a adjuntar (requerido si usas dataBase64; opcional si usas dataUrl con media-type)"));
+    props.put("fileName", Map.of("type","string","description","Nombre del archivo a adjuntar (requerido si usas dataBase64; opcional si usas dataUrl con media-type o filePath)"));
     props.put("dataUrl", Map.of("type","string","description","Data URI inline (p. ej., data:image/png;base64,AAAA...). Evita archivos/URIs compartidas."));
+    props.put("filePath", Map.of("type","string","description","Ruta local absoluta o URI file:// al archivo a adjuntar"));
     props.put("dataBase64", Map.of("type","string","description","[DEPRECATED] Contenido base64 del archivo (solo compatibilidad)"));
         props.put("contentType", Map.of("type","string","description","MIME type. Default application/octet-stream"));
         props.put("comment", Map.of("type","string","description","Comentario opcional de la relación"));
@@ -80,23 +87,34 @@ public class WorkItemAttachmentAddTool extends AbstractAzureDevOpsTool {
         int workItemId = Integer.parseInt(arguments.get("workItemId").toString());
         String fileName = Objects.toString(arguments.get("fileName"), null);
         String dataB64 = Objects.toString(arguments.get("dataBase64"), null); // legacy
-        String dataUrl = Objects.toString(arguments.get("dataUrl"), null); // recomendado si cliente y servidor están separados
-        String comment = Objects.toString(arguments.get("comment"), null);
+    String dataUrl = Objects.toString(arguments.get("dataUrl"), null); // recomendado si cliente y servidor están separados
+    String filePath = Objects.toString(arguments.get("filePath"), null); // ruta local o file://
+    String comment = Objects.toString(arguments.get("comment"), null);
         String apiVersion = Objects.toString(arguments.getOrDefault("apiVersion", "7.2-preview"));
         boolean raw = Boolean.TRUE.equals(arguments.get("raw"));
 
         byte[] data;
         String ctStr;
-        // Preferir dataUrl (data:) para permitir envío inline sin base64 "suelo" manual y sin filesystem compartido
+        // Prioridad: dataUrl > filePath > dataBase64
         if (dataUrl != null && !dataUrl.isBlank()) {
             try {
-                ReadResult rr = readFromUri(dataUrl.trim());
+                ReadResult rr = readFromSource(dataUrl.trim());
                 data = rr.bytes;
                 if ((fileName == null || fileName.isBlank()) && rr.suggestedFileName != null) fileName = rr.suggestedFileName;
                 String ctInput = Objects.toString(arguments.get("contentType"), null);
                 ctStr = attachmentsHelper.sanitizeContentType(ctInput != null ? ctInput : rr.contentType);
             } catch (Exception ex) {
                 return error("No se pudo procesar 'dataUrl': " + ex.getMessage());
+            }
+        } else if (filePath != null && !filePath.isBlank()) {
+            try {
+                ReadResult rr = readFromSource(filePath.trim());
+                data = rr.bytes;
+                if ((fileName == null || fileName.isBlank()) && rr.suggestedFileName != null) fileName = rr.suggestedFileName;
+                String ctInput = Objects.toString(arguments.get("contentType"), null);
+                ctStr = attachmentsHelper.sanitizeContentType(ctInput != null ? ctInput : rr.contentType);
+            } catch (Exception ex) {
+                return error("No se pudo leer 'filePath': " + ex.getMessage());
             }
         } else if (dataB64 != null && !dataB64.isBlank()) {
             data = attachmentsHelper.decodeBase64(dataB64);
@@ -194,7 +212,31 @@ public class WorkItemAttachmentAddTool extends AbstractAzureDevOpsTool {
         sb.append("Archivo: ").append(fileName).append("\n");
         sb.append("URL: ").append(attachmentUrl).append("\n");
         if (comment != null && !comment.isBlank()) sb.append("Comentario: ").append(comment).append("\n");
-        return success(sb.toString());
+
+        // Estructura programática simple para agentes
+        Map<String,Object> result = new LinkedHashMap<>();
+        result.put("workItemId", workItemId);
+        result.put("fileName", fileName);
+        result.put("url", attachmentUrl);
+        if (comment != null && !comment.isBlank()) result.put("comment", comment);
+        // Intentar inferir attachmentId a partir de la URL
+        String attachmentId = Objects.toString(createResp.get("id"), null);
+        if (attachmentId == null && attachmentUrl != null) {
+            int idx = attachmentUrl.lastIndexOf('/');
+            if (idx != -1) {
+                String tail = attachmentUrl.substring(idx+1);
+                int q = tail.indexOf('?');
+                if (q != -1) tail = tail.substring(0,q);
+                if (!tail.isBlank()) attachmentId = tail;
+            }
+        }
+        if (attachmentId != null) result.put("attachmentId", attachmentId);
+
+        Map<String,Object> out = new LinkedHashMap<>();
+        out.put("isError", false);
+        out.put("result", result);
+        out.put("content", java.util.List.of(java.util.Map.of("type","text","text", sb.toString())));
+        return out;
     }
 
     // --- Utilidades locales ---
@@ -205,9 +247,10 @@ public class WorkItemAttachmentAddTool extends AbstractAzureDevOpsTool {
         ReadResult(byte[] b, String ct, String name) { this.bytes = b; this.contentType = ct; this.suggestedFileName = name; }
     }
 
-    private ReadResult readFromUri(String uriOrPath) throws Exception {
+    private ReadResult readFromSource(String uriOrPath) throws Exception {
         // Soporta:
         // - data:[<mediatype>][;base64],<data>
+        // - file:///absolute/path o rutas locales (absolutas o relativas)
         String lower = uriOrPath.toLowerCase(Locale.ROOT);
         if (lower.startsWith("data:")) {
             // data URI
@@ -229,7 +272,26 @@ public class WorkItemAttachmentAddTool extends AbstractAzureDevOpsTool {
             }
             return new ReadResult(bytes, ct, suggested);
         }
-        throw new IllegalArgumentException("Solo se soporta 'data:' URI en este contexto");
+        // file:// URI o ruta local
+        java.nio.file.Path path;
+        try {
+            if (lower.startsWith("file:")) {
+                java.net.URI uri = java.net.URI.create(uriOrPath);
+                path = java.nio.file.Paths.get(uri);
+            } else {
+                path = java.nio.file.Paths.get(uriOrPath);
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Ruta inválida: " + e.getMessage());
+        }
+        if (!java.nio.file.Files.exists(path)) {
+            throw new IllegalArgumentException("Archivo no existe: " + path);
+        }
+        byte[] bytes = java.nio.file.Files.readAllBytes(path);
+        String ct = null;
+        try { ct = java.nio.file.Files.probeContentType(path); } catch (Exception ignore) {}
+        String suggested = path.getFileName() != null ? path.getFileName().toString() : null;
+        return new ReadResult(bytes, ct, suggested);
     }
 
     private String guessExtensionFromContentType(String ct) {
