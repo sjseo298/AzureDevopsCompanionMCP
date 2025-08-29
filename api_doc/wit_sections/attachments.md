@@ -71,3 +71,41 @@ curl -X POST \
   "url": "https://dev.azure.com/{organization}/_apis/wit/attachments/b1c2d3e4-5678-90ab-cdef-1234567890ab"
 }
 ```
+
+## Flujo recomendado: Subir y asociar a Work Item en un paso
+
+Para evitar adjuntos huérfanos, se recomienda usar el script `scripts/curl/wit/work_item_attachment_add.sh` que:
+- Sube el archivo a Attachments
+- Asocia inmediatamente la relación `AttachedFile` al Work Item
+- Si el PATCH falla, intenta rollback eliminando el attachment creado
+
+Soporta como fuente del archivo:
+- Ruta local (./archivo.png)
+- URI `file://` (file:///tmp/archivo.png)
+- `data:` URI (p. ej. data:image/png;base64,AAAA...)
+
+Uso:
+
+```bash
+scripts/curl/wit/work_item_attachment_add.sh \
+  --project "Mi Proyecto" \
+  --id 12345 \
+  --file ./evidencia.png \
+  [--name evidencia.png] \
+  [--comment "Screenshot del error"] \
+  [--content-type image/png]
+```
+
+Ejemplos adicionales:
+- Con file URI:
+  ```bash
+  scripts/curl/wit/work_item_attachment_add.sh --project MyProj --id 100 --file "file:///tmp/mi imagen.png" --comment "Adjunto"
+  ```
+- Con data URI:
+  ```bash
+  scripts/curl/wit/work_item_attachment_add.sh --project MyProj --id 101 --file "data:text/plain;base64,SG9sYQ==" --name hola.txt
+  ```
+
+Notas:
+- El Content-Type por defecto es `application/octet-stream`; puedes forzarlo con `--content-type`.
+- A nivel de herramienta MCP (`azuredevops_wit_work_item_attachment_add`), ahora se recomienda pasar `fileUri`/ruta y dejar que el tool lea el archivo. El soporte a `dataBase64` queda como [DEPRECATED] para compatibilidad.
