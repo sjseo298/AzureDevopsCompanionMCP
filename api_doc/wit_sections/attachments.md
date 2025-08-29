@@ -79,10 +79,19 @@ Para evitar adjuntos huérfanos, se recomienda usar el script `scripts/curl/wit/
 - Asocia inmediatamente la relación `AttachedFile` al Work Item
 - Si el PATCH falla, intenta rollback eliminando el attachment creado
 
-Soporta como fuente del archivo:
-- Ruta local (./archivo.png)
-- URI `file://` (file:///tmp/archivo.png)
-- `data:` URI (p. ej. data:image/png;base64,AAAA...)
+Opciones de origen del archivo:
+- Cliente y servidor MCP en la misma instancia: usa ruta local/`file://` con el script.
+- Cliente y servidor MCP en instancias separadas: usa el endpoint HTTP multipart para enviar el archivo en streaming (sin base64 ni filesystem compartido):
+
+  POST /mcp/uploads/wit/workitems/{id}/attachment?project={project}
+  Content-Type: multipart/form-data
+
+  Partes soportadas:
+  - file (obligatoria): el archivo a subir
+  - fileName (opcional)
+  - comment (opcional)
+  - contentType (opcional)
+  - apiVersion (opcional, default 7.2-preview)
 
 Uso:
 
@@ -108,4 +117,15 @@ Ejemplos adicionales:
 
 Notas:
 - El Content-Type por defecto es `application/octet-stream`; puedes forzarlo con `--content-type`.
-- A nivel de herramienta MCP (`azuredevops_wit_work_item_attachment_add`), ahora se recomienda pasar `fileUri`/ruta y dejar que el tool lea el archivo. El soporte a `dataBase64` queda como [DEPRECATED] para compatibilidad.
+- A nivel de herramienta MCP (`azuredevops_wit_work_item_attachment_add`), se recomienda usar `dataUrl` (data: URI inline) cuando no se pueda compartir filesystem. El soporte a `dataBase64` queda como [DEPRECATED] para compatibilidad.
+
+### Ejemplo de uso del endpoint HTTP multipart (con curl):
+
+```bash
+curl -X POST \
+  "http://localhost:8080/mcp/uploads/wit/workitems/123/attachment?project=MiProyecto" \
+  -H "Accept: application/json" \
+  -F "file=@./evidencia.png" \
+  -F "fileName=evidencia.png" \
+  -F "comment=Screenshot del error"
+```
