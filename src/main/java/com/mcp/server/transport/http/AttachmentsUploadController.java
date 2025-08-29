@@ -60,9 +60,10 @@ public class AttachmentsUploadController {
             if (effectiveFileName == null || effectiveFileName.isBlank()) {
                 effectiveFileName = "attachment.bin";
             }
-            String ct = attachmentsHelper.sanitizeContentType(
-                    (contentType != null && !contentType.isBlank()) ? contentType : Objects.toString(file.getContentType(), null)
-            );
+        // Para el POST de attachments Azure DevOps exige application/octet-stream; el contentType del archivo se puede conservar como metadata lógica
+        String ct = attachmentsHelper.sanitizeContentType(
+            (contentType != null && !contentType.isBlank()) ? contentType : Objects.toString(file.getContentType(), null)
+        );
 
             // 1) Crear attachment con binario
             Map<String, Object> createResp = attachmentsHelper.createAttachment(effectiveFileName, file.getBytes(), ct);

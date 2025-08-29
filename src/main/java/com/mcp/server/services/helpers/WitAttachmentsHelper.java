@@ -43,9 +43,10 @@ public class WitAttachmentsHelper {
     public Map<String,Object> createAttachment(String fileName, byte[] data, String contentType) {
         Map<String,String> query = new LinkedHashMap<>();
         query.put("fileName", fileName);
-        // El tipo MediaType debe resolverse en el Tool, aquí solo se pasa el string
-    MediaType ct = contentType != null ? MediaType.valueOf(contentType) : MediaType.APPLICATION_OCTET_STREAM;
-    return azureService.postCoreBinary("wit/attachments", query, data, "7.2-preview", ct);
+        // Azure DevOps requiere application/octet-stream para subir el binario del attachment
+        // Ignoramos 'contentType' para el header de subida y forzamos octet-stream
+        MediaType ct = MediaType.APPLICATION_OCTET_STREAM;
+        return azureService.postCoreBinary("wit/attachments", query, data, "7.2-preview", ct);
     }
 
     /**
