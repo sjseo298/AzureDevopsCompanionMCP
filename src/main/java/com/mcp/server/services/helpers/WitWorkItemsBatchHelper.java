@@ -31,7 +31,8 @@ public class WitWorkItemsBatchHelper {
         List<Integer> ids = new ArrayList<>();
         for (String tok : idsStr.split(",")) {
             String t = tok.trim(); if (t.isEmpty()) continue; if (!t.matches("^\\d+$")) continue; ids.add(Integer.valueOf(t));
-            if (ids.size() >= 200) break; // límite script
+            // Aumentado de 200 a 1000 IDs para permitir lotes más grandes
+            if (ids.size() >= 1000) break; // límite aumentado
         }
         Map<String,Object> body = new LinkedHashMap<>();
         body.put("ids", ids);

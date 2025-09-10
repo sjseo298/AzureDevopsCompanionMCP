@@ -12,6 +12,12 @@ server:
   error:
     include-stacktrace: never
     include-message: always
+  # Configuración para manejar requests y responses más grandes
+  max-http-header-size: 64KB
+  max-http-post-size: 100MB
+  tomcat:
+    max-post-size: 100MB
+    max-http-form-post-size: 100MB
 
 # Configuración de Spring Boot
 spring:
@@ -47,19 +53,22 @@ spring:
   webflux:
     buffer:
       # Aumentar límite de buffer para respuestas grandes de Azure DevOps
-      max-in-memory-size: 10MB
+      # Aumentado de 10MB a 50MB para manejar respuestas más grandes
+      max-in-memory-size: 50MB
   
   # Configuración de codec para parsing JSON
   codec:
-    max-in-memory-size: 10MB
+    # Aumentado de 10MB a 50MB para procesar JSONs más grandes
+    max-in-memory-size: 50MB
   
   # Configuración de tareas asíncronas
   task:
     execution:
       pool:
-        core-size: 2
-        max-size: 4
-        queue-capacity: 100
+        # Aumentado para manejar más requests concurrentes
+        core-size: 8
+        max-size: 16
+        queue-capacity: 500
         keep-alive: 60s
       thread-name-prefix: mcp-async-
 
@@ -78,14 +87,20 @@ azure:
     organization: ${AZURE_DEVOPS_ORGANIZATION:#{null}}
     pat: ${AZURE_DEVOPS_PAT:#{null}}
     api-version: "7.1"
-    timeout: 30s
+    # Aumentar timeout para operaciones con datos grandes
+    timeout: 120s
+    # Configuración adicional para requests grandes
+    connection-timeout: 30s
+    read-timeout: 120s
+    write-timeout: 120s
 
 # Configuración específica de MCP
 mcp:
   stdio: ${MCP_STDIO:false}
   protocol:
     version: "2025-06-18"
-    timeout: ${MCP_TIMEOUT:30s}
+    # Aumentar timeout para operaciones con datos grandes
+    timeout: ${MCP_TIMEOUT:120s}
   tools:
     enabled: true
     auto-discovery: true

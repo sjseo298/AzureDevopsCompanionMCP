@@ -4,6 +4,8 @@ import com.mcp.server.services.AzureDevOpsClientService;
 import org.springframework.stereotype.Component;
 import org.springframework.http.MediaType;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Helper para crear work items replicando lógica avanzada del script bash.
@@ -49,10 +51,13 @@ public class WitWorkItemCreateHelper {
         if (iteration != null && !iteration.isEmpty()) patch.add(Map.of("op","add","path","/fields/System.IterationPath","value",iteration));
 
         if (fields != null && !fields.isEmpty()) {
-            for (String pair : fields.split(",")) {
+            // CORREGIDO: Usar parsing inteligente para campos que pueden contener comas
+            List<String> fieldPairs = smartSplitByComma(fields);
+            for (String pair : fieldPairs) {
                 if (pair.isBlank() || !pair.contains("=")) continue;
                 String[] kv = pair.split("=",2);
-                String k = kv[0].trim(); String v = kv[1].trim();
+                String k = kv[0].trim(); 
+                String v = kv.length > 1 ? kv[1].trim() : "";
                 if (k.isEmpty()) continue;
                 Object valObj = v;
                 if (v.matches("^-?\\d+$")) { try { valObj = Integer.parseInt(v); } catch (NumberFormatException ignored) {} }
@@ -214,5 +219,53 @@ public class WitWorkItemCreateHelper {
             }
         }
         return resp;
+    }
+    
+    /**
+     * Divide inteligentemente por comas, respetando valores que pueden contener comas internas
+     */
+    private List<String> smartSplitByComma(String text) {
+        List<String> result = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        int equalsCount = 0;
+        
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            
+            if (c == '"') {
+                inQuotes = !inQuotes;
+                current.append(c);
+            } else if (c == '=' && !inQuotes) {
+                equalsCount++;
+                current.append(c);
+            } else if (c == ',' && !inQuotes) {
+                // Solo dividir en coma si ya hemos visto un '=' en el segmento actual
+                // y el siguiente segmento parece ser otro campo=valor
+                String remaining = text.substring(i + 1).trim();
+                if (equalsCount > 0 && remaining.contains("=")) {
+                    // Verificar si lo que sigue parece ser otro campo
+                    int nextEquals = remaining.indexOf('=');
+                    String potentialField = remaining.substring(0, nextEquals).trim();
+                    // Si el potencial campo no contiene espacios excesivos, probablemente es un campo
+                    if (potentialField.length() > 0 && potentialField.length() < 100 && 
+                        !potentialField.contains("\n") && !potentialField.contains("#")) {
+                        result.add(current.toString().trim());
+                        current = new StringBuilder();
+                        equalsCount = 0;
+                        continue;
+                    }
+                }
+                current.append(c);
+            } else {
+                current.append(c);
+            }
+        }
+        
+        if (current.length() > 0) {
+            result.add(current.toString().trim());
+        }
+        
+        return result;
     }
 }

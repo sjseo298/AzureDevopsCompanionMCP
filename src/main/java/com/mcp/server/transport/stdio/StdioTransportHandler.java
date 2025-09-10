@@ -81,7 +81,8 @@ public class StdioTransportHandler implements CommandLineRunner {
             // Check if this looks like JSON
             if (!isJsonMessage(message)) {
                 System.err.println("Received non-JSON message, ignoring: " + 
-                    (message.length() > 50 ? message.substring(0, 50) + "..." : message));
+                    // Aumentado de 50 a 500 caracteres para mejor debugging
+                    (message.length() > 500 ? message.substring(0, 500) + "..." : message));
                 return;
             }
             
@@ -146,7 +147,8 @@ public class StdioTransportHandler implements CommandLineRunner {
     private void handleHttpRequest(String request, PrintWriter writer) {
         try {
             System.err.println("Handling HTTP request: " + 
-                (request.length() > 100 ? request.substring(0, 100) + "..." : request));
+                // Aumentado de 100 a 1000 caracteres para mejor debugging
+                (request.length() > 1000 ? request.substring(0, 1000) + "..." : request));
             
             if (request.contains("GET /health") || request.contains("GET /mcp/health")) {
                 // Simple health check response

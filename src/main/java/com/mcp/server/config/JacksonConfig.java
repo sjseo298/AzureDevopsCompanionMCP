@@ -1,5 +1,7 @@
 package com.mcp.server.config;
 
+import com.fasterxml.jackson.core.StreamReadConstraints;
+import com.fasterxml.jackson.core.StreamWriteConstraints;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
@@ -44,7 +46,7 @@ public class JacksonConfig {
     @Bean
     @Primary
     public ObjectMapper objectMapper() {
-        return new ObjectMapper()
+        ObjectMapper mapper = new ObjectMapper()
                 // Configuración de deserialización
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false)
@@ -60,5 +62,21 @@ public class JacksonConfig {
                 
                 // Estrategia de nombres (snake_case para MCP)
                 .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+        
+        // Configurar límites para manejar textos muy grandes
+        StreamReadConstraints readConstraints = StreamReadConstraints.builder()
+                .maxStringLength(50_000_000) // 50MB para strings muy grandes
+                .maxNumberLength(10000)      // Números muy largos
+                .maxNestingDepth(2000)       // JSON muy anidado
+                .build();
+        
+        StreamWriteConstraints writeConstraints = StreamWriteConstraints.builder()
+                .maxNestingDepth(2000)       // JSON muy anidado
+                .build();
+        
+        mapper.getFactory().setStreamReadConstraints(readConstraints);
+        mapper.getFactory().setStreamWriteConstraints(writeConstraints);
+        
+        return mapper;
     }
 }
