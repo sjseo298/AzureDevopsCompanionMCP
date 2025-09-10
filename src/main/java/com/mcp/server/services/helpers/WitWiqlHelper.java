@@ -51,7 +51,8 @@ public class WitWiqlHelper {
         @SuppressWarnings("unchecked") List<Map<String,Object>> cols = (List<Map<String,Object>>) data.get("columns");
         if (cols != null && !cols.isEmpty()) {
             sb.append("Columnas (").append(cols.size()).append("): ");
-            cols.stream().limit(8).forEach(c -> sb.append(c.getOrDefault("referenceName","?")));
+            // Aumentado de 8 a 20 columnas para mostrar más información
+            cols.stream().limit(20).forEach(c -> sb.append(c.getOrDefault("referenceName","?")));
             sb.append('\n');
         }
         Object workItems = data.get("workItems");

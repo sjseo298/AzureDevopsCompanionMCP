@@ -45,6 +45,10 @@ public class AzureDevOpsClientService {
             .defaultHeader(HttpHeaders.AUTHORIZATION, "Basic " + encoded)
             .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+            // Configurar codecs para manejar responses más grandes
+            .codecs(configurer -> {
+                configurer.defaultCodecs().maxInMemorySize(50 * 1024 * 1024); // 50MB
+            })
             .build();
     }
 

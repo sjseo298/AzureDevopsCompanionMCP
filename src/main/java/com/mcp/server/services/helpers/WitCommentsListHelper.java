@@ -41,7 +41,8 @@ public class WitCommentsListHelper {
                     Object id = m.get("id");
                     Object text = m.get("text");
                     String t = text == null ? "" : text.toString();
-                    if (t.length() > 200) t = t.substring(0, 200) + "…";
+                    // Aumentado de 200 a 10000 caracteres para evitar truncamiento
+                    if (t.length() > 10000) t = t.substring(0, 10000) + "…";
                     sb.append(i++).append(") ").append(id != null ? id : "?").append(": ").append(t).append('\n');
                 }
             }

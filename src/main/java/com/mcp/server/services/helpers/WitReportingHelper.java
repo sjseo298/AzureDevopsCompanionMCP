@@ -38,7 +38,8 @@ public class WitReportingHelper {
             sb.append("Sin datos.");
         } else {
             sb.append("Links recibidos: ").append(values.size()).append('\n');
-            int max = Math.min(values.size(), 10);
+            // Aumentado de 10 a 100 elementos para mostrar más detalles
+            int max = Math.min(values.size(), 100);
             for (int i=0;i<max;i++) {
                 Map<String,Object> v = values.get(i);
                 sb.append(i+1).append(") ")
@@ -123,7 +124,8 @@ public class WitReportingHelper {
         StringBuilder sb = new StringBuilder();
         sb.append("Revisiones recibidas: ").append(total).append('\n');
         if (values != null && !values.isEmpty()) {
-            int max = Math.min(5, values.size());
+            // Aumentado de 5 a 50 elementos para mostrar más detalles en revisiones
+            int max = Math.min(50, values.size());
             for (int i=0;i<max;i++) {
                 Map<String,Object> v = values.get(i);
                 sb.append(i+1).append(") id=").append(v.get("id")).append(" rev=").append(v.get("rev")).append('\n');

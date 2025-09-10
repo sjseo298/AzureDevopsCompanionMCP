@@ -61,7 +61,8 @@ public class WitRevisionsHelper {
         StringBuilder sb = new StringBuilder();
         sb.append("Revisiones count=").append(count).append('\n');
         if (value != null && !value.isEmpty()) {
-            int max = Math.min(5, value.size());
+            // Aumentado de 5 a 50 elementos para mostrar más revisiones
+            int max = Math.min(50, value.size());
             for (int i=0;i<max;i++) {
                 Map<String,Object> v = value.get(i);
                 Object rev = v.get("rev");
