@@ -18,7 +18,7 @@ import java.util.*;
 public class WiqlByQueryTool extends AbstractAzureDevOpsTool {
 
     private static final String NAME = "azuredevops_wit_wiql_by_query";
-    private static final String DESC = "Ejecuta una consulta WIQL ad-hoc en el proyecto (POST _apis/wit/wiql).";
+    private static final String DESC = "Ejecuta una consulta WIQL ad-hoc en el proyecto y obtiene los datos completos de los work items (POST _apis/wit/wiql + GET _apis/wit/workitems).";
     private static final String DEFAULT_API_VERSION = "7.2-preview";
 
     private final WitWiqlHelper helper;
@@ -54,7 +54,9 @@ public class WiqlByQueryTool extends AbstractAzureDevOpsTool {
         } catch (IllegalArgumentException e) {
             return error(e.getMessage());
         }
-        Map<String,Object> resp = helper.fetchByQuery(project, team, wiql, apiVersion);
+        
+        // Usar el nuevo método que obtiene datos completos de work items
+        Map<String,Object> resp = helper.fetchByQueryWithData(project, team, wiql, apiVersion);
         String formattedErr = tryFormatRemoteError(resp);
         if (formattedErr != null) return success(formattedErr);
         return success(helper.formatResponse(resp));

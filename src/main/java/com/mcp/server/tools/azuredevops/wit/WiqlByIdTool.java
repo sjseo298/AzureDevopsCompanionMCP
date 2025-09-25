@@ -24,9 +24,9 @@ public class WiqlByIdTool extends AbstractAzureDevOpsTool {
     private final WitWiqlHelper helper;
 
     @Autowired
-    public WiqlByIdTool(AzureDevOpsClientService service) {
+    public WiqlByIdTool(AzureDevOpsClientService service, WitWiqlHelper helper) {
         super(service);
-        this.helper = new WitWiqlHelper(service);
+        this.helper = helper;
     }
 
     @Override public String getName() { return NAME; }
