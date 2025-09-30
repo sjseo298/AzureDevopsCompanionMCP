@@ -58,6 +58,8 @@ RUN_TEST=false
 QUIET=false
 TAG_AS_LATEST=true
 DOCKER_ARGS=""
+# Usuario para Docker Hub (si no se especifica se pedirá al usuario en modo interactivo)
+DOCKERHUB_USER=""
 
 # Parsear argumentos
 while [[ $# -gt 0 ]]; do
@@ -66,6 +68,7 @@ while [[ $# -gt 0 ]]; do
     --dockerfile) DOCKERFILE="$2"; shift 2;;
     --no-cache) NO_CACHE="--no-cache"; shift;;
     --push) PUSH_IMAGE=true; shift;;
+    --dockerhub-user) DOCKERHUB_USER="$2"; shift 2;;
     --registry) REGISTRY="$2"; shift 2;;
     --clean) CLEAN_FIRST=true; shift;;
     --test) RUN_TEST=true; shift;;
@@ -161,7 +164,8 @@ interactive_mode() {
   read -p "📤 ¿Push la imagen tras construir? (y/N): " push_choice
   if [[ $push_choice =~ ^[Yy]$ ]]; then
     PUSH_IMAGE=true
-    read -p "🌐 Registry URL (opcional): " registry_input
+    echo "Nota: Si dejas vacío el registry, se usará Docker Hub (se te pedirá el usuario si no fue proporcionado)."
+    read -p "🌐 Registry URL (opcional) [enter para usar Docker Hub]: " registry_input
     REGISTRY=$registry_input
   fi
   
@@ -189,6 +193,20 @@ interactive_mode() {
 # Verificar si se ejecuta sin argumentos (modo interactivo)
 if [[ $# -eq 0 ]]; then
   interactive_mode
+fi
+
+# Si estamos en modo no interactivo y el usuario no pasó --dockerhub-user ni --registry
+# y se pidió push, pedimos confirmación y solicitamos el usuario de Docker Hub
+if [[ "${PUSH_IMAGE}" == true && -z "${REGISTRY}" && -z "${DOCKERHUB_USER}" ]]; then
+  if [[ -t 0 ]]; then
+    # TTY disponible - preguntar ahora
+    read -p "Introduce tu usuario de Docker Hub (ej: sjseo298): " input_dh_user
+    DOCKERHUB_USER=${input_dh_user}
+  else
+    # No hay TTY: abortar para evitar push accidental
+    log_error "Se solicitó --push pero no se proporcionó --registry ni --dockerhub-user y no hay TTY para preguntar. Aborting."
+    exit 1
+  fi
 fi
 
 # Verificar que estamos en el directorio correcto
@@ -311,22 +329,44 @@ fi
 
 # Push si se solicita
 if [[ "${PUSH_IMAGE}" == true ]]; then
-  if [[ -n "${REGISTRY}" && "${IMAGE_TAG}" != *"${REGISTRY}"* ]]; then
-    # Re-tag la imagen con el registry
-    REGISTRY_TAG="${REGISTRY}/${IMAGE_TAG}"
-    log "🏷️  Re-etiquetando imagen para registry: ${REGISTRY_TAG}"
-    docker tag "${IMAGE_TAG}" "${REGISTRY_TAG}"
+  # Si no se indicó un registry, usar Docker Hub bajo el usuario DOCKERHUB_USER
+  if [[ -z "${REGISTRY}" ]]; then
+    # Determinar nombre y tag base
+    # Si IMAGE_TAG incluye un tag (user/repo:tag o repo:tag), separar
+    REPO_AND_TAG="${IMAGE_TAG}"
+    # Si IMAGE_TAG no contiene '/', asumimos repo:tag y preprendemos el user
+    if [[ "${REPO_AND_TAG}" != */* ]]; then
+      REGISTRY_TAG="${DOCKERHUB_USER}/${REPO_AND_TAG}"
+    else
+      # Ya contiene user/repo, solo asegurarse que use el DOCKERHUB_USER si no se proporcionó registry
+      # Si ya tiene formato user/repo, mantenerlo
+      REGISTRY_TAG="${REPO_AND_TAG}"
+    fi
+
+    log "🏷️  Re-etiquetando imagen para Docker Hub: ${REGISTRY_TAG}"
+    if ! docker tag "${IMAGE_TAG}" "${REGISTRY_TAG}"; then
+      log_error "Error al tagear la imagen para Docker Hub"
+      exit 1
+    fi
     IMAGE_TAG="${REGISTRY_TAG}"
+  else
+    if [[ "${IMAGE_TAG}" != *"${REGISTRY}"* ]]; then
+      # Re-tag la imagen con el registry proporcionado
+      REGISTRY_TAG="${REGISTRY}/${IMAGE_TAG}"
+      log "🏷️  Re-etiquetando imagen para registry: ${REGISTRY_TAG}"
+      docker tag "${IMAGE_TAG}" "${REGISTRY_TAG}"
+      IMAGE_TAG="${REGISTRY_TAG}"
+    fi
   fi
-  
+
   log "⬆️  Subiendo imagen: ${IMAGE_TAG}"
-  
+
   if ! docker push "${IMAGE_TAG}"; then
     log_error "Falló el push de la imagen"
     exit 1
   fi
-  
-  log_success "Imagen subida exitosamente"
+
+  log_success "Imagen subida exitosamente: ${IMAGE_TAG}"
 fi
 
 # Mostrar instrucciones de uso
