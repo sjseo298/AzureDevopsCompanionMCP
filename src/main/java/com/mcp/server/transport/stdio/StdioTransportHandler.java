@@ -132,10 +132,16 @@ public class StdioTransportHandler implements CommandLineRunner {
     }
     
     private boolean isHttpRequest(String message) {
-        return message.startsWith("GET ") || message.startsWith("POST ") || 
-               message.startsWith("PUT ") || message.startsWith("DELETE ") ||
-               message.startsWith("HEAD ") || message.startsWith("OPTIONS ") ||
-               message.contains("HTTP/");
+        // Solo detectar como HTTP request si COMIENZA con un verbo HTTP válido
+        // No usar .contains("HTTP/") porque puede aparecer en datos JSON
+        String trimmed = message.trim();
+        return trimmed.startsWith("GET ") || 
+               trimmed.startsWith("POST ") || 
+               trimmed.startsWith("PUT ") || 
+               trimmed.startsWith("DELETE ") ||
+               trimmed.startsWith("HEAD ") || 
+               trimmed.startsWith("OPTIONS ") ||
+               trimmed.startsWith("PATCH ");
     }
     
     private boolean isJsonMessage(String message) {
