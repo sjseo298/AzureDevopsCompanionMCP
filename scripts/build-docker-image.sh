@@ -23,7 +23,7 @@ Descripción:
   especificaciones del README.md
 
 Opciones:
-  --tag <nombre>      Nombre/tag para la imagen (default: mcp-azure-devops)
+  --tag <nombre>      Nombre/tag para la imagen (default: sjseo298/mcp-azure-devops)
   --dockerfile <file> Dockerfile a usar (default: Dockerfile)
                       Opciones: Dockerfile, Dockerfile.slim, Dockerfile.ultra
   --no-cache          Construir sin usar cache de Docker
@@ -32,6 +32,9 @@ Opciones:
   --clean             Limpiar imágenes previas antes de construir
   --test              Ejecutar test básico tras la construcción
   --quiet             Salida mínima (solo errores)
+  --platform <plats>  Plataformas a construir (default: linux/amd64,linux/arm64)
+                      Ejemplos: linux/amd64 | linux/arm64 | linux/amd64,linux/arm64
+  --no-multiplatform  Construir solo para la plataforma local (sin buildx)
   --help              Mostrar esta ayuda
 
 Dockerfiles disponibles:
@@ -41,14 +44,17 @@ Dockerfiles disponibles:
 
 Ejemplos:
   ./build-docker-image.sh
-  ./build-docker-image.sh --dockerfile Dockerfile.slim --tag mcp-azure-devops:slim
-  ./build-docker-image.sh --dockerfile Dockerfile.ultra --tag mcp-azure-devops:ultra
+  ./build-docker-image.sh --dockerfile Dockerfile.slim --tag sjseo298/mcp-azure-devops:slim
+  ./build-docker-image.sh --dockerfile Dockerfile.ultra --tag sjseo298/mcp-azure-devops:ultra
   ./build-docker-image.sh --no-cache --clean --test --dockerfile Dockerfile.slim
+  ./build-docker-image.sh --platform linux/amd64 --push  # Solo amd64
+  ./build-docker-image.sh --no-multiplatform             # Plataforma local solamente
 USAGE
 }
 
 # Configuración por defecto
-IMAGE_TAG="mcp-azure-devops"
+DEFAULT_IMAGE_REPO="sjseo298/mcp-azure-devops"
+IMAGE_TAG="${DEFAULT_IMAGE_REPO}"
 DOCKERFILE="Dockerfile"
 NO_CACHE=""
 PUSH_IMAGE=false
@@ -60,6 +66,13 @@ TAG_AS_LATEST=true
 DOCKER_ARGS=""
 # Usuario para Docker Hub (si no se especifica se pedirá al usuario en modo interactivo)
 DOCKERHUB_USER=""
+# Configuración multiplataforma (por defecto: activado con amd64+arm64)
+MULTIPLATFORM=true
+PLATFORMS="linux/amd64,linux/arm64"
+BUILDX_BUILDER="mcp-multiplatform-builder"
+
+# Guardar si se proporcionaron argumentos (para decidir modo interactivo)
+HAD_ARGS=$#
 
 # Parsear argumentos
 while [[ $# -gt 0 ]]; do
@@ -73,6 +86,8 @@ while [[ $# -gt 0 ]]; do
     --clean) CLEAN_FIRST=true; shift;;
     --test) RUN_TEST=true; shift;;
     --quiet) QUIET=true; shift;;
+    --platform) PLATFORMS="$2"; shift 2;;
+    --no-multiplatform) MULTIPLATFORM=false; shift;;
     -h|--help) usage; exit 0;;
     *) echo -e "${RED}Argumento no reconocido: $1${NC}" >&2; usage; exit 1;;
   esac
@@ -95,6 +110,32 @@ log_warning() {
 log_error() {
   echo -e "${RED}[$(date +'%H:%M:%S')] ❌ $1${NC}" >&2
 }
+
+compute_latest_tag() {
+  local image_ref="$1"
+  local last_segment="${image_ref##*/}"
+  if [[ "${last_segment}" == *:* ]]; then
+    echo "${image_ref%:*}:latest"
+  else
+    echo "${image_ref}:latest"
+  fi
+}
+
+detect_local_platform() {
+  local arch
+  arch="$(uname -m)"
+  case "${arch}" in
+    x86_64|amd64) echo "linux/amd64";;
+    aarch64|arm64) echo "linux/arm64";;
+    armv7l) echo "linux/arm/v7";;
+    armv6l) echo "linux/arm/v6";;
+    *)
+      echo "linux/amd64"
+      ;;
+  esac
+}
+
+LATEST_TAG="$(compute_latest_tag "${IMAGE_TAG}")"
 
 # Función para modo interactivo
 interactive_mode() {
@@ -122,22 +163,23 @@ interactive_mode() {
   done
   
   # Configurar tag basado en dockerfile
-  default_tag="mcp-azure-devops"
+  default_tag="${DEFAULT_IMAGE_REPO}"
   case $DOCKERFILE in
-    "Dockerfile.slim") default_tag="mcp-azure-devops:slim";;
-    "Dockerfile.ultra") default_tag="mcp-azure-devops:ultra";;
+    "Dockerfile.slim") default_tag="${DEFAULT_IMAGE_REPO}:slim";;
+    "Dockerfile.ultra") default_tag="${DEFAULT_IMAGE_REPO}:ultra";;
   esac
   
   # Nombre de la imagen
   read -p "🏷️  Tag de la imagen [default: $default_tag]: " user_tag
   IMAGE_TAG=${user_tag:-$default_tag}
+  LATEST_TAG="$(compute_latest_tag "${IMAGE_TAG}")"
   
   # Preguntar si también tagear como latest
   echo ""
   read -p "🏆 ¿También tagear esta imagen como 'latest'? (Y/n): " latest_choice
   if [[ ! $latest_choice =~ ^[Nn]$ ]]; then
     TAG_AS_LATEST=true
-    echo -e "${GREEN}   ✅ Se tageará también como: mcp-azure-devops:latest${NC}"
+    echo -e "${GREEN}   ✅ Se tageará también como: ${LATEST_TAG}${NC}"
   else
     TAG_AS_LATEST=false
   fi
@@ -169,17 +211,48 @@ interactive_mode() {
     REGISTRY=$registry_input
   fi
   
+  # Opciones de multiplataforma
+  echo ""
+  echo -e "${YELLOW}🖥️  Configuración de plataformas:${NC}"
+  echo "Por defecto se construye para: linux/amd64,linux/arm64 (multiplataforma)"
+  read -p "🔧 ¿Construir multiplataforma (amd64+arm64)? (Y/n): " multiplatform_choice
+  if [[ $multiplatform_choice =~ ^[Nn]$ ]]; then
+    MULTIPLATFORM=false
+    echo -e "${GREEN}   ✅ Se construirá solo para la plataforma local${NC}"
+  else
+    MULTIPLATFORM=true
+    read -p "📦 Plataformas a construir [default: linux/amd64,linux/arm64]: " platform_input
+    if [[ -n "$platform_input" ]]; then
+      PLATFORMS="$platform_input"
+    fi
+    echo -e "${GREEN}   ✅ Se construirá para: ${PLATFORMS}${NC}"
+    
+    # Advertencia sobre push con multiplataforma
+    if [[ "${PUSH_IMAGE}" != true ]]; then
+      echo -e "${YELLOW}   ⚠️  Nota: En construcción multiplataforma (amd64+arm64) sin --push, Docker Buildx no puede cargar la imagen en el daemon local.${NC}"
+      echo -e "${YELLOW}      El resultado queda en el caché del builder (no verás la imagen en 'docker images').${NC}"
+      echo -e "${YELLOW}      Opciones:${NC}"
+      echo -e "${YELLOW}        - Usa --push (y luego 'docker pull' / 'docker run --platform ...')${NC}"
+      echo -e "${YELLOW}        - O construye UNA sola plataforma (ej. --platform linux/amd64) para habilitar --load${NC}"
+      echo -e "${YELLOW}        - O usa --no-multiplatform para build local clásico${NC}"
+    fi
+  fi
+  
   echo ""
   echo -e "${GREEN}✅ Configuración completada:${NC}"
   echo -e "   📄 Dockerfile: ${DOCKERFILE}"
   echo -e "   🏷️  Tag: ${IMAGE_TAG}"
   if [[ "$TAG_AS_LATEST" == true ]]; then
-    echo -e "   🏆 Tag adicional: mcp-azure-devops:latest"
+    echo -e "   🏆 Tag adicional: ${LATEST_TAG}"
   fi
   echo -e "   🧹 Limpiar: ${CLEAN_FIRST}"
   echo -e "   🚫 Sin cache: ${NO_CACHE:-false}"
   echo -e "   🧪 Test: ${RUN_TEST}"
   echo -e "   📤 Push: ${PUSH_IMAGE}"
+  echo -e "   🖥️  Multiplataforma: ${MULTIPLATFORM}"
+  if [[ "${MULTIPLATFORM}" == true ]]; then
+    echo -e "   📦 Plataformas: ${PLATFORMS}"
+  fi
   [[ -n "$REGISTRY" ]] && echo -e "   🌐 Registry: ${REGISTRY}"
   echo ""
   
@@ -191,9 +264,11 @@ interactive_mode() {
 }
 
 # Verificar si se ejecuta sin argumentos (modo interactivo)
-if [[ $# -eq 0 ]]; then
+if [[ ${HAD_ARGS} -eq 0 ]]; then
   interactive_mode
 fi
+
+LATEST_TAG="$(compute_latest_tag "${IMAGE_TAG}")"
 
 # Si estamos en modo no interactivo y el usuario no pasó --dockerhub-user ni --registry
 # y se pidió push, pedimos confirmación y solicitamos el usuario de Docker Hub
@@ -268,40 +343,197 @@ done
 
 log_success "Todos los archivos necesarios están presentes"
 
+# Función para configurar buildx para multiplataforma
+setup_buildx() {
+  log "🔧 Configurando Docker Buildx para construcción multiplataforma..."
+  
+  # Verificar si buildx está disponible
+  if ! docker buildx version >/dev/null 2>&1; then
+    log_error "Docker Buildx no está disponible. Por favor actualiza Docker o usa --no-multiplatform"
+    exit 1
+  fi
+  
+  # Verificar si el builder ya existe
+  if docker buildx inspect "${BUILDX_BUILDER}" >/dev/null 2>&1; then
+    log "Builder '${BUILDX_BUILDER}' ya existe, usándolo..."
+    docker buildx use "${BUILDX_BUILDER}"
+  else
+    log "Creando nuevo builder '${BUILDX_BUILDER}'..."
+    docker buildx create --name "${BUILDX_BUILDER}" --driver docker-container --bootstrap --use
+  fi
+  
+  # Nota: NO ejecutamos multiarch/qemu-user-static aquí porque puede corromper
+  # los binfmt handlers y causar "Exec format error" en binarios nativos.
+  # Docker Buildx con driver docker-container ya incluye soporte QEMU integrado.
+  # Si necesitas configurar QEMU manualmente, hazlo FUERA de este script con:
+  #   docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+  # y reinicia el Docker daemon después si hay problemas.
+  
+  # Verificar que el builder soporta las plataformas solicitadas
+  log "Verificando plataformas soportadas por el builder..."
+  SUPPORTED_PLATFORMS=$(docker buildx inspect "${BUILDX_BUILDER}" --bootstrap 2>/dev/null | grep -i "Platforms:" | head -1 || echo "")
+  if [[ -n "${SUPPORTED_PLATFORMS}" ]]; then
+    log "Plataformas disponibles: ${SUPPORTED_PLATFORMS}"
+  fi
+  
+  log_success "Docker Buildx configurado correctamente"
+}
+
 # Construir la imagen
 log "🔨 Construyendo imagen Docker..."
-log "Comando: docker build ${NO_CACHE} -f ${DOCKERFILE} -t ${IMAGE_TAG} ."
 
 if [[ "${QUIET}" == true ]]; then
   DOCKER_ARGS="--quiet"
 fi
 
-if ! docker build ${NO_CACHE} ${DOCKER_ARGS} -f "${DOCKERFILE}" -t "${IMAGE_TAG}" .; then
-  log_error "Falló la construcción de la imagen Docker"
-  exit 1
-fi
-
-log_success "Imagen construida exitosamente: ${IMAGE_TAG}"
-
-# Tagear como latest si se solicita
-if [[ "$TAG_AS_LATEST" == true ]]; then
-  log "🏆 Tageando imagen como latest..."
-  if docker tag "${IMAGE_TAG}" "mcp-azure-devops:latest"; then
-    log_success "Imagen tageada como: mcp-azure-devops:latest"
+if [[ "${MULTIPLATFORM}" == true ]]; then
+  # Construcción multiplataforma con buildx
+  setup_buildx
+  
+  # Construir tags
+  BUILD_TAGS="-t ${IMAGE_TAG}"
+  if [[ "$TAG_AS_LATEST" == true ]]; then
+    BUILD_TAGS="${BUILD_TAGS} -t ${LATEST_TAG}"
+  fi
+  
+  # Determinar si usar --push o --load
+  # Nota: --load solo funciona con una plataforma, --push funciona con múltiples
+  OUTPUT_FLAG=""
+  LOCAL_PLATFORM_FOR_LOAD=""
+  if [[ "${PUSH_IMAGE}" == true ]]; then
+    # Para push, necesitamos el tag completo con registry/user
+    if [[ -z "${REGISTRY}" && -n "${DOCKERHUB_USER}" ]]; then
+      # Re-construir tags para Docker Hub
+      if [[ "${IMAGE_TAG}" != */* ]]; then
+        BUILD_TAGS="-t ${DOCKERHUB_USER}/${IMAGE_TAG}"
+        if [[ "$TAG_AS_LATEST" == true ]]; then
+          BUILD_TAGS="${BUILD_TAGS} -t ${DOCKERHUB_USER}/${LATEST_TAG}"
+        fi
+        IMAGE_TAG="${DOCKERHUB_USER}/${IMAGE_TAG}"
+        LATEST_TAG="$(compute_latest_tag "${IMAGE_TAG}")"
+      fi
+    elif [[ -n "${REGISTRY}" ]]; then
+      if [[ "${IMAGE_TAG}" != *"${REGISTRY}"* ]]; then
+        BUILD_TAGS="-t ${REGISTRY}/${IMAGE_TAG}"
+        if [[ "$TAG_AS_LATEST" == true ]]; then
+          BUILD_TAGS="${BUILD_TAGS} -t ${REGISTRY}/${LATEST_TAG}"
+        fi
+        IMAGE_TAG="${REGISTRY}/${IMAGE_TAG}"
+        LATEST_TAG="$(compute_latest_tag "${IMAGE_TAG}")"
+      fi
+    fi
+    OUTPUT_FLAG="--push"
+    log "📤 Las imágenes se subirán automáticamente al registry tras la construcción"
   else
-    log_error "Error al tagear la imagen como latest"
+    # Sin push: si son múltiples plataformas, no podemos usar --load.
+    # Para garantizar que el tag quede usable localmente, construimos y cargamos SOLO la plataforma local.
+    if [[ "${PLATFORMS}" == *","* ]]; then
+      LOCAL_PLATFORM="$(detect_local_platform)"
+      log_warning "Construcción multiplataforma sin --push no se puede cargar al daemon local."
+      log_warning "Construyendo y cargando SOLO la plataforma local (${LOCAL_PLATFORM}) para dejar la imagen disponible en 'docker images' y 'docker run'."
+      log_warning "Si necesitas un verdadero multi-arch (amd64+arm64) usable por otros hosts, usa --push."
+      PLATFORMS="${LOCAL_PLATFORM}"
+      OUTPUT_FLAG="--load"
+    else
+      # Una sola plataforma, podemos usar --load
+      OUTPUT_FLAG="--load"
+    fi
+  fi
+  
+  log "Comando: docker buildx build ${NO_CACHE} --platform ${PLATFORMS} ${BUILD_TAGS} ${OUTPUT_FLAG} -f ${DOCKERFILE} ."
+  
+  if ! docker buildx build ${NO_CACHE} ${DOCKER_ARGS} --platform "${PLATFORMS}" ${BUILD_TAGS} ${OUTPUT_FLAG} -f "${DOCKERFILE}" .; then
+    if [[ "${OUTPUT_FLAG}" == "--push" ]]; then
+      log_error "Falló la construcción/push de la imagen Docker con buildx. Causas comunes: no estar logueado ('docker login'), repo inexistente o falta de permisos en el registry."
+      LOCAL_PLATFORM_FOR_LOAD="$(detect_local_platform)"
+      log_warning "Intentando dejar imagen disponible localmente (best-effort) construyendo ${LOCAL_PLATFORM_FOR_LOAD} con --load..."
+      if docker buildx build ${NO_CACHE} ${DOCKER_ARGS} --platform "${LOCAL_PLATFORM_FOR_LOAD}" ${BUILD_TAGS} --load -f "${DOCKERFILE}" .; then
+        log_success "Imagen cargada localmente tras fallo de push: ${IMAGE_TAG}"
+        log_success "Tag local adicional (si aplica): ${LATEST_TAG}"
+      else
+        log_warning "También falló el build local con --load."
+      fi
+    else
+      log_error "Falló la construcción de la imagen Docker con buildx"
+    fi
+    exit 1
+  fi
+  
+  log_success "Imagen multiplataforma construida exitosamente: ${IMAGE_TAG}"
+  log "📦 Plataformas: ${PLATFORMS}"
+  
+  # Si hicimos push con buildx, marcar para no hacer push de nuevo
+  if [[ "${PUSH_IMAGE}" == true ]]; then
+    PUSH_IMAGE=false  # Ya se hizo push con buildx
+    log_success "Imagen subida exitosamente a registry"
+
+    # Verificación best-effort del manifest remoto (no falla el script si no hay acceso)
+    if docker buildx imagetools inspect "${LATEST_TAG}" >/dev/null 2>&1; then
+      log_success "Verificación: manifest disponible en registry (${LATEST_TAG})"
+    else
+      log_warning "No se pudo verificar el manifest remoto con 'docker buildx imagetools inspect'."
+    fi
+
+    # Garantizar disponibilidad local aunque se haya hecho push
+    # (buildx --push no carga al daemon local; hacemos un build adicional de la plataforma local con --load)
+    LOCAL_PLATFORM_FOR_LOAD="$(detect_local_platform)"
+    log "📦 Cargando imagen local para '${LOCAL_PLATFORM_FOR_LOAD}' (para 'docker run')..."
+    if docker buildx build ${NO_CACHE} ${DOCKER_ARGS} --platform "${LOCAL_PLATFORM_FOR_LOAD}" ${BUILD_TAGS} --load -f "${DOCKERFILE}" .; then
+      log_success "Imagen disponible localmente: ${IMAGE_TAG}"
+      if [[ "$TAG_AS_LATEST" == true ]]; then
+        log_success "Tag local adicional: ${LATEST_TAG}"
+      fi
+    else
+      log_warning "El push se completó, pero no se pudo cargar la imagen localmente con --load."
+    fi
+  fi
+  
+else
+  # Construcción tradicional (plataforma local)
+  log "Comando: docker build ${NO_CACHE} -f ${DOCKERFILE} -t ${IMAGE_TAG} ."
+  
+  if ! docker build ${NO_CACHE} ${DOCKER_ARGS} -f "${DOCKERFILE}" -t "${IMAGE_TAG}" .; then
+    log_error "Falló la construcción de la imagen Docker"
+    exit 1
+  fi
+  
+  log_success "Imagen construida exitosamente: ${IMAGE_TAG}"
+  
+  # Tagear como latest si se solicita (solo en modo no-multiplataforma)
+  if [[ "$TAG_AS_LATEST" == true ]]; then
+    log "🏆 Tageando imagen como latest..."
+    if docker tag "${IMAGE_TAG}" "${LATEST_TAG}"; then
+      log_success "Imagen tageada como: ${LATEST_TAG}"
+    else
+      log_error "Error al tagear la imagen como latest"
+    fi
   fi
 fi
 
 # Mostrar información de la imagen
 log "📊 Información de la imagen:"
-if [[ "$TAG_AS_LATEST" == true ]]; then
-  # Mostrar ambas imágenes
-  echo "REPOSITORY         TAG       IMAGE ID       CREATED         SIZE"
-  docker images "${IMAGE_TAG}" --format "{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}"
-  docker images "mcp-azure-devops:latest" --format "{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}"
+if [[ "${MULTIPLATFORM}" == true ]]; then
+  # Para imágenes multiplataforma, mostrar información del manifest
+  if [[ "${PUSH_IMAGE}" == false ]] && [[ "${PLATFORMS}" == *","* ]]; then
+    log_warning "Las imágenes multiplataforma sin --push no se cargan localmente"
+    log "Para ver las plataformas disponibles después de push, usa:"
+    log "  docker buildx imagetools inspect ${IMAGE_TAG}"
+  else
+    # Si se hizo push o es una sola plataforma
+    if docker images "${IMAGE_TAG}" -q 2>/dev/null | grep -q .; then
+      docker images "${IMAGE_TAG}" --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}"
+    fi
+    log "🖥️  Plataformas construidas: ${PLATFORMS}"
+  fi
 else
-  docker images "${IMAGE_TAG}" --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}"
+  if [[ "$TAG_AS_LATEST" == true ]]; then
+    # Mostrar ambas imágenes
+    echo "REPOSITORY         TAG       IMAGE ID       CREATED         SIZE"
+    docker images "${IMAGE_TAG}" --format "{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}"
+    docker images "${LATEST_TAG}" --format "{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}"
+  else
+    docker images "${IMAGE_TAG}" --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}"
+  fi
 fi
 
 # Test básico si se solicita
@@ -380,7 +612,7 @@ echo "   AZURE_DEVOPS_PAT=tu-personal-access-token"
 # Determinar qué tag usar en las instrucciones (preferir latest si existe)
 INSTRUCTION_TAG="${IMAGE_TAG}"
 if [[ "$TAG_AS_LATEST" == true ]]; then
-  INSTRUCTION_TAG="mcp-azure-devops:latest"
+  INSTRUCTION_TAG="${LATEST_TAG}"
 fi
 
 echo
