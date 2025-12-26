@@ -21,11 +21,36 @@ public class McpProtocolHandler {
     
     private final Map<String, McpTool> availableTools = new HashMap<>();
     private final Map<String, McpPrompt> availablePrompts = new HashMap<>();
+
+            private static final Set<String> EXPOSED_TOOL_NAMES = Set.of(
+                // Azure DevOps consolidated router tools (exactly 12)
+            "azuredevops_profile_identity",
+            "azuredevops_core_projects",
+            "azuredevops_core_teams",
+            "azuredevops_core_processes",
+            "azuredevops_core_avatars",
+            "azuredevops_work_planning",
+            "azuredevops_wit_work_items",
+            "azuredevops_wit_comments",
+            "azuredevops_wit_attachments",
+            "azuredevops_wit_classification_nodes",
+            "azuredevops_wit_queries",
+            "azuredevops_wit_reporting"
+        );
     
     @Autowired
     public McpProtocolHandler(List<McpTool> tools, List<McpPrompt> prompts) {
         for (McpTool tool : tools) {
-            availableTools.put(tool.getName(), tool);
+            if (tool == null) continue;
+            String name = null;
+            try {
+                name = tool.getName();
+            } catch (Exception ignored) {
+                // ignore
+            }
+            if (name == null || name.isBlank()) continue;
+            if (!EXPOSED_TOOL_NAMES.contains(name)) continue;
+            availableTools.put(name, tool);
         }
         
         for (McpPrompt prompt : prompts) {
