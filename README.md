@@ -10,6 +10,23 @@ Servidor MCP (Model Context Protocol) para Azure DevOps que proporciona acceso c
 - **Múltiples modos de transporte**: STDIO, HTTP wrapper, y WebSocket (próximamente)
 - **Configuración flexible**: Variables de entorno y archivos de configuración
 
+## 🔁 Refactorización de tools (routers)
+
+Este servidor pasó de exponer decenas de tools individuales (p.ej. `azuredevops_wit_work_item_get`, `azuredevops_core_get_projects`, etc.) a exponer **exactamente 12 tools “router”**.
+
+Cada router tool recibe un parámetro obligatorio `operation` y enruta internamente hacia la implementación existente.
+
+### ¿Por qué se hizo?
+
+- **Reducir superficie de exposición**: un catálogo muy grande de tools aumenta el riesgo de exponer operaciones destructivas/administrativas por accidente.
+- **Mejor UX para el cliente MCP**: menos tools, más fáciles de descubrir y documentar.
+- **Estandarización**: unifica convenciones de entrada/salida (un solo punto por dominio) y deja el terreno preparado para políticas de enablement por `env var` a nivel de operación.
+
+### Impacto
+
+- **Breaking change**: no se mantiene compatibilidad hacia atrás. Los nombres antiguos dejan de aparecer en `tools/list`.
+- El servidor sigue conteniendo los tools “leaf” (internos), pero **solo los routers** se exponen por defecto.
+
 ## 📋 Requisitos
 
 - Java 21+
@@ -53,6 +70,12 @@ export AZURE_DEVOPS_PAT=tu-personal-access-token
 2. **Ejecutar con Gradle**:
 ```bash
 ./gradlew bootRun
+```
+
+Nota (Dev Container / filesystem montado): en algunos entornos el directorio `.gradle/` dentro del workspace puede causar errores de lock al finalizar el build. Si te ocurre, ejecuta builds usando caches fuera del workspace:
+
+```bash
+./gradlew --no-daemon -g /tmp/gradle-user-home --project-cache-dir /tmp/gradle-project-cache clean build
 ```
 
 ## ⚙️ Configuración MCP
@@ -209,58 +232,63 @@ docker run -p 8081:8081 --env-file .env mcp-azure-devops websocket
 
 ## 🎯 Herramientas Disponibles
 
-El servidor proporciona acceso a más de 80 herramientas MCP que cubren:
+El servidor expone **12 tools router**. Cada una recibe `operation` y parámetros según la operación.
 
-### Core APIs
-- `azuredevops_core_get_projects` - Lista proyectos
-- `azuredevops_core_get_teams` - Lista equipos
-- `azuredevops_core_create_project` - Crea proyecto
-- `azuredevops_accounts_get_accounts` - Lista cuentas
+### 1) Identidad / Perfil
+- `azuredevops_profile_identity`
+  - `operation: get_my_memberid`
 
-### Work Items
-- `azuredevops_wit_work_item_get` - Obtiene work item
-- `azuredevops_wit_work_item_create` - Crea work item  
-- `azuredevops_wit_work_item_update` - Actualiza work item
-- `azuredevops_wit_wiql_by_query` - Ejecuta consulta WIQL
-- `azuredevops_wit_work_item_attachment_add` - Sube y adjunta archivo (operación atómica con rollback)
+### 2) Core
+- `azuredevops_core_projects`
+  - `operation: list | get | get_properties | create | update | delete | set_properties`
+- `azuredevops_core_teams`
+  - `operation: list | get | list_all | members | categorized | create | update | delete`
+- `azuredevops_core_processes`
+  - `operation: list | get`
+- `azuredevops_core_avatars`
+  - `operation: get | set`
 
-### Work Management
-- `azuredevops_work_get_boards` - Lista tableros
-- `azuredevops_work_get_backlogs` - Lista backlogs
+### 3) Work / Planning
+- `azuredevops_work_planning`
+  - `operation: get_boards | get_backlogs`
 
-Y muchas más...
+### 4) Work Item Tracking (WIT)
+- `azuredevops_wit_work_items`
+  - `operation: get | create | update | delete | batch_get | bulk_delete`
+- `azuredevops_wit_comments`
+  - `operation: list | add | update | delete | versions_list | versions_get | reactions_list | reactions_add | reactions_delete | reactions_engaged_users`
+- `azuredevops_wit_attachments`
+  - `operation: get | delete | add_to_work_item`
+- `azuredevops_wit_classification_nodes`
+  - `operation: get_root | get | get_by_ids | upsert | update | delete`
+- `azuredevops_wit_queries`
+  - `operation: wiql_query | wiql_by_id | search_queries | list_root_folders`
+- `azuredevops_wit_reporting`
+  - `operation: revisions_list | revisions_get | reporting_links_get | reporting_revisions_get | reporting_revisions_post`
+
+Nota: existen tools internos (“leaf”) en el código, pero no se exponen en `tools/list` tras esta refactorización.
 
 ## 📱 Ejemplos de Uso
 
 ### Listar proyectos
 ```bash
-echo '{"jsonrpc":"2.0","method":"tools/call","id":1,"params":{"name":"azuredevops_core_get_projects","arguments":{}}}' | docker run -i --env-file .env mcp-azure-devops stdio
+echo '{"jsonrpc":"2.0","method":"tools/call","id":1,"params":{"name":"azuredevops_core_projects","arguments":{"operation":"list"}}}' | docker run -i --env-file .env mcp-azure-devops stdio
 ```
 
 ### Crear work item
 ```bash
-echo '{"jsonrpc":"2.0","method":"tools/call","id":2,"params":{"name":"azuredevops_wit_work_item_create","arguments":{"project":"MiProyecto","type":"User Story","title":"Nueva funcionalidad","description":"Implementar nueva característica"}}}' | docker run -i --env-file .env mcp-azure-devops stdio
+echo '{"jsonrpc":"2.0","method":"tools/call","id":2,"params":{"name":"azuredevops_wit_work_items","arguments":{"operation":"create","project":"MiProyecto","type":"User Story","title":"Nueva funcionalidad","description":"Implementar nueva característica"}}}' | docker run -i --env-file .env mcp-azure-devops stdio
 ```
 
 ### Ejecutar consulta WIQL
-### Adjuntar archivo a un Work Item (nuevo flujo unificado)
-Operación atómica: si la asociación falla se elimina el archivo temporal.
 ```bash
-echo '{"jsonrpc":"2.0","method":"tools/call","id":4,"params":{"name":"azuredevops_wit_work_item_attachment_add","arguments":{"project":"MiProyecto","workItemId":123,"fileName":"evidencia.txt","dataBase64":"'"$(printf 'Hola mundo' | base64 -w0)"'","comment":"Evidencia de prueba"}}}' | docker run -i --env-file .env mcp-azure-devops stdio
+echo '{"jsonrpc":"2.0","method":"tools/call","id":3,"params":{"name":"azuredevops_wit_queries","arguments":{"operation":"wiql_query","project":"MiProyecto","query":"SELECT [System.Id], [System.Title] FROM workitems WHERE [System.WorkItemType] = '\''User Story'\'' AND [System.State] = '\''Active'\''"}}}'  | docker run -i --env-file .env mcp-azure-devops stdio
 ```
-Respuesta típica (éxito):
-```
-=== Attachment Adjuntado ===
 
-WorkItem: 123
-Archivo: evidencia.txt
-URL: https://dev.azure.com/.../attachments/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
-Comentario: Evidencia de prueba
-```
-Si falla la asociación, el tool hará rollback y devolverá error explicando el detalle.
-
+### Adjuntar archivo a un Work Item
+Operación atómica: si la asociación falla se elimina el attachment subido.
 ```bash
-echo '{"jsonrpc":"2.0","method":"tools/call","id":3,"params":{"name":"azuredevops_wit_wiql_by_query","arguments":{"project":"MiProyecto","wiql":"SELECT [System.Id], [System.Title] FROM workitems WHERE [System.WorkItemType] = '\''User Story'\'' AND [System.State] = '\''Active'\''"}}}'  | docker run -i --env-file .env mcp-azure-devops stdio
+echo '{"jsonrpc":"2.0","method":"tools/call","id":4,"params":{"name":"azuredevops_wit_attachments","arguments":{"operation":"add_to_work_item","project":"MiProyecto","workItemId":123,"fileName":"evidencia.txt","dataBase64":"'"$(printf 'Hola mundo' | base64 -w0)"'","comment":"Evidencia de prueba"}}}' | docker run -i --env-file .env mcp-azure-devops stdio
 ```
 
 ## 🐳 Docker
@@ -351,9 +379,8 @@ services:
 ```
 src/
 ├── main/java/com/mcp/server/
-│   ├── tools/azuredevops/          # Herramientas MCP
-│   ├── helpers/azuredevops/        # Lógica de negocio
-│   ├── services/                   # Cliente HTTP unificado
+│   ├── tools/azuredevops/          # Tools (routers + leaf tools)
+│   ├── services/                   # Cliente HTTP unificado + helpers
 │   └── transport/                  # Capas de transporte
 ├── test/                           # Tests unitarios
 docker/                             # Scripts Docker
@@ -363,7 +390,12 @@ api_doc/                           # Documentación de APIs
 
 ### Agregar nueva herramienta MCP
 
-1. **Crear helper** en `src/main/java/com/mcp/server/helpers/azuredevops/`:
+Nota: el catálogo expuesto al cliente es el set de **routers**. Si agregas un tool nuevo “leaf”, normalmente también debes:
+
+1) Exponerlo como `operation` dentro de un router existente (o crear un router nuevo si aplica).
+2) Mantener la lista blanca de tools expuestos.
+
+1. **Crear helper** en `src/main/java/com/mcp/server/services/helpers/`:
 ```java
 @Service
 public class MyHelper {
@@ -404,8 +436,13 @@ curl_json "${DEVOPS_BASE}/_apis/my/endpoint?api-version=${AZURE_DEVOPS_API_VERSI
 # Validar endpoint con cURL
 ./scripts/curl/area/my_endpoint.sh
 
-# Rebuild y test
-./scripts/rebuild_image.sh
+# Rebuild de imagen Docker
+./scripts/build-docker-image.sh --dockerfile Dockerfile --tag mcp-azure-devops:latest
+
+# Smoke test de contenedor
+./scripts/test-docker-image.sh
+
+# Ejecutar en modo STDIO
 docker run -i --env-file .env mcp-azure-devops:latest stdio
 ```
 
