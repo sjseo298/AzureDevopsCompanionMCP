@@ -64,6 +64,16 @@ public class WitQueriesTool extends AbstractAzureDevOpsTool {
     protected Map<String, Object> executeInternal(Map<String, Object> arguments) {
         String op = arguments.get("operation") == null ? "" : arguments.get("operation").toString().trim();
         if (op.isEmpty()) return error("'operation' es requerido");
+        
+        // Mapeo de parámetro 'query' genérico al específico de cada herramienta
+        Object queryVal = arguments.get("query");
+        if (queryVal != null) {
+            if ("wiql_query".equals(op)) {
+                arguments.put("wiql", queryVal);
+            } else if ("search_queries".equals(op)) {
+                arguments.put("searchText", queryVal);
+            }
+        }
 
         return switch (op) {
             case "wiql_query" -> delegate(wiqlByQueryTool, arguments);
