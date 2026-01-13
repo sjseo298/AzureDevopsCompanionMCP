@@ -245,6 +245,7 @@ public class McpProtocolHandler {
                     CompletionCompleteRequest completionReq = (CompletionCompleteRequest) request;
                     yield handleCompletionComplete(completionReq.getParams());
                 }
+                case "ping" -> "pong";
                 default -> throw new IllegalArgumentException("Unknown method: " + request.getMethod());
             };
             

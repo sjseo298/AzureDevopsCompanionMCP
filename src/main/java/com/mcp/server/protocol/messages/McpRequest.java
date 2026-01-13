@@ -40,7 +40,8 @@ import java.util.Objects;
     @JsonSubTypes.Type(value = CallToolRequest.class, name = "tools/call"),
     @JsonSubTypes.Type(value = ListPromptsRequest.class, name = "prompts/list"),
     @JsonSubTypes.Type(value = GetPromptRequest.class, name = "prompts/get"),
-    @JsonSubTypes.Type(value = CompletionCompleteRequest.class, name = "completion/complete")
+    @JsonSubTypes.Type(value = CompletionCompleteRequest.class, name = "completion/complete"),
+    @JsonSubTypes.Type(value = PingRequest.class, name = "ping")
 })
 public abstract class McpRequest {
     
