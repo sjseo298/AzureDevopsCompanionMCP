@@ -22,5 +22,6 @@
             ]
         }
     },
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "editor.aiStats.enabled": false
 }

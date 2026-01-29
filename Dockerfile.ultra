@@ -4,7 +4,7 @@
 # ========================================
 # Etapa 1: Construcción con cache optimizado
 # ========================================
-FROM gradle:8.5-jdk21-alpine AS dependencies
+FROM gradle:8.5-jdk21 AS dependencies
 
 WORKDIR /app
 
@@ -29,7 +29,7 @@ RUN gradle clean build -x test --no-daemon && \
 # ========================================
 # Etapa 3: Análisis y optimización de dependencias
 # ========================================
-FROM eclipse-temurin:21-jdk-alpine AS analyzer
+FROM eclipse-temurin:21-jdk AS analyzer
 
 WORKDIR /opt
 
@@ -53,8 +53,9 @@ RUN java -Djarmode=layertools -jar app.jar extract
 # ========================================
 FROM alpine:3.18
 
-# Instalar solo lo absolutamente esencial
+# Instalar gcompat para compatibilidad con binarios glibc (Java) en Alpine
 RUN apk add --no-cache \
+    gcompat \
     bash \
     curl \
     socat && \
