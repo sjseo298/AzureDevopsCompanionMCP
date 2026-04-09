@@ -139,3 +139,57 @@ Esta notificación debe recordarse en cada respuesta tras aplicar cambios.
 - Herramienta MCP implementa la misma ruta y parámetros que el script validado
 - Tests mínimos en verde y documentación/progreso actualizados
 
+## Sistema de Versionamiento
+
+Se usa **Semantic Versioning 2.0** (`MAJOR.MINOR.PATCH[-prerelease]`).
+
+### Reglas de incremento
+
+| Cambio | Acción |
+|--------|--------|
+| Nueva área de API completa (ej. Work, WIT) | `MINOR++` (ej. `0.9.0` → `0.10.0`) |
+| Bugfix, ajuste de parámetro o mejora menor | `PATCH++` (ej. `0.9.0` → `0.9.1`) |
+| Cambio en firma de tools MCP que rompe compatibilidad | `MAJOR++` |
+
+### Ruta hacia 1.0.0 estable
+
+| Fase | Versión ejemplo | Criterio de entrada |
+|------|-----------------|---------------------|
+| **Desarrollo activo** | `0.x.y` | APIs en construcción, estado actual del proyecto |
+| **Alpha** | `1.0.0-alpha.N` | Todas las áreas de `api_doc/` implementadas (✅ en `api_client_progress.md`) |
+| **Beta** | `1.0.0-beta.N` | Scripts cURL validados al 100%, sin errores de integración |
+| **Release Candidate** | `1.0.0-rc.N` | README completo, sin issues críticos abiertos |
+| **Estable** | `1.0.0` | Aprobación explícita tras período de RC sin regresiones |
+
+### Criterios de completitud para `1.0.0`
+- [ ] Todas las áreas de `api_doc/` marcadas ✅ en `api_client_progress.md`
+- [ ] Todos los scripts cURL en `scripts/curl/` validados sin 4xx/5xx
+- [ ] Tests mínimos en verde en todas las áreas
+- [ ] README con ejemplos de uso actualizados
+- [ ] Sin regresiones en herramientas ya implementadas
+
+### Flujo de release (git tags)
+
+```bash
+# Versión de desarrollo
+git tag v0.9.0 && git push origin --tags
+
+# Alpha (todas las APIs implementadas)
+git tag v1.0.0-alpha.1 && git push origin --tags
+
+# Beta (integración validada)
+git tag v1.0.0-beta.1 && git push origin --tags
+
+# Release Candidate
+git tag v1.0.0-rc.1 && git push origin --tags
+
+# Estable
+git tag v1.0.0 && git push origin --tags
+```
+
+El workflow `.github/workflows/release.yml` detecta automáticamente si la versión es
+pre-release (contiene `alpha`, `beta` o `rc`) y la publica como tal en GitHub Releases.
+
+### Versión actual
+Ver `version` en `build.gradle`. La fase actual se documenta en `gradle.properties`.
+

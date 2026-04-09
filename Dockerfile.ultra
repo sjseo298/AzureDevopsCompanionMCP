@@ -4,7 +4,7 @@
 # ========================================
 # Etapa 1: Construcción con cache optimizado
 # ========================================
-FROM gradle:8.5-jdk21 AS dependencies
+FROM gradle:9.4.1-jdk21 AS dependencies
 
 WORKDIR /app
 
@@ -51,7 +51,7 @@ RUN java -Djarmode=layertools -jar app.jar extract
 # ========================================
 # Etapa 4: Imagen final ultra-mínima
 # ========================================
-FROM alpine:3.18
+FROM alpine:3.22
 
 # Instalar gcompat para compatibilidad con binarios glibc (Java) en Alpine
 RUN apk add --no-cache \

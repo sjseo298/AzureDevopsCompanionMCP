@@ -1,0 +1,175 @@
+# =============================================================================
+# Configuración del Servidor MCP (Model Context Protocol)
+# =============================================================================
+
+# Configuración del servidor web (usado solo en modo web)
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  compression:
+    enabled: true
+    mime-types: application/json,text/plain
+  error:
+    include-stacktrace: never
+    include-message: always
+  # Configuración para manejar requests y responses más grandes
+  max-http-header-size: 64KB
+  max-http-post-size: 100MB
+  tomcat:
+    max-post-size: 100MB
+    max-http-form-post-size: 100MB
+
+# Configuración de Spring Boot
+spring:
+  application:
+    name: mcp-server
+  main:
+    web-application-type: ${WEB_APP_TYPE:none}  # none para STDIO, servlet para web
+    banner-mode: "off"
+    lazy-initialization: false
+  
+  # Configuración JSON
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+      indent-output: false
+    deserialization:
+      fail-on-unknown-properties: false
+      fail-on-null-for-primitives: false
+  
+  # Configuración de encoding
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  
+  # Configuración de mensajes
+  messages:
+    encoding: UTF-8
+  
+  # Configuración de WebClient para Azure DevOps API
+  webflux:
+    buffer:
+      # Aumentar límite de buffer para respuestas grandes de Azure DevOps
+      # Aumentado de 10MB a 50MB para manejar respuestas más grandes
+      max-in-memory-size: 50MB
+  
+  # Configuración de codec para parsing JSON
+  codec:
+    # Aumentado de 10MB a 50MB para procesar JSONs más grandes
+    max-in-memory-size: 50MB
+  
+  # Configuración de tareas asíncronas
+  task:
+    execution:
+      pool:
+        # Aumentado para manejar más requests concurrentes
+        core-size: 8
+        max-size: 16
+        queue-capacity: 500
+        keep-alive: 60s
+      thread-name-prefix: mcp-async-
+
+# Configuración de logging - deshabilitado para MCP STDIO
+logging:
+  level:
+    com.mcp.server: ${LOG_LEVEL:ERROR}
+    org.springframework: ERROR
+    root: ${ROOT_LOG_LEVEL:ERROR}
+  pattern:
+    console: ""
+
+# Configuración de Azure DevOps
+azure:
+  devops:
+    organization: ${AZURE_DEVOPS_ORGANIZATION:#{null}}
+    pat: ${AZURE_DEVOPS_PAT:#{null}}
+    api-version: "7.1"
+    # Aumentar timeout para operaciones con datos grandes
+    timeout: 120s
+    # Configuración adicional para requests grandes
+    connection-timeout: 30s
+    read-timeout: 120s
+    write-timeout: 120s
+
+# Configuración específica de MCP
+mcp:
+  stdio: ${MCP_STDIO:false}
+  protocol:
+    version: "2025-06-18"
+    # Aumentar timeout para operaciones con datos grandes
+    timeout: ${MCP_TIMEOUT:120s}
+  tools:
+    enabled: true
+    auto-discovery: true
+  performance:
+    enable-metrics: ${ENABLE_METRICS:false}
+
+# Configuración de actuator para monitoreo
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+    enabled-by-default: false
+  endpoint:
+    health:
+      enabled: true
+      show-details: when-authorized
+    info:
+      enabled: true
+    metrics:
+      enabled: ${ENABLE_METRICS:false}
+  metrics:
+    export:
+      prometheus:
+        enabled: ${ENABLE_METRICS:false}
+
+# Información de la aplicación
+info:
+  app:
+    name: "@project.name@"
+    version: "@project.version@"
+    description: "Servidor MCP implementado con Spring Boot y Java 21"
+    protocol: "MCP 2025-06-18"
+  java:
+    version: "@java.version@"
+    runtime: "@java.runtime.name@"
+
+# Configuración de perfiles
+---
+spring:
+  config:
+    activate:
+      on-profile: development
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+logging:
+  level:
+    com.mcp.server: DEBUG
+    root: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: production
+server:
+  compression:
+    enabled: true
+logging:
+  level:
+    com.mcp.server: INFO
+    root: WARN
+mcp:
+  performance:
+    enable-metrics: true
+management:
+  endpoint:
+    metrics:
+      enabled: true

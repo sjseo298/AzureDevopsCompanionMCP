@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile para MCP Azure DevOps Server
-FROM gradle:8.5-jdk21 AS builder
+FROM gradle:9.4.1-jdk21 AS builder
 
 # Configurar directorio de trabajo
 WORKDIR /app
@@ -16,7 +16,7 @@ COPY src/ src/
 RUN gradle clean build -x test --no-daemon
 
 # Imagen de runtime
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:21-jre-noble
 
 # Instalar herramientas necesarias
 RUN apt-get update && apt-get install -y \

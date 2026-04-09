@@ -4,7 +4,7 @@
 # ========================================
 # Etapa 1: Construcción (sin cambios)
 # ========================================
-FROM gradle:8.5-jdk21 AS builder
+FROM gradle:9.4.1-jdk21 AS builder
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ RUN gradle clean build -x test --no-daemon
 # ========================================
 # Etapa 2: Imagen runtime optimizada
 # ========================================
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:21.0.8_9-jre
 
 # Combinar comandos RUN para reducir capas y tamaño
 RUN apt-get update && \

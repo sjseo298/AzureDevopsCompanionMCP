@@ -41,7 +41,7 @@ services:
 
   # Proxy nginx para balanceo de carga y SSL termination
   nginx-proxy:
-    image: nginx:alpine
+    image: nginx:1.29-alpine
     container_name: mcp-nginx-proxy
     ports:
       - "80:80"
