@@ -56,6 +56,11 @@ public class WitAttachmentsTool extends AbstractAzureDevOpsTool {
         props.put("dataBase64", Map.of("type", "string", "description", "[legacy] base64"));
         props.put("contentType", Map.of("type", "string", "description", "MIME"));
         props.put("comment", Map.of("type", "string", "description", "Comentario"));
+        props.put("includeBase64", Map.of("type", "boolean", "description", "(get) incluir contenido base64 en la respuesta"));
+        props.put("maxBase64Chars", Map.of("type", "integer", "description", "(get) máximo de caracteres base64 a retornar"));
+        props.put("includeTextPreview", Map.of("type", "boolean", "description", "(get) incluir preview UTF-8 para tipos de texto"));
+        props.put("maxTextChars", Map.of("type", "integer", "description", "(get) máximo de caracteres en textPreview"));
+        props.put("outputPath", Map.of("type", "string", "description", "(get) ruta local para guardar el adjunto"));
         props.put("apiVersion", Map.of("type", "string", "description", "Override apiVersion"));
         props.put("raw", Map.of("type", "boolean", "description", "Devuelve JSON crudo"));
         base.put("required", List.of("project", "operation"));

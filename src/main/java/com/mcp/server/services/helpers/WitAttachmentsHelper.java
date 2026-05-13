@@ -3,6 +3,9 @@ package com.mcp.server.services.helpers;
 import org.springframework.http.MediaType;
 import com.mcp.server.services.AzureDevOpsClientService;
 import java.util.Base64;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.springframework.stereotype.Component;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -135,16 +138,80 @@ public class WitAttachmentsHelper {
         return azureService.getCoreBinary("wit/attachments/"+id.trim(), query, "7.2-preview");
     }
 
-    public String formatGetResponse(Map<String,Object> resp) {
+    public Map<String,Object> buildGetResponse(
+            String id,
+            Map<String,Object> resp,
+            boolean includeBase64,
+            Integer maxBase64Chars,
+            boolean includeTextPreview,
+            Integer maxTextChars,
+            String outputPath
+    ) {
         String dataB64 = Objects.toString(resp.get("data"), null);
-        String ct = Objects.toString(resp.get("contentType"), null);
-        if (dataB64 != null) {
-            int size = java.util.Base64.getDecoder().decode(dataB64).length;
-            StringBuilder sb = new StringBuilder("=== Attachment Downloaded ===\n\n");
-            if (ct != null) sb.append("Content-Type: ").append(ct).append("\n");
-            sb.append("Bytes: ").append(size).append("\n");
-            return sb.toString();
+        String ct = Objects.toString(resp.get("contentType"), MediaType.APPLICATION_OCTET_STREAM_VALUE);
+
+        if (dataB64 == null) {
+            return new LinkedHashMap<>(resp);
         }
-        return resp.toString();
+
+        byte[] bytes = Base64.getDecoder().decode(dataB64);
+        Map<String,Object> out = new LinkedHashMap<>();
+        out.put("attachmentId", id);
+        out.put("contentType", ct);
+        out.put("bytes", bytes.length);
+
+        if (includeBase64) {
+            int limit = (maxBase64Chars != null && maxBase64Chars > 0) ? maxBase64Chars : 200_000;
+            if (dataB64.length() > limit) {
+                out.put("dataBase64", dataB64.substring(0, limit));
+                out.put("base64Truncated", true);
+                out.put("base64ReturnedChars", limit);
+                out.put("base64TotalChars", dataB64.length());
+            } else {
+                out.put("dataBase64", dataB64);
+                out.put("base64Truncated", false);
+            }
+        }
+
+        if (includeTextPreview && isTextLike(ct)) {
+            int limit = (maxTextChars != null && maxTextChars > 0) ? maxTextChars : 8_000;
+            String text = new String(bytes, StandardCharsets.UTF_8);
+            if (text.length() > limit) {
+                out.put("textPreview", text.substring(0, limit));
+                out.put("textPreviewTruncated", true);
+                out.put("textPreviewChars", limit);
+            } else {
+                out.put("textPreview", text);
+                out.put("textPreviewTruncated", false);
+                out.put("textPreviewChars", text.length());
+            }
+        }
+
+        if (outputPath != null && !outputPath.isBlank()) {
+            try {
+                Path path = Path.of(outputPath.trim()).toAbsolutePath().normalize();
+                Path parent = path.getParent();
+                if (parent != null) {
+                    Files.createDirectories(parent);
+                }
+                Files.write(path, bytes);
+                out.put("savedToPath", path.toString());
+            } catch (Exception e) {
+                out.put("saveError", "No se pudo escribir outputPath: " + e.getMessage());
+            }
+        }
+
+        return out;
+    }
+
+    private boolean isTextLike(String contentType) {
+        if (contentType == null || contentType.isBlank()) return false;
+        String ct = contentType.toLowerCase();
+        return ct.startsWith("text/")
+                || ct.contains("json")
+                || ct.contains("xml")
+                || ct.contains("yaml")
+                || ct.contains("javascript")
+                || ct.contains("x-www-form-urlencoded");
     }
 }
