@@ -80,6 +80,18 @@ public class WorkItemCreateTool extends AbstractAzureDevOpsTool {
             boolean raw = Boolean.TRUE.equals(args.get("raw"));
             boolean validateOnly = Boolean.TRUE.equals(args.get("validateOnly"));
 
+            // Manejar respuesta de validateOnly estructurada
+            if (validateOnly && Boolean.TRUE.equals(resp.get("validated"))) {
+                @SuppressWarnings("unchecked")
+                Map<String,Object> validationResult = new java.util.LinkedHashMap<>(resp);
+                Object diag = validationResult.get("diagnostic");
+                String text = diag != null ? diag.toString() : "Validación completada sin errores.";
+                validationResult.remove("content");
+                validationResult.remove("diagnostic");
+                validationResult.put("content", List.of(Map.of("type", "text", "text", text != null ? text : "")));
+                return validationResult;
+            }
+
             if (formattedErr != null) {
                 // Adjuntar diagnóstico si existe
                 Object diag = resp.get("diagnostic");

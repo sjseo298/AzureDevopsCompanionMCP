@@ -68,3 +68,4 @@ logs/
 ehthumbs.db
 Thumbs.db
 .venv
+.env
