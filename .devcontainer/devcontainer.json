@@ -28,14 +28,17 @@
 	
 	// Mount Docker socket from host to enable Docker-outside-of-Docker
 	"mounts": [
-		"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+		"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
+		"type=bind,source=${localEnv:HOME}/projects/personal/opencode/scripts,target=/opt/opencode/scripts,consistency=cached",
+		"type=bind,source=${localEnv:HOME}/projects/personal/opencode/packages/opencode/dist,target=/opt/opencode/packages/opencode/dist,consistency=cached",
+		"type=bind,source=${localEnv:HOME}/.config/opencode/opencode.jsonc,target=/home/vscode/.config/opencode/opencode.jsonc,consistency=cached"
 	],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	"forwardPorts": [8080, 8081, 8082],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "sudo chmod 666 /var/run/docker.sock && docker --version && docker-compose --version && echo 'Docker and Docker Compose are available!'",
+	"postCreateCommand": "sudo chmod 666 /var/run/docker.sock && docker --version && docker-compose --version && bash .devcontainer/setup_opencode_devcontainer.sh && python3 -m venv .venv && . .venv/bin/activate && pip install --upgrade pip setuptools wheel rich && echo 'Docker and Docker Compose are available!'",
 
 	// Configure tool-specific properties.
 	"customizations": {

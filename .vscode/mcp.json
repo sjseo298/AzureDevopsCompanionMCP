@@ -29,6 +29,10 @@
 				"AZURE_DEVOPS_ORGANIZATION": "${input:azure_devops_org}",
 				"AZURE_DEVOPS_PAT": "${input:azure_devops_pat}"
 			}
+		},
+		"playwright": {
+			"command": "docker",
+			"args": ["run", "-i", "--rm", "--network", "host", "--user", "root", "mcp/playwright"]
 		}
 	}
 }

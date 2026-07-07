@@ -86,7 +86,7 @@ azure:
   devops:
     organization: ${AZURE_DEVOPS_ORGANIZATION:#{null}}
     pat: ${AZURE_DEVOPS_PAT:#{null}}
-    api-version: "7.1"
+    api-version: "7.2-preview.1"
     # Aumentar timeout para operaciones con datos grandes
     timeout: 120s
     # Configuración adicional para requests grandes
