@@ -38,7 +38,7 @@ public class CommentsUpdateTool extends AbstractAzureDevOpsTool {
         @SuppressWarnings("unchecked") Map<String,Object> props = (Map<String, Object>) base.get("properties");
         props.put("workItemId", Map.of("type","integer","description","ID del work item"));
         props.put("commentId", Map.of("type","integer","description","ID del comentario"));
-        props.put("text", Map.of("type","string","description","Nuevo texto"));
+        props.put("text", Map.of("type","string","description","Nuevo texto en HTML enriquecido seguro. Use <p>, listas, negrita, código y tablas; el MCP aplica estilos compatibles a tablas automáticamente."));
         base.put("required", List.of("project","workItemId","commentId","text"));
         return base;
     }

@@ -35,12 +35,14 @@ public class WorkItemUpdateTool extends AbstractAzureDevOpsTool {
         props.put("id", Map.of("type","integer","description","ID numérico del work item"));
     // Aliases con guiones para paridad con script bash
     props.put("api-version", Map.of("type","string","description","Alias de apiVersion (script: --api-version)"));
-        props.put("add", Map.of("type","string","description","Campos op add k=v separados por coma"));
-        props.put("replace", Map.of("type","string","description","Campos op replace k=v separados por coma"));
+        props.put("add", Map.of("type","string","description","Campos op add k=v separados por coma. Campos HTML conocidos se normalizan; tablas reciben estilos compatibles automáticamente."));
+        props.put("replace", Map.of("type","string","description","Campos op replace k=v separados por coma. Campos HTML conocidos se normalizan; tablas reciben estilos compatibles automáticamente."));
         props.put("remove", Map.of("type","string","description","Campos (ref) separados por coma para op remove"));
         props.put("state", Map.of("type","string","description","Atajo System.State"));
         props.put("title", Map.of("type","string","description","Atajo System.Title"));
-        props.put("description", Map.of("type","string","description","Atajo System.Description"));
+        props.put("description", Map.of("type","string","description","Atajo System.Description en HTML enriquecido seguro. Use <p>, listas, negrita, código y tablas; el MCP estiliza tablas automáticamente."));
+        props.put("acceptanceCriteria", Map.of("type","string","description","Atajo Microsoft.VSTS.Common.AcceptanceCriteria en HTML enriquecido seguro. Las tablas se estilizan automáticamente."));
+        props.put("criteria", Map.of("type","string","description","Alias de acceptanceCriteria"));
         props.put("area", Map.of("type","string","description","Atajo System.AreaPath"));
         props.put("iteration", Map.of("type","string","description","Atajo System.IterationPath"));
         props.put("parentId", Map.of("type","integer","description","ID del work item padre para re-parenting"));

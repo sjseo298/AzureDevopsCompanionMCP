@@ -39,6 +39,10 @@ public class WitWorkItemCreateHelper {
         String area = args.getOrDefault("area",null) != null ? args.get("area").toString() : null;
         String iteration = args.getOrDefault("iteration",null) != null ? args.get("iteration").toString() : null;
         String description = args.getOrDefault("description",null) != null ? args.get("description").toString() : null;
+        String acceptanceCriteria = args.getOrDefault("acceptanceCriteria",null) != null ? args.get("acceptanceCriteria").toString() : null;
+        if ((acceptanceCriteria == null || acceptanceCriteria.isBlank()) && args.get("criteria") != null) {
+            acceptanceCriteria = args.get("criteria").toString();
+        }
         String state = args.getOrDefault("state",null) != null ? args.get("state").toString() : null;
         Integer parentId = args.getOrDefault("parentId",null) != null ? Integer.valueOf(args.get("parentId").toString()) : null;
         String fields = args.getOrDefault("fields",null) != null ? args.get("fields").toString() : null;
@@ -179,7 +183,8 @@ public class WitWorkItemCreateHelper {
         java.util.List<Map<String,Object>> patch = new java.util.ArrayList<>();
         patch.add(Map.of("op","add","path","/fields/System.Title","value",title));
         if (state != null && !state.isEmpty()) patch.add(Map.of("op","add","path","/fields/System.State","value",state));
-        if (description != null && !description.isEmpty()) patch.add(Map.of("op","add","path","/fields/System.Description","value",description));
+        if (description != null && !description.isEmpty()) patch.add(Map.of("op","add","path","/fields/System.Description","value",AzureDevOpsRichHtmlHelper.normalize(description)));
+        if (acceptanceCriteria != null && !acceptanceCriteria.isEmpty()) patch.add(Map.of("op","add","path","/fields/Microsoft.VSTS.Common.AcceptanceCriteria","value",AzureDevOpsRichHtmlHelper.normalize(acceptanceCriteria)));
         if (area != null && !area.isEmpty()) patch.add(Map.of("op","add","path","/fields/System.AreaPath","value",area));
         if (iteration != null && !iteration.isEmpty()) patch.add(Map.of("op","add","path","/fields/System.IterationPath","value",iteration));
 
@@ -194,7 +199,7 @@ public class WitWorkItemCreateHelper {
                 Object valObj = v;
                 if (v.matches("^-?\\d+$")) { try { valObj = Integer.parseInt(v); } catch (NumberFormatException ignored) {} }
                 else if (v.matches("^-?\\d+\\.\\d+$")) { try { valObj = Double.parseDouble(v); } catch (NumberFormatException ignored) {} }
-                patch.add(Map.of("op","add","path","/fields/"+k,"value",valObj));
+                patch.add(Map.of("op","add","path","/fields/"+k,"value",AzureDevOpsRichHtmlHelper.enrichIfHtmlField(k, valObj)));
             }
         }
 

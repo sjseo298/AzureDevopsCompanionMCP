@@ -50,6 +50,8 @@ public class WitWorkItemUpdateHelper {
         String state = opt(args, "state");
         String title = opt(args, "title");
         String description = opt(args, "description");
+        String acceptanceCriteria = opt(args, "acceptanceCriteria");
+        if ((acceptanceCriteria == null || acceptanceCriteria.isBlank())) acceptanceCriteria = opt(args, "criteria");
         String area = opt(args, "area");
         String iteration = opt(args, "iteration");
         Integer parentId = args.get("parentId") != null ? Integer.valueOf(args.get("parentId").toString()) : null;
@@ -65,7 +67,8 @@ public class WitWorkItemUpdateHelper {
         // Atajos (script usa op add para todos)
         if (state != null && !state.isEmpty()) patch.add(addField("System.State", state));
         if (title != null && !title.isEmpty()) patch.add(addField("System.Title", title));
-        if (description != null && !description.isEmpty()) patch.add(addField("System.Description", description));
+        if (description != null && !description.isEmpty()) patch.add(addField("System.Description", AzureDevOpsRichHtmlHelper.normalize(description)));
+        if (acceptanceCriteria != null && !acceptanceCriteria.isEmpty()) patch.add(addField("Microsoft.VSTS.Common.AcceptanceCriteria", AzureDevOpsRichHtmlHelper.normalize(acceptanceCriteria)));
         if (area != null && !area.isEmpty()) patch.add(addField("System.AreaPath", area));
         if (iteration != null && !iteration.isEmpty()) patch.add(addField("System.IterationPath", iteration));
 
@@ -302,7 +305,7 @@ public class WitWorkItemUpdateHelper {
                 else if (v.matches("^-?\\d+\\.\\d+$")) { 
                     try { val = Double.parseDouble(v); } catch (NumberFormatException ignored) {} 
                 }
-                patch.add(Map.of("op", op, "path", "/fields/"+k, "value", val));
+                patch.add(Map.of("op", op, "path", "/fields/"+k, "value", AzureDevOpsRichHtmlHelper.enrichIfHtmlField(k, val)));
             }
             return;
         }
@@ -323,7 +326,7 @@ public class WitWorkItemUpdateHelper {
             else if (v.matches("^-?\\d+\\.\\d+$")) { 
                 try { val = Double.parseDouble(v); } catch (NumberFormatException ignored) {} 
             }
-            patch.add(Map.of("op", op, "path", "/fields/"+k, "value", val));
+            patch.add(Map.of("op", op, "path", "/fields/"+k, "value", AzureDevOpsRichHtmlHelper.enrichIfHtmlField(k, val)));
         }
     }
     

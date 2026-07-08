@@ -24,7 +24,7 @@ public class WitCommentsUpdateHelper {
 
     public Map<String,Object> updateComment(String project, String team, String wi, String ci, String text, String apiVersion) {
         String endpoint = "workItems/" + wi + "/comments/" + ci;
-        Map<String,Object> body = Map.of("text", text);
+        Map<String,Object> body = Map.of("text", AzureDevOpsRichHtmlHelper.normalize(text));
         return azureService.patchWitApi(project, team, endpoint, body, apiVersion);
     }
 

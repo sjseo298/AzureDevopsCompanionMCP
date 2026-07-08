@@ -40,10 +40,12 @@ public class WorkItemCreateTool extends AbstractAzureDevOpsTool {
         props.put("title", Map.of("type","string","description","Título del work item"));
         props.put("area", Map.of("type","string","description","AreaPath (opcional)"));
         props.put("iteration", Map.of("type","string","description","IterationPath (opcional)"));
-        props.put("description", Map.of("type","string","description","Descripción Markdown (opcional)"));
+        props.put("description", Map.of("type","string","description","Descripción en HTML enriquecido seguro para Azure DevOps. Use <p>, <ul><li>, <ol><li>, <strong>, <em>, <code>, <pre>, <blockquote>, <table>. Las tablas se estilizan automáticamente con bordes, encabezado gris y padding."));
+        props.put("acceptanceCriteria", Map.of("type","string","description","Criterios de aceptación en HTML enriquecido seguro. Use listas y tablas; el MCP aplica estilos compatibles a tablas automáticamente."));
+        props.put("criteria", Map.of("type","string","description","Alias de acceptanceCriteria"));
         props.put("state", Map.of("type","string","description","Estado inicial (opcional)"));
         props.put("parentId", Map.of("type","integer","description","ID de work item padre (opcional)"));
-        props.put("fields", Map.of("type","string","description","Campos extra k=v separados por coma (opcional)"));
+        props.put("fields", Map.of("type","string","description","Campos extra k=v separados por coma o punto y coma. Campos HTML conocidos se normalizan; tablas reciben estilos compatibles automáticamente."));
         props.put("relations", Map.of("type","string","description","Relaciones extra tipo:id[:comentario] separados por coma (opcional)"));
         props.put("apiVersion", Map.of("type","string","description","Versión de la API", "default", DEFAULT_API_VERSION));
         props.put("raw", Map.of("type","boolean","description","Devuelve JSON crudo de la respuesta"));

@@ -37,7 +37,7 @@ public class CommentsAddTool extends AbstractAzureDevOpsTool {
         Map<String,Object> base = new LinkedHashMap<>(createBaseSchema());
         @SuppressWarnings("unchecked") Map<String,Object> props = (Map<String, Object>) base.get("properties");
         props.put("workItemId", Map.of("type","integer","description","ID del work item"));
-        props.put("text", Map.of("type","string","description","Texto del comentario"));
+        props.put("text", Map.of("type","string","description","Texto del comentario en HTML enriquecido seguro. Use <p>, listas, negrita, código y tablas; el MCP aplica estilos compatibles a tablas automáticamente."));
         base.put("required", List.of("project","workItemId","text"));
         return base;
     }

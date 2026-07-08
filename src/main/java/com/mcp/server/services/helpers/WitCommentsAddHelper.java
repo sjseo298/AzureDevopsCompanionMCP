@@ -23,7 +23,7 @@ public class WitCommentsAddHelper {
 
     public Map<String,Object> addComment(String project, String team, String wi, String text, String apiVersion) {
         String endpoint = "workItems/" + wi + "/comments";
-        Map<String,Object> body = Map.of("text", text);
+        Map<String,Object> body = Map.of("text", AzureDevOpsRichHtmlHelper.normalize(text));
         return azureService.postWitApi(project, team, endpoint, body, apiVersion);
     }
 

@@ -82,13 +82,15 @@ public class WitWorkItemsTool extends AbstractAzureDevOpsTool {
         // Unión (subset) de parámetros de los tools delegados
         props.put("id", Map.of("type", "integer", "description", "Work item ID (get/update/delete)"));
         props.put("ids", Map.of("type", "string", "description", "IDs separados por coma (batch_get/bulk_delete)"));
-        props.put("fields", Map.of("type", "string", "description", "Campos referenceName separados por coma"));
+        props.put("fields", Map.of("type", "string", "description", "Campos referenceName separados por coma o punto y coma. Campos HTML conocidos se normalizan y las tablas reciben estilos compatibles automáticamente."));
         props.put("expand", Map.of("type", "string", "description", "None|Relations|Links|All (get)"));
         props.put("asOf", Map.of("type", "string", "description", "Fecha/hora ISO (get/batch_get)"));
 
         props.put("type", Map.of("type", "string", "description", "Tipo de work item (create)"));
         props.put("title", Map.of("type", "string", "description", "Título (create/update shortcut)"));
-        props.put("description", Map.of("type", "string", "description", "Descripción (create/update shortcut)"));
+        props.put("description", Map.of("type", "string", "description", "Descripción HTML enriquecida segura (create/update shortcut). Use <p>, listas, negrita, código y tablas; el MCP estiliza tablas automáticamente."));
+        props.put("acceptanceCriteria", Map.of("type", "string", "description", "Criterios de aceptación HTML enriquecidos. Alias de Microsoft.VSTS.Common.AcceptanceCriteria; tablas estilizadas automáticamente."));
+        props.put("criteria", Map.of("type", "string", "description", "Alias de acceptanceCriteria"));
         props.put("state", Map.of("type", "string", "description", "Estado (create/update shortcut)"));
         props.put("area", Map.of("type", "string", "description", "AreaPath (create/update shortcut)"));
         props.put("iteration", Map.of("type", "string", "description", "IterationPath (create/update shortcut)"));
