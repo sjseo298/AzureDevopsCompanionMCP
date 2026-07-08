@@ -52,6 +52,82 @@ public class WitAttachmentsHelper {
         return azureService.postCoreBinary("wit/attachments", query, data, "7.2-preview", ct);
     }
 
+    public String inferProjectFromWorkItem(int workItemId, String apiVersion) {
+        Map<String,String> query = new LinkedHashMap<>();
+        query.put("fields", "System.TeamProject");
+        query.put("api-version", apiVersion != null && !apiVersion.isBlank() ? apiVersion : "7.2-preview");
+        Map<String,Object> wi = azureService.getWitApiWithQuery(null, null, "workitems/" + workItemId, query, apiVersion);
+        Object fields = wi != null ? wi.get("fields") : null;
+        if (fields instanceof Map<?,?> fm) {
+            Object project = fm.get("System.TeamProject");
+            if (project != null && !project.toString().isBlank()) return project.toString();
+        }
+        return null;
+    }
+
+    public Map<String,Object> attachBytesToWorkItem(String project, int workItemId, String fileName, byte[] data,
+                                                    String contentType, String comment, String apiVersion) {
+        String effectiveProject = project;
+        String effectiveApiVersion = apiVersion != null && !apiVersion.isBlank() ? apiVersion : "7.2-preview";
+        if (effectiveProject == null || effectiveProject.isBlank()) {
+            effectiveProject = inferProjectFromWorkItem(workItemId, effectiveApiVersion);
+        }
+        if (effectiveProject == null || effectiveProject.isBlank()) {
+            return Map.of("isError", true, "message", "No se pudo inferir 'project' desde workItemId=" + workItemId + ". Envíe project explícitamente.");
+        }
+
+        String effectiveFileName = fileName != null && !fileName.isBlank() ? fileName.trim() : "attachment.bin";
+        String effectiveContentType = sanitizeContentType(contentType);
+        Map<String,Object> createResp = createAttachment(effectiveFileName, data, effectiveContentType);
+        String attachmentUrl = Objects.toString(createResp.get("url"), null);
+        if (attachmentUrl == null || attachmentUrl.isBlank()) {
+            Map<String,Object> out = new LinkedHashMap<>();
+            out.put("isError", true);
+            out.put("message", "No se obtuvo URL del attachment");
+            out.put("attachment", createResp);
+            return out;
+        }
+
+        Map<String,Object> linkResp = linkAttachmentToWorkItem(effectiveProject, workItemId, attachmentUrl, comment, effectiveApiVersion);
+        boolean linkFailed = Boolean.TRUE.equals(linkResp.get("isHttpError")) || linkResp.get("message") != null || linkResp.get("typeKey") != null;
+        Map<String,Object> result = new LinkedHashMap<>();
+        result.put("project", effectiveProject);
+        result.put("workItemId", workItemId);
+        result.put("fileName", effectiveFileName);
+        result.put("contentType", effectiveContentType);
+        result.put("bytes", data != null ? data.length : 0);
+        result.put("url", attachmentUrl);
+        String attachmentId = extractAttachmentId(createResp, attachmentUrl);
+        if (attachmentId != null) result.put("attachmentId", attachmentId);
+        if (comment != null && !comment.isBlank()) result.put("comment", comment);
+        result.put("attachment", createResp);
+        result.put("workItemPatch", linkResp);
+
+        if (linkFailed) {
+            result.put("isError", true);
+            result.put("message", "Error asociando attachment al work item. Se intentó rollback.");
+            if (attachmentId != null) result.put("rollback", deleteAttachment(effectiveProject, attachmentId));
+            return result;
+        }
+        result.put("isError", false);
+        result.put("message", "Archivo adjuntado correctamente");
+        return result;
+    }
+
+    public String extractAttachmentId(Map<String,Object> createResp, String attachmentUrl) {
+        String attachmentId = Objects.toString(createResp != null ? createResp.get("id") : null, null);
+        if (attachmentId == null && attachmentUrl != null) {
+            int idx = attachmentUrl.lastIndexOf('/');
+            if (idx != -1) {
+                String tail = attachmentUrl.substring(idx + 1);
+                int q = tail.indexOf('?');
+                if (q != -1) tail = tail.substring(0, q);
+                if (!tail.isBlank()) attachmentId = tail;
+            }
+        }
+        return attachmentId;
+    }
+
     /**
      * Asocia un attachment recién creado (url completa) a un Work Item agregando relación AttachedFile.
      * Devuelve respuesta del PATCH del work item o un Map con error.

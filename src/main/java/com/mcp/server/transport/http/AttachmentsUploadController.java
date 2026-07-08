@@ -37,7 +37,7 @@ public class AttachmentsUploadController {
     @PostMapping(value = "/wit/workitems/{workItemId}/attachment", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadAndAttach(
             @PathVariable("workItemId") int workItemId,
-            @RequestParam("project") String project,
+            @RequestParam(value = "project", required = false) String project,
             @RequestPart("file") MultipartFile file,
             @RequestParam(value = "fileName", required = false) String fileName,
             @RequestParam(value = "comment", required = false) String comment,
@@ -46,9 +46,6 @@ public class AttachmentsUploadController {
             @RequestParam(value = "raw", required = false, defaultValue = "false") boolean raw
     ) {
         try {
-            if (project == null || project.isBlank()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "'project' es requerido"));
-            }
             if (workItemId <= 0) {
                 return ResponseEntity.badRequest().body(Map.of("error", "'workItemId' debe ser > 0"));
             }
@@ -60,93 +57,31 @@ public class AttachmentsUploadController {
             if (effectiveFileName == null || effectiveFileName.isBlank()) {
                 effectiveFileName = "attachment.bin";
             }
-        // Para el POST de attachments Azure DevOps exige application/octet-stream; el contentType del archivo se puede conservar como metadata lógica
-        String ct = attachmentsHelper.sanitizeContentType(
+            String ct = attachmentsHelper.sanitizeContentType(
             (contentType != null && !contentType.isBlank()) ? contentType : Objects.toString(file.getContentType(), null)
         );
 
-            // 1) Crear attachment con binario
-            Map<String, Object> createResp = attachmentsHelper.createAttachment(effectiveFileName, file.getBytes(), ct);
-            String createErrFmt = tryFormatRemoteError(createResp);
-            if (createErrFmt != null && !raw) {
-                return ResponseEntity.status(502).body(Map.of("error", "Error creando attachment", "details", createErrFmt));
-            }
-            String attachmentUrl = Objects.toString(createResp.get("url"), null);
-            if (attachmentUrl == null) {
-                if (raw) return ResponseEntity.status(502).body(Map.of("isError", true, "raw", Map.of("attachment", createResp, "message", "No se obtuvo URL del attachment")));
-                return ResponseEntity.status(502).body(Map.of("error", "No se obtuvo URL del attachment"));
-            }
-
-            // 2) Vincular al Work Item
-            Map<String, Object> linkResp = attachmentsHelper.linkAttachmentToWorkItem(project, workItemId, attachmentUrl, comment, apiVersion);
-            String linkErrFmt = tryFormatRemoteError(linkResp);
-
-            if (raw) {
-                Map<String, Object> combined = new LinkedHashMap<>();
-                combined.put("attachment", createResp);
-                combined.put("workItemPatch", linkResp);
-                if (createErrFmt != null) combined.put("createErrorFormatted", createErrFmt);
-                if (linkErrFmt != null) {
-                    combined.put("linkErrorFormatted", linkErrFmt);
-                    // Rollback: eliminar attachment si la asociación falla
-                    Map<String, Object> rollbackInfo = new LinkedHashMap<>();
-                    String attachmentId = Objects.toString(createResp.get("id"), null);
-                    if (attachmentId == null) {
-                        int idx = attachmentUrl.lastIndexOf('/');
-                        if (idx != -1) {
-                            String tail = attachmentUrl.substring(idx + 1);
-                            int q = tail.indexOf('?');
-                            if (q != -1) tail = tail.substring(0, q);
-                            if (!tail.isBlank()) attachmentId = tail;
-                        }
-                    }
-                    if (attachmentId != null) {
-                        Map<String, Object> delResp = attachmentsHelper.deleteAttachment(project, attachmentId);
-                        rollbackInfo.put("deleteResponse", delResp);
-                        String delErrFmt = tryFormatRemoteError(delResp);
-                        if (delErrFmt != null) rollbackInfo.put("deleteErrorFormatted", delErrFmt);
-                    } else {
-                        rollbackInfo.put("message", "No se pudo determinar ID del attachment para rollback");
-                    }
-                    combined.put("rollback", rollbackInfo);
-                    combined.put("operationStatus", "FAILED_AND_ROLLED_BACK");
-                    return ResponseEntity.status(502).body(Map.of("isError", true, "raw", combined));
-                }
-                combined.put("operationStatus", "SUCCESS");
-                return ResponseEntity.ok(Map.of("isError", false, "raw", combined));
-            }
-
-            if (linkErrFmt != null) {
-                // Rollback si falla el PATCH
-                String attachmentId = Objects.toString(createResp.get("id"), null);
-                if (attachmentId == null) {
-                    int idx = attachmentUrl.lastIndexOf('/');
-                    if (idx != -1) {
-                        String tail = attachmentUrl.substring(idx + 1);
-                        int q = tail.indexOf('?');
-                        if (q != -1) tail = tail.substring(0, q);
-                        if (!tail.isBlank()) attachmentId = tail;
-                    }
-                }
-                if (attachmentId != null) {
-                    Map<String, Object> delResp = attachmentsHelper.deleteAttachment(project, attachmentId);
-                    String delErrFmt = tryFormatRemoteError(delResp);
-                    if (delErrFmt != null) {
-                        log.warn("Rollback delete error: {}", delErrFmt);
-                    }
-                }
+            Map<String,Object> result = attachmentsHelper.attachBytesToWorkItem(project, workItemId, effectiveFileName, file.getBytes(), ct, comment, apiVersion);
+            if (raw) return ResponseEntity.status(Boolean.TRUE.equals(result.get("isError")) ? 502 : 200).body(Map.of("isError", result.get("isError"), "raw", result));
+            if (Boolean.TRUE.equals(result.get("isError"))) {
                 return ResponseEntity.status(502).body(Map.of(
-                        "error", "Error asociando attachment al work item",
-                        "details", linkErrFmt
+                        "isError", true,
+                        "message", Objects.toString(result.get("message"), "Error adjuntando archivo"),
+                        "details", result
                 ));
             }
-
-            return ResponseEntity.ok(Map.of(
-                    "message", "Attachment adjuntado",
-                    "workItemId", workItemId,
-                    "fileName", effectiveFileName,
-                    "url", attachmentUrl
-            ));
+            Map<String,Object> response = new LinkedHashMap<>();
+            response.put("isError", false);
+            response.put("message", "Archivo adjuntado correctamente");
+            response.put("project", result.get("project"));
+            response.put("workItemId", result.get("workItemId"));
+            response.put("fileName", result.get("fileName"));
+            response.put("contentType", result.get("contentType"));
+            response.put("bytes", result.get("bytes"));
+            response.put("attachmentId", result.get("attachmentId"));
+            response.put("url", result.get("url"));
+            if (result.get("comment") != null) response.put("comment", result.get("comment"));
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
             log.error("Error en uploadAndAttach", e);
@@ -154,20 +89,4 @@ public class AttachmentsUploadController {
         }
     }
 
-    // Reutiliza el formateador consistente de errores remotos
-    private String tryFormatRemoteError(Map<String, Object> resp) {
-        if (resp == null) return "Respuesta nula";
-        Object isHttpError = resp.get("isHttpError");
-        if (isHttpError instanceof Boolean && (Boolean) isHttpError) {
-            StringBuilder sb = new StringBuilder();
-            Object status = resp.get("httpStatus");
-            Object reason = resp.get("httpReason");
-            if (status != null) sb.append("HTTP Status: ").append(status).append('\n');
-            if (reason != null) sb.append("Reason: ").append(reason).append('\n');
-            Object body = resp.get("body");
-            if (body != null) sb.append("Body: ").append(body);
-            return sb.toString();
-        }
-        return null;
-    }
 }

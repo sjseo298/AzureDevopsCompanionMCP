@@ -43,7 +43,6 @@ public class WorkItemAttachmentAddTool extends AbstractAzureDevOpsTool {
     String dataB64 = Objects.toString(args.get("dataBase64"), null); // legacy
     String dataUrl = Objects.toString(args.get("dataUrl"), null); // data: URI inline en el payload JSON
     String filePath = Objects.toString(args.get("filePath"), null); // ruta local o file://
-        if (project.isEmpty()) throw new IllegalArgumentException("'project' es requerido");
         if (wiObj == null) throw new IllegalArgumentException("'workItemId' es requerido");
         int id;
         try { id = Integer.parseInt(wiObj.toString()); } catch (NumberFormatException e) { throw new IllegalArgumentException("'workItemId' inválido"); }
@@ -53,7 +52,7 @@ public class WorkItemAttachmentAddTool extends AbstractAzureDevOpsTool {
         boolean hasFilePath = filePath != null && !filePath.isBlank();
         boolean hasB64 = dataB64 != null && !dataB64.isBlank();
         if (!(hasDataUrl || hasFilePath || hasB64)) {
-            throw new IllegalArgumentException("Se requiere 'dataUrl' (data: URI inline), 'filePath' (ruta local/file://) o, en modo legacy, 'dataBase64'.");
+            throw new IllegalArgumentException("Se requiere 'dataUrl' (MCP remoto/archivo pequeño), multipart vía prepare_upload, 'filePath' (solo MCP local) o 'dataBase64' legacy.");
         }
         if (hasB64 && (fileName == null || fileName.isBlank())) {
             throw new IllegalArgumentException("'fileName' es requerido cuando se usa 'dataBase64'.");
@@ -63,11 +62,11 @@ public class WorkItemAttachmentAddTool extends AbstractAzureDevOpsTool {
     @Override
     public Map<String, Object> getInputSchema() {
         Map<String,Object> props = new LinkedHashMap<>();
-        props.put("project", Map.of("type","string","description","Nombre o ID del proyecto (requerido)"));
+        props.put("project", Map.of("type","string","description","Nombre o ID del proyecto. Opcional: si no viene, el MCP intenta inferirlo desde workItemId."));
         props.put("workItemId", Map.of("type","integer","description","ID numérico del work item (requerido)"));
-    props.put("fileName", Map.of("type","string","description","Nombre del archivo a adjuntar (requerido si usas dataBase64; opcional si usas dataUrl con media-type o filePath)"));
-    props.put("dataUrl", Map.of("type","string","description","Data URI inline (p. ej., data:image/png;base64,AAAA...). Evita archivos/URIs compartidas."));
-    props.put("filePath", Map.of("type","string","description","Ruta local absoluta o URI file:// al archivo a adjuntar"));
+    props.put("fileName", Map.of("type","string","description","Nombre del archivo. Opcional con dataUrl/multipart; requerido si no puede inferirse."));
+    props.put("dataUrl", Map.of("type","string","description","MCP remoto/archivos pequeños: Data URI inline (data:image/png;base64,AAAA...). Para archivos reales/grandes use prepare_upload + multipart."));
+    props.put("filePath", Map.of("type","string","description","Solo MCP local: ruta accesible por el servidor MCP. No usar en MCP remoto."));
     props.put("dataBase64", Map.of("type","string","description","[DEPRECATED] Contenido base64 del archivo (solo compatibilidad)"));
         props.put("contentType", Map.of("type","string","description","MIME type. Default application/octet-stream"));
         props.put("comment", Map.of("type","string","description","Comentario opcional de la relación"));
@@ -76,8 +75,7 @@ public class WorkItemAttachmentAddTool extends AbstractAzureDevOpsTool {
         return Map.of(
             "type","object",
             "properties", props,
-            // Requerimos project/workItemId.
-            "required", List.of("project","workItemId")
+            "required", List.of("workItemId")
         );
     }
 
@@ -129,107 +127,27 @@ public class WorkItemAttachmentAddTool extends AbstractAzureDevOpsTool {
             return error("'fileName' no pudo inferirse; proporciónelo explícitamente.");
         }
 
-        Map<String,Object> createResp = attachmentsHelper.createAttachment(fileName, data, ctStr);
-        String createErrFmt = tryFormatRemoteError(createResp);
-        if (createErrFmt != null && !raw) {
-            return error("Error creando attachment: \n" + createErrFmt);
-        }
-        String attachmentUrl = Objects.toString(createResp.get("url"), null);
-        if (attachmentUrl == null) {
-            if (raw) return Map.of("isError", true, "raw", Map.of("attachment", createResp, "message", "No se obtuvo URL del attachment"));
-            return error("No se obtuvo URL del attachment");
-        }
-
-        Map<String,Object> linkResp = attachmentsHelper.linkAttachmentToWorkItem(project, workItemId, attachmentUrl, comment, apiVersion);
-        String linkErrFmt = tryFormatRemoteError(linkResp);
-
-        if (raw) {
-            Map<String,Object> combined = new LinkedHashMap<>();
-            combined.put("attachment", createResp);
-            combined.put("workItemPatch", linkResp);
-            if (createErrFmt != null) combined.put("createErrorFormatted", createErrFmt);
-            if (linkErrFmt != null) {
-                combined.put("linkErrorFormatted", linkErrFmt);
-                // Intentar rollback eliminando el attachment porque la asociación falló
-                Map<String,Object> rollbackInfo = new LinkedHashMap<>();
-                String attachmentId = Objects.toString(createResp.get("id"), null);
-                if (attachmentId == null && attachmentUrl != null) {
-                    int idx = attachmentUrl.lastIndexOf('/');
-                    if (idx != -1) {
-                        String tail = attachmentUrl.substring(idx+1);
-                        int q = tail.indexOf('?');
-                        if (q != -1) tail = tail.substring(0,q);
-                        if (!tail.isBlank()) attachmentId = tail;
-                    }
-                }
-                if (attachmentId != null) {
-                    Map<String,Object> delResp = attachmentsHelper.deleteAttachment(project, attachmentId);
-                    rollbackInfo.put("deleteResponse", delResp);
-                    String delErrFmt = tryFormatRemoteError(delResp);
-                    if (delErrFmt != null) rollbackInfo.put("deleteErrorFormatted", delErrFmt);
-                } else {
-                    rollbackInfo.put("message", "No se pudo determinar ID del attachment para rollback");
-                }
-                combined.put("rollback", rollbackInfo);
-                combined.put("operationStatus", "FAILED_AND_ROLLED_BACK");
-                return Map.of("isError", true, "raw", combined);
-            }
-            return Map.of("isError", false, "raw", combined);
-        }
-
-        if (linkErrFmt != null) {
-            // Intentar rollback (eliminar adjunto creado) para consistencia
-            String attachmentId = Objects.toString(createResp.get("id"), null);
-            if (attachmentId == null && attachmentUrl != null) {
-                int idx = attachmentUrl.lastIndexOf('/');
-                if (idx != -1) {
-                    String tail = attachmentUrl.substring(idx+1);
-                    int q = tail.indexOf('?');
-                    if (q != -1) tail = tail.substring(0,q);
-                    if (!tail.isBlank()) attachmentId = tail;
-                }
-            }
-            StringBuilder err = new StringBuilder();
-            err.append("Error asociando attachment al work item. Operación revertida.\n");
-            err.append(linkErrFmt).append("\n");
-            if (attachmentId != null) {
-                Map<String,Object> delResp = attachmentsHelper.deleteAttachment(project, attachmentId);
-                String delErrFmt = tryFormatRemoteError(delResp);
-                if (delErrFmt != null) {
-                    err.append("Error eliminando attachment durante rollback:\n").append(delErrFmt).append("\n");
-                } else {
-                    err.append("Attachment temporal eliminado (rollback OK).\n");
-                }
-            } else {
-                err.append("No se pudo determinar ID del attachment para rollback.\n");
-            }
-            return error(err.toString());
-        }
+        Map<String,Object> attached = attachmentsHelper.attachBytesToWorkItem(project, workItemId, fileName, data, ctStr, comment, apiVersion);
+        if (raw) return Map.of("isError", Boolean.TRUE.equals(attached.get("isError")), "raw", attached);
+        if (Boolean.TRUE.equals(attached.get("isError"))) return error(Objects.toString(attached.get("message"), "Error adjuntando archivo"));
 
         StringBuilder sb = new StringBuilder();
         sb.append("=== Attachment Adjuntado ===\n\n");
+        sb.append("Project: ").append(attached.get("project")).append("\n");
         sb.append("WorkItem: ").append(workItemId).append("\n");
-        sb.append("Archivo: ").append(fileName).append("\n");
-        sb.append("URL: ").append(attachmentUrl).append("\n");
+        sb.append("Archivo: ").append(attached.get("fileName")).append("\n");
+        sb.append("URL: ").append(attached.get("url")).append("\n");
         if (comment != null && !comment.isBlank()) sb.append("Comentario: ").append(comment).append("\n");
 
         // Estructura programática simple para agentes
         Map<String,Object> result = new LinkedHashMap<>();
         result.put("workItemId", workItemId);
-        result.put("fileName", fileName);
-        result.put("url", attachmentUrl);
+        result.put("project", attached.get("project"));
+        result.put("fileName", attached.get("fileName"));
+        result.put("url", attached.get("url"));
         if (comment != null && !comment.isBlank()) result.put("comment", comment);
         // Intentar inferir attachmentId a partir de la URL
-        String attachmentId = Objects.toString(createResp.get("id"), null);
-        if (attachmentId == null && attachmentUrl != null) {
-            int idx = attachmentUrl.lastIndexOf('/');
-            if (idx != -1) {
-                String tail = attachmentUrl.substring(idx+1);
-                int q = tail.indexOf('?');
-                if (q != -1) tail = tail.substring(0,q);
-                if (!tail.isBlank()) attachmentId = tail;
-            }
-        }
+        String attachmentId = Objects.toString(attached.get("attachmentId"), null);
         if (attachmentId != null) result.put("attachmentId", attachmentId);
 
         Map<String,Object> out = new LinkedHashMap<>();

@@ -55,6 +55,11 @@ spring:
       # Aumentar límite de buffer para respuestas grandes de Azure DevOps
       # Aumentado de 10MB a 50MB para manejar respuestas más grandes
       max-in-memory-size: 50MB
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 100MB
+      max-request-size: 120MB
   
   # Configuración de codec para parsing JSON
   codec:
