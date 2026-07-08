@@ -65,4 +65,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 
 # Script de entrada por defecto
 ENTRYPOINT ["docker/entrypoint.sh"]
-CMD ["stdio"]
+CMD ["stdio-http"]

@@ -34,12 +34,12 @@ show_help() {
 # Validar variables requeridas
 validate_env() {
     if [ -z "$AZURE_DEVOPS_ORGANIZATION" ]; then
-        echo "ERROR: AZURE_DEVOPS_ORGANIZATION environment variable is required"
+        echo "ERROR: AZURE_DEVOPS_ORGANIZATION environment variable is required" >&2
         exit 1
     fi
     
     if [ -z "$AZURE_DEVOPS_PAT" ]; then
-        echo "ERROR: AZURE_DEVOPS_PAT environment variable is required"
+        echo "ERROR: AZURE_DEVOPS_PAT environment variable is required" >&2
         exit 1
     fi
 }
@@ -54,29 +54,29 @@ case "$MODE" in
         ;;
     "stdio")
         validate_env
-        echo "Starting MCP Server in STDIO mode..."
+        echo "Starting MCP Server in STDIO mode..." >&2
         exec java $JAVA_OPTS -jar app.jar --mcp.stdio=true
         ;;
     "http")
         validate_env
         export HTTP_PORT="${HTTP_PORT:-8080}"
-        echo "Starting MCP Server in real HTTP mode on port $HTTP_PORT..."
+        echo "Starting MCP Server in real HTTP mode on port $HTTP_PORT..." >&2
         exec java $JAVA_OPTS -Dspring.main.web-application-type=servlet -Dserver.port=$HTTP_PORT -Dmcp.http=true -jar app.jar --mcp.http=true
         ;;
     "stdio-http")
         validate_env
         export HTTP_PORT="${HTTP_PORT:-8080}"
-        echo "Starting MCP Server in STDIO + HTTP mode on port $HTTP_PORT..."
+        echo "Starting MCP Server in STDIO + HTTP mode on port $HTTP_PORT..." >&2
         exec java $JAVA_OPTS -Dspring.main.web-application-type=servlet -Dserver.port=$HTTP_PORT -Dmcp.http=true -Dmcp.stdio=true -jar app.jar --mcp.stdio=true --mcp.http=true
         ;;
     "websocket")
         validate_env
         export WS_PORT="${WS_PORT:-8081}"
-        echo "Starting MCP Server in WebSocket mode on port $WS_PORT..."
+        echo "Starting MCP Server in WebSocket mode on port $WS_PORT..." >&2
         exec java $JAVA_OPTS -jar app.jar --server.port=$WS_PORT --mcp.websocket=true
         ;;
     *)
-        echo "ERROR: Unknown mode '$MODE'"
+        echo "ERROR: Unknown mode '$MODE'" >&2
         show_help
         exit 1
         ;;
