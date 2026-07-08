@@ -56,8 +56,8 @@ public class WitAttachmentsTool extends AbstractAzureDevOpsTool {
         props.put("attachmentId", Map.of("type", "string", "description", "ID del attachment (get/delete)"));
         props.put("workItemId", Map.of("type", "integer", "description", "Work item ID (attach/add_to_work_item/prepare_upload)"));
         props.put("fileName", Map.of("type", "string", "description", "Nombre del archivo. Opcional si se usa multipart o dataUrl con MIME inferible."));
-        props.put("dataUrl", Map.of("type", "string", "description", "Para MCP remoto y archivos pequeños: data URI inline (data:<mime>;base64,...). Preferir multipart para archivos reales/grandes."));
-        props.put("filePath", Map.of("type", "string", "description", "Solo MCP local: ruta accesible por el servidor MCP. No usar en MCP remoto; use prepare_upload/multipart o dataUrl."));
+        props.put("dataUrl", Map.of("type", "string", "description", "Para MCP remoto y archivos pequeños: data URI inline (data:<mime>;base64,...). Preferir prepare_upload + multipart para archivos reales/grandes."));
+        props.put("filePath", Map.of("type", "string", "description", "Solo MCP local: ruta accesible por el servidor MCP. No usar en MCP remoto. Si el MCP corre en Docker, el agente debe descubrir host/puerto del contenedor y subir por multipart."));
         props.put("dataBase64", Map.of("type", "string", "description", "[legacy] base64; preferir dataUrl o multipart."));
         props.put("contentType", Map.of("type", "string", "description", "MIME"));
         props.put("comment", Map.of("type", "string", "description", "Comentario"));
@@ -98,8 +98,9 @@ public class WitAttachmentsTool extends AbstractAzureDevOpsTool {
         out.put("contentType", "multipart/form-data");
         out.put("fileField", "file");
         out.put("optionalFields", List.of("comment", "fileName", "contentType", "apiVersion", "raw"));
-        out.put("message", "Envíe el archivo real como multipart/form-data en el campo 'file'. En MCP remoto no use filePath.");
-        out.put("content", List.of(Map.of("type", "text", "text", "POST " + path + " con multipart/form-data; campo obligatorio: file. Campos opcionales: comment, fileName, contentType.")));
+        out.put("dockerDiscovery", "Si este MCP fue instanciado con Docker, localice el contenedor/servicio y el puerto publicado (por ejemplo docker ps o docker compose ps). Use http://<host>:<puerto> + uploadPath como URL multipart. En MCP remoto no use filePath.");
+        out.put("message", "Envíe el archivo real como multipart/form-data en el campo 'file'. Si el MCP corre en Docker, descubra host/puerto publicados y combine esa base con uploadPath. En MCP remoto no use filePath.");
+        out.put("content", List.of(Map.of("type", "text", "text", "POST " + path + " con multipart/form-data; campo obligatorio: file. Campos opcionales: comment, fileName, contentType. Si el MCP corre en Docker, use docker ps/docker compose ps para identificar host y puerto publicados, y construya http://<host>:<puerto>" + path + ".")));
         return out;
     }
 
