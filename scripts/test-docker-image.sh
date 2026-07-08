@@ -6,6 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+LAST_TEST_ARGS_FILE="${TMPDIR:-/tmp}/mcp-azure-devops-test-last-args"
 
 # Colores para output
 RED='\033[0;31m'
@@ -43,6 +44,15 @@ ENV_FILE=".env"
 TIMEOUT=30
 HTTP_PORT=8080
 
+if [[ $# -eq 1 && "${1}" == "--last" ]]; then
+  if [[ ! -f "${LAST_TEST_ARGS_FILE}" ]]; then
+    echo -e "${RED}No hay una última configuración de test guardada.${NC}" >&2
+    exit 1
+  fi
+  mapfile -t SAVED_ARGS < "${LAST_TEST_ARGS_FILE}"
+  set -- "${SAVED_ARGS[@]}"
+fi
+
 # Parsear argumentos
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -51,6 +61,7 @@ while [[ $# -gt 0 ]]; do
     --env-file) ENV_FILE="$2"; shift 2;;
     --timeout) TIMEOUT="$2"; shift 2;;
     --port) HTTP_PORT="$2"; shift 2;;
+    --last) ;; # Ya fue expandido antes del parseo.
     -h|--help) usage; exit 0;;
     *) echo -e "${RED}Argumento no reconocido: $1${NC}" >&2; usage; exit 1;;
   esac
@@ -58,6 +69,14 @@ done
 
 log() {
   echo -e "${BLUE}[$(date +'%H:%M:%S')]${NC} $1"
+}
+
+save_last_test_args() {
+  local args=(--image "${IMAGE_NAME}" --mode "${TEST_MODE}" --env-file "${ENV_FILE}" --timeout "${TIMEOUT}")
+  if [[ "${TEST_MODE}" == "http" || "${TEST_MODE}" == "all" ]]; then
+    args+=(--port "${HTTP_PORT}")
+  fi
+  printf '%s\n' "${args[@]}" > "${LAST_TEST_ARGS_FILE}"
 }
 
 log_success() {
@@ -163,6 +182,8 @@ interactive_mode() {
 if [[ $# -eq 0 ]]; then
   interactive_mode
 fi
+
+save_last_test_args
 
 # Verificar que Docker esté funcionando
 if ! docker --version >/dev/null 2>&1; then

@@ -127,6 +127,43 @@ Nota (Dev Container / filesystem montado): en algunos entornos el directorio `.g
 
 En esta configuración el cliente MCP habla por STDIO, y los archivos grandes se suben por HTTP multipart usando el puerto publicado `9090`. El agente debe construir la URL base con el puerto publicado del contenedor y el `uploadPath` devuelto por `prepare_upload`.
 
+#### Para uso local con opencode
+
+Este repositorio incluye una configuración local en `.opencode/opencode.json` que levanta el MCP mediante:
+
+```bash
+scripts/opencode-mcp-azure-devops.sh
+```
+
+El script usa `stdio-http` y el puerto esperado `127.0.0.1:9091`:
+
+- Si `9091` está libre, arranca Docker con `-p 127.0.0.1:9091:8080`.
+- Si `9091` ya está ocupado, arranca el MCP igualmente por STDIO sin publicar `-p`.
+- En ambos casos anuncia `MCP_PUBLIC_BASE_URL=http://127.0.0.1:9091`, asumiendo que el servicio que ocupa ese puerto es una instancia compatible de esta imagen.
+- No usa `--name`, por lo que no hay conflicto de nombres entre proyectos.
+
+Variables opcionales del script:
+
+| Variable | Descripción | Default |
+|----------|-------------|---------|
+| `AZURE_DEVOPS_MCP_IMAGE` | Imagen Docker a ejecutar | `mcp-azure-devops:latest` |
+| `AZURE_DEVOPS_MCP_ENV_FILE` | Archivo de variables para Docker | `<repo>/.env` |
+| `AZURE_DEVOPS_MCP_HOST` | Host donde publicar HTTP si el puerto está libre | `127.0.0.1` |
+| `AZURE_DEVOPS_MCP_HTTP_PORT` | Puerto HTTP esperado para uploads | `9091` |
+
+#### Recursos MCP de configuración
+
+El servidor expone recursos MCP en Markdown para que clientes o agentes que soporten `resources/list` y `resources/read` puedan obtener plantillas de configuración para otros proyectos:
+
+| URI | Propósito |
+|-----|-----------|
+| `azuredevops-mcp://config/index` | Índice de recursos de configuración disponibles |
+| `azuredevops-mcp://config/opencode` | Plantilla para `.opencode/opencode.json` |
+| `azuredevops-mcp://config/vscode` | Plantilla para `.vscode/mcp.json` |
+| `azuredevops-mcp://config/docker-script` | Script recomendado para opencode con Docker `stdio-http` |
+
+Estos recursos son documentación de configuración. Las tools operativas, como `azuredevops_wit_attachments` con `operation=prepare_upload`, solo devuelven datos necesarios para ejecutar la operación actual.
+
 #### Para desarrollo local
 ```json
 {
@@ -287,6 +324,14 @@ Con Docker Compose también puede usarse:
 ```bash
 docker compose ps
 ```
+
+En opencode local, `prepare_upload` puede devolver directamente `uploadUrl` cuando la instancia fue arrancada por `scripts/opencode-mcp-azure-devops.sh`. El valor esperado es:
+
+```text
+http://127.0.0.1:9091/mcp/uploads/wit/workitems/{id}/attachment?project={project}
+```
+
+Si el script detecta que `9091` ya estaba ocupado, no publica un nuevo puerto para evitar que Docker falle. En ese caso las URLs siguen apuntando a `127.0.0.1:9091`, bajo la premisa de que el servicio existente en ese puerto es otra instancia compatible de esta misma imagen.
 
 ## 🔧 Variables de Entorno
 

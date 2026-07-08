@@ -6,6 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+LAST_BUILD_ARGS_FILE="${TMPDIR:-/tmp}/mcp-azure-devops-build-last-args"
 
 # Colores para output
 RED='\033[0;31m'
@@ -71,6 +72,16 @@ MULTIPLATFORM=true
 PLATFORMS="linux/amd64,linux/arm64"
 BUILDX_BUILDER="mcp-multiplatform-builder"
 
+# Repetir la última configuración no interactiva guardada.
+if [[ $# -eq 1 && "${1}" == "--last" ]]; then
+  if [[ ! -f "${LAST_BUILD_ARGS_FILE}" ]]; then
+    echo -e "${RED}No hay una última configuración de build guardada.${NC}" >&2
+    exit 1
+  fi
+  mapfile -t SAVED_ARGS < "${LAST_BUILD_ARGS_FILE}"
+  set -- "${SAVED_ARGS[@]}"
+fi
+
 # Guardar si se proporcionaron argumentos (para decidir modo interactivo)
 HAD_ARGS=$#
 
@@ -88,6 +99,7 @@ while [[ $# -gt 0 ]]; do
     --quiet) QUIET=true; shift;;
     --platform) PLATFORMS="$2"; shift 2;;
     --no-multiplatform) MULTIPLATFORM=false; shift;;
+    --last) ;; # Ya fue expandido antes del parseo.
     -h|--help) usage; exit 0;;
     *) echo -e "${RED}Argumento no reconocido: $1${NC}" >&2; usage; exit 1;;
   esac
@@ -97,6 +109,26 @@ log() {
   if [[ "${QUIET}" == false ]]; then
     echo -e "${BLUE}[$(date +'%H:%M:%S')]${NC} $1"
   fi
+}
+
+save_last_build_args() {
+  local args=(--tag "${IMAGE_TAG}" --dockerfile "${DOCKERFILE}")
+
+  [[ -n "${NO_CACHE}" ]] && args+=(--no-cache)
+  [[ "${CLEAN_FIRST}" == true ]] && args+=(--clean)
+  [[ "${RUN_TEST}" == true ]] && args+=(--test)
+  if [[ "${PUSH_IMAGE}" == true ]]; then
+    args+=(--push)
+    [[ -n "${REGISTRY}" ]] && args+=(--registry "${REGISTRY}")
+    [[ -n "${DOCKERHUB_USER}" ]] && args+=(--dockerhub-user "${DOCKERHUB_USER}")
+  fi
+  if [[ "${MULTIPLATFORM}" == true ]]; then
+    args+=(--platform "${PLATFORMS}")
+  else
+    args+=(--no-multiplatform)
+  fi
+
+  printf '%s\n' "${args[@]}" > "${LAST_BUILD_ARGS_FILE}"
 }
 
 log_success() {
@@ -109,6 +141,37 @@ log_warning() {
 
 log_error() {
   echo -e "${RED}[$(date +'%H:%M:%S')] ❌ $1${NC}" >&2
+}
+
+remove_containers_using_image() {
+  local image_ref="$1"
+  local containers=()
+
+  mapfile -t containers < <(docker ps -a --filter "ancestor=${image_ref}" --format "{{.ID}} {{.Names}}" || true)
+  if [[ ${#containers[@]} -eq 0 ]]; then
+    return 0
+  fi
+
+  log_warning "La imagen ${image_ref} está siendo usada por ${#containers[@]} contenedor(es). Se detendrán y eliminarán para poder borrar la imagen."
+  local line id name
+  for line in "${containers[@]}"; do
+    id="${line%% *}"
+    name="${line#* }"
+    log "Deteniendo/eliminando contenedor ${name} (${id})"
+    docker rm -f "${id}" >/dev/null || log_warning "No se pudo eliminar el contenedor ${name} (${id})"
+  done
+}
+
+remove_image_with_containers() {
+  local image_ref="$1"
+
+  if ! docker images "${image_ref}" -q | grep -q .; then
+    return 0
+  fi
+
+  log "Eliminando imagen existente: ${image_ref}"
+  remove_containers_using_image "${image_ref}"
+  docker rmi "${image_ref}" || log_warning "No se pudo eliminar imagen ${image_ref}"
 }
 
 compute_latest_tag() {
@@ -297,6 +360,8 @@ if [[ ! -f "${PROJECT_ROOT}/README.md" ]]; then
   exit 1
 fi
 
+save_last_build_args
+
 log "🚀 Iniciando construcción de imagen Docker MCP Azure DevOps"
 log "📁 Directorio del proyecto: ${PROJECT_ROOT}"
 log "📄 Dockerfile: ${DOCKERFILE}"
@@ -309,10 +374,7 @@ if [[ "${CLEAN_FIRST}" == true ]]; then
   log "🧹 Limpiando imágenes previas..."
   
   # Remover imágenes con el mismo tag
-  if docker images "${IMAGE_TAG}" -q | grep -q .; then
-    log "Eliminando imagen existente: ${IMAGE_TAG}"
-    docker rmi "${IMAGE_TAG}" || log_warning "No se pudo eliminar imagen ${IMAGE_TAG}"
-  fi
+  remove_image_with_containers "${IMAGE_TAG}"
   
   # Limpiar imágenes dangling
   if docker images -f "dangling=true" -q | grep -q .; then
