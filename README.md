@@ -4,11 +4,14 @@ Servidor MCP (Model Context Protocol) para Azure DevOps que proporciona acceso c
 
 ## 🚀 Características
 
-- **Protocolo MCP completo**: Soporte para JSON-RPC 2.0 sobre STDIO y HTTP
+- **Protocolo MCP completo**: Soporte para JSON-RPC 2.0 sobre STDIO, HTTP real y modo híbrido STDIO+HTTP
 - **APIs de Azure DevOps**: Acceso completo a Core, Work Items, Work Management, y más
 - **Containerizado**: Imagen Docker lista para producción
-- **Múltiples modos de transporte**: STDIO, HTTP wrapper, y WebSocket (próximamente)
+- **Múltiples modos de transporte**: `stdio-http` (default recomendado), `stdio`, `http` real y WebSocket (próximamente)
 - **Configuración flexible**: Variables de entorno y archivos de configuración
+- **Uploads grandes**: Endpoint HTTP multipart para adjuntar archivos grandes a work items, compatible con MCP remoto y Docker/devcontainers
+- **WIQL robusto**: `top` real, preservación de `ORDER BY`, salida estructurada, identities compactas y URLs directas
+- **HTML enriquecido seguro**: Normalización de Description, Acceptance Criteria y comentarios; tablas con estilos automáticos compatibles con Azure DevOps
 
 ## 🔁 Refactorización de tools (routers)
 
@@ -52,12 +55,17 @@ AZURE_DEVOPS_PAT=tu-personal-access-token
 
 3. **Ejecutar el contenedor**:
 ```bash
-# Modo STDIO (para clientes MCP locales)
-docker run -i --env-file .env mcp-azure-devops stdio
+# Modo recomendado: STDIO + HTTP real para MCP y uploads multipart
+docker run --rm -i -p 9090:8080 --env-file .env mcp-azure-devops
 
-# Modo HTTP (para acceso remoto en puerto 8080)
+# Modo HTTP puro (sin STDIO) para acceso remoto en puerto 8080
 docker run -p 8080:8080 --env-file .env mcp-azure-devops http
+
+# Modo STDIO puro (sin endpoint HTTP de uploads)
+docker run --rm -i --env-file .env mcp-azure-devops stdio
 ```
+
+> Si no se especifica modo, la imagen arranca en `stdio-http`. Este modo mantiene el protocolo MCP por STDIO y expone HTTP real para `/mcp`, `/mcp/health` y `/mcp/uploads/...`.
 
 ### Opción 2: Desarrollo Local
 
@@ -82,7 +90,7 @@ Nota (Dev Container / filesystem montado): en algunos entornos el directorio `.g
 
 ### Configuración básica con mcp.json
 
-#### Para uso con Docker (STDIO)
+#### Para uso con Docker (STDIO + HTTP recomendado)
 ```json
 {
   "inputs": [
@@ -104,17 +112,20 @@ Nota (Dev Container / filesystem montado): en algunos entornos el directorio `.g
         "run",
         "--rm",
         "-i",
+        "-p",
+        "9090:8080",
         "--env",
         "AZURE_DEVOPS_ORGANIZATION=${input:azure_devops_org}",
         "--env",
         "AZURE_DEVOPS_PAT=${input:azure_devops_pat}",
-        "mcp-azure-devops",
-        "stdio"
+        "mcp-azure-devops"
       ]
     }
   }
 }
 ```
+
+En esta configuración el cliente MCP habla por STDIO, y los archivos grandes se suben por HTTP multipart usando el puerto publicado `9090`. El agente debe construir la URL base con el puerto publicado del contenedor y el `uploadPath` devuelto por `prepare_upload`.
 
 #### Para desarrollo local
 ```json
@@ -136,20 +147,22 @@ Nota (Dev Container / filesystem montado): en algunos entornos el directorio `.g
 }
 ```
 
+> Esta configuración local usa STDIO puro. Si necesitas uploads grandes en desarrollo local, arranca también HTTP con `-Dspring.main.web-application-type=servlet -Dmcp.http=true -Dserver.port=8080` o usa Docker en modo `stdio-http`.
+
 #### Para servidor HTTP remoto
+Si el cliente MCP soporta transporte HTTP, apunta al endpoint `/mcp` del servidor remoto:
+
 ```json
 {
   "servers": {
     "azure-devops-remote": {
-      "command": "socat",
-      "args": [
-        "-",
-        "TCP:servidor-remoto:8080"
-      ]
+      "url": "https://servidor-remoto/mcp"
     }
   }
 }
 ```
+
+Si tu cliente MCP solo soporta `command`/STDIO, usa Docker en modo `stdio-http` localmente para conservar STDIO y publicar el endpoint de uploads.
 
 ### Configuración avanzada con múltiples instancias
 
@@ -181,19 +194,19 @@ Nota (Dev Container / filesystem montado): en algunos entornos el directorio `.g
     "azure-devops-dev": {
       "command": "docker",
       "args": [
-        "run", "--rm", "-i",
+        "run", "--rm", "-i", "-p", "9091:8080",
         "--env", "AZURE_DEVOPS_ORGANIZATION=${input:dev_org}",
         "--env", "AZURE_DEVOPS_PAT=${input:dev_pat}",
-        "mcp-azure-devops", "stdio"
+        "mcp-azure-devops"
       ]
     },
     "azure-devops-prod": {
       "command": "docker", 
       "args": [
-        "run", "--rm", "-i",
+        "run", "--rm", "-i", "-p", "9092:8080",
         "--env", "AZURE_DEVOPS_ORGANIZATION=${input:prod_org}",
         "--env", "AZURE_DEVOPS_PAT=${input:prod_pat}",
-        "mcp-azure-devops", "stdio"
+        "mcp-azure-devops"
       ]
     }
   }
@@ -202,21 +215,77 @@ Nota (Dev Container / filesystem montado): en algunos entornos el directorio `.g
 
 ## 🛠️ Modos de Uso
 
-### 1. Modo STDIO (Por defecto)
-Ideal para clientes MCP locales como VS Code, Claude Desktop, etc.
+### 1. Modo `stdio-http` (Default recomendado)
+Ideal para clientes MCP locales que usan STDIO y además necesitan subir archivos grandes por HTTP multipart.
+
+```bash
+docker run --rm -i -p 9090:8080 --env-file .env mcp-azure-devops
+```
+
+Equivale a:
+
+```bash
+docker run --rm -i -p 9090:8080 --env-file .env mcp-azure-devops stdio-http
+```
+
+Este modo habilita simultáneamente:
+
+- STDIO para JSON-RPC MCP normal.
+- HTTP real para `/mcp`, `/mcp/health` y `/mcp/uploads/wit/workitems/{id}/attachment`.
+
+### 2. Modo STDIO puro
+Ideal cuando no se necesitan uploads grandes. No expone endpoint HTTP.
 ```bash
 docker run -i --env-file .env mcp-azure-devops stdio
 ```
 
-### 2. Modo HTTP Wrapper
-Expone el servidor MCP via TCP para acceso remoto:
+### 3. Modo HTTP real
+Expone el servidor MCP por HTTP real. No usa STDIO.
 ```bash
 docker run -p 8080:8080 --env-file .env mcp-azure-devops http
 ```
 
-### 3. Modo WebSocket (Próximamente)
+### 4. Modo WebSocket (Próximamente)
 ```bash
 docker run -p 8081:8081 --env-file .env mcp-azure-devops websocket
+```
+
+### Descubrimiento de URL para uploads en Docker/devcontainer
+
+Cuando el MCP corre en Docker o dentro de un devcontainer, el agente debe descubrir el host/puerto publicado para construir la URL multipart:
+
+```bash
+docker ps
+```
+
+Buscar algo como:
+
+```text
+0.0.0.0:9090->8080/tcp
+```
+
+Entonces la base HTTP es:
+
+```text
+http://localhost:9090
+```
+
+Y si `prepare_upload` devuelve:
+
+```text
+/mcp/uploads/wit/workitems/123/attachment
+```
+
+La URL final es:
+
+```text
+http://localhost:9090/mcp/uploads/wit/workitems/123/attachment
+```
+
+Con Docker Compose también puede usarse:
+
+```bash
+docker compose ps
 ```
 
 ## 🔧 Variables de Entorno
@@ -254,15 +323,15 @@ El servidor expone **12 tools router**. Cada una recibe `operation` y parámetro
 
 ### 4) Work Item Tracking (WIT)
 - `azuredevops_wit_work_items`
-  - `operation: get | create | update | delete | batch_get | bulk_delete`
+  - `operation: get | create | update | delete | batch_get | bulk_delete | get_fields`
 - `azuredevops_wit_comments`
   - `operation: list | add | update | delete | versions_list | versions_get | reactions_list | reactions_add | reactions_delete | reactions_engaged_users`
 - `azuredevops_wit_attachments`
-  - `operation: get | delete | add_to_work_item`
+  - `operation: get | delete | attach | prepare_upload | add_to_work_item`
 - `azuredevops_wit_classification_nodes`
   - `operation: get_root | get | get_by_ids | upsert | update | delete`
 - `azuredevops_wit_queries`
-  - `operation: wiql_query | wiql_by_id | search_queries | list_root_folders`
+  - `operation: wiql_query | wiql_by_id | search_queries | list_root_folders | recent_created_by_me | recent_changed_by_me | assigned_to_me`
 - `azuredevops_wit_reporting`
   - `operation: revisions_list | revisions_get | reporting_links_get | reporting_revisions_get | reporting_revisions_post`
 
@@ -286,10 +355,134 @@ echo '{"jsonrpc":"2.0","method":"tools/call","id":3,"params":{"name":"azuredevop
 ```
 
 ### Adjuntar archivo a un Work Item
-Operación atómica: si la asociación falla se elimina el attachment subido.
+Para archivos pequeños puede usarse `dataUrl` o `dataBase64` por MCP JSON-RPC. Para archivos reales o grandes, usa `prepare_upload` + HTTP multipart.
+
+#### Flujo recomendado para archivos grandes
+
+1. Asegurar que el MCP esté corriendo en `stdio-http` con puerto publicado. En un cliente MCP real, el cliente mantiene vivo el contenedor configurado en `mcp.json`.
+
+Para una prueba manual sin cliente MCP, puedes iniciar HTTP real en background:
+
+```bash
+docker run --rm -d --name mcp-azure-devops-upload-test \
+  -p 9090:8080 \
+  --env-file .env \
+  mcp-azure-devops http
+```
+
+2. Preparar upload por MCP usando la tool `prepare_upload`.
+
+En un cliente MCP, llama:
+
+```json
+{
+  "operation": "prepare_upload",
+  "workItemId": 123
+}
+```
+
+Si estás probando contra el servidor HTTP real:
+
+```bash
+curl -s -X POST http://localhost:9090/mcp \
+  -H "Content-Type: application/json" \
+  -H "MCP-Protocol-Version: 2025-06-18" \
+  -d '{"jsonrpc":"2.0","method":"tools/call","id":4,"params":{"name":"azuredevops_wit_attachments","arguments":{"operation":"prepare_upload","workItemId":123}}}'
+```
+
+Respuesta esperada:
+
+```json
+{
+  "uploadAvailable": true,
+  "method": "POST",
+  "uploadPath": "/mcp/uploads/wit/workitems/123/attachment",
+  "contentType": "multipart/form-data",
+  "fileField": "file"
+}
+```
+
+3. Descubrir el puerto publicado del contenedor si aplica:
+
+```bash
+docker ps
+```
+
+4. Subir el archivo real por multipart:
+
+```bash
+curl -X POST \
+  -F "file=@/ruta/evidencia.zip" \
+  -F "comment=Evidencia" \
+  http://localhost:9090/mcp/uploads/wit/workitems/123/attachment
+```
+
+El endpoint infiere `project` desde `workItemId`, infiere nombre/MIME, sube el archivo a Azure DevOps y crea la relación `AttachedFile`.
+
+#### Flujo MCP puro para archivos pequeños
 ```bash
 echo '{"jsonrpc":"2.0","method":"tools/call","id":4,"params":{"name":"azuredevops_wit_attachments","arguments":{"operation":"add_to_work_item","project":"MiProyecto","workItemId":123,"fileName":"evidencia.txt","dataBase64":"'"$(printf 'Hola mundo' | base64 -w0)"'","comment":"Evidencia de prueba"}}}' | docker run -i --env-file .env mcp-azure-devops stdio
 ```
+
+> `filePath` solo funciona si el archivo existe dentro del entorno donde corre el MCP. En MCP remoto o Docker no debe usarse; envía el archivo por multipart.
+
+### WIQL con orden, top y salida estructurada
+
+`wiql_query` preserva el orden devuelto por Azure DevOps, incluyendo `ORDER BY`, y aplica `top` tanto en WIQL como fallback local.
+
+```bash
+echo '{"jsonrpc":"2.0","method":"tools/call","id":5,"params":{"name":"azuredevops_wit_queries","arguments":{"operation":"recent_created_by_me","project":"MiProyecto","top":10}}}' | docker run --rm -i --env-file .env mcp-azure-devops stdio
+```
+
+Operaciones de alto nivel disponibles:
+
+- `recent_created_by_me`: work items más recientes creados por el usuario autenticado.
+- `recent_changed_by_me`: work items más recientes modificados por el usuario autenticado.
+- `assigned_to_me`: work items asignados al usuario autenticado.
+
+Para consumo programático, usa `raw=true`:
+
+```json
+{
+  "operation": "recent_created_by_me",
+  "project": "MiProyecto",
+  "top": 10,
+  "raw": true
+}
+```
+
+La respuesta incluye:
+
+- `items[]` estructurado
+- `count`
+- `topApplied`
+- `idsInWiqlOrder`
+- `fieldsUsed`
+- identities compactas
+- URLs directas a work items
+
+### HTML enriquecido seguro en work items y comentarios
+
+Los campos HTML conocidos se normalizan automáticamente:
+
+- `System.Description`
+- `Microsoft.VSTS.Common.AcceptanceCriteria`
+- `Microsoft.VSTS.TCM.ReproSteps`
+- `Microsoft.VSTS.TCM.SystemInfo`
+- `Microsoft.VSTS.Common.Resolution`
+- comentarios WIT
+
+Se soporta HTML simple como:
+
+- `<p>`
+- `<strong>` / `<em>`
+- `<ul><li>` / `<ol><li>`
+- `<code>` / `<pre>`
+- `<blockquote>`
+- `<a href="...">`
+- `<table>`
+
+Las tablas reciben estilos automáticos compatibles con Azure DevOps: borde gris, encabezado gris claro, padding y ancho completo. No es necesario que el agente agregue estilos manualmente.
 
 ## 🐳 Docker
 
@@ -303,7 +496,7 @@ docker ps  # Muestra (healthy) cuando todo está funcionando
 Los logs están optimizados para producción sin spam del health check:
 ```bash
 docker logs nombre-contenedor
-# Output: Starting MCP Server in HTTP wrapper mode on port 8080...
+# Output: Starting MCP Server in STDIO + HTTP mode on port 8080...
 ```
 
 ### Multi-stage build
@@ -359,9 +552,10 @@ version: '3.8'
 services:
   mcp-azure-devops:
     build: .
-    command: ["http"]
+    command: ["stdio-http"]
+    stdin_open: true
     ports:
-      - "8080:8080"
+      - "9090:8080"
     environment:
       - AZURE_DEVOPS_ORGANIZATION=${AZURE_DEVOPS_ORGANIZATION}
       - AZURE_DEVOPS_PAT=${AZURE_DEVOPS_PAT}

@@ -91,16 +91,30 @@ public class WitAttachmentsTool extends AbstractAzureDevOpsTool {
         String project = arguments.get("project") == null ? null : arguments.get("project").toString().trim();
         StringBuilder path = new StringBuilder("/mcp/uploads/wit/workitems/").append(wiObj).append("/attachment");
         if (project != null && !project.isBlank()) path.append("?project=").append(project);
+        boolean httpEnabled = "true".equalsIgnoreCase(System.getProperty("mcp.http"))
+                || "true".equalsIgnoreCase(System.getenv("MCP_HTTP"));
         Map<String,Object> out = new LinkedHashMap<>();
         out.put("isError", false);
+        out.put("uploadAvailable", httpEnabled);
+        out.put("requiredMode", "stdio-http");
         out.put("method", "POST");
         out.put("uploadPath", path.toString());
         out.put("contentType", "multipart/form-data");
         out.put("fileField", "file");
         out.put("optionalFields", List.of("comment", "fileName", "contentType", "apiVersion", "raw"));
-        out.put("dockerDiscovery", "Si este MCP fue instanciado con Docker, localice el contenedor/servicio y el puerto publicado (por ejemplo docker ps o docker compose ps). Use http://<host>:<puerto> + uploadPath como URL multipart. En MCP remoto no use filePath.");
-        out.put("message", "Envíe el archivo real como multipart/form-data en el campo 'file'. Si el MCP corre en Docker, descubra host/puerto publicados y combine esa base con uploadPath. En MCP remoto no use filePath.");
-        out.put("content", List.of(Map.of("type", "text", "text", "POST " + path + " con multipart/form-data; campo obligatorio: file. Campos opcionales: comment, fileName, contentType. Si el MCP corre en Docker, use docker ps/docker compose ps para identificar host y puerto publicados, y construya http://<host>:<puerto>" + path + ".")));
+        out.put("dockerDiscovery", Map.of(
+                "containerLookup", "Use docker ps o docker compose ps para encontrar el contenedor MCP y el puerto publicado.",
+                "portPattern", "Busque algo como 0.0.0.0:9090->8080/tcp o 127.0.0.1:9090->8080/tcp.",
+                "urlRule", "Construya http://<host>:<puerto> + uploadPath. En devcontainer normalmente <host> puede ser localhost desde el mismo workspace, o el host expuesto por el entorno.",
+                "recommendedDockerMode", "stdio-http",
+                "exampleRun", "docker run --rm -i -p 9090:8080 -e AZURE_DEVOPS_ORGANIZATION=... -e AZURE_DEVOPS_PAT=... sjseo298/mcp-azure-devops stdio-http"
+        ));
+        if (httpEnabled) {
+            out.put("message", "Envíe el archivo real como multipart/form-data en el campo 'file'. Si el MCP corre en Docker/devcontainer, descubra host/puerto publicados y combine esa base con uploadPath. En MCP remoto no use filePath.");
+        } else {
+            out.put("message", "El endpoint HTTP de uploads no está activo en esta instancia. Inicie el contenedor en modo stdio-http y publique el puerto (por ejemplo -p 9090:8080). En MCP remoto no use filePath.");
+        }
+        out.put("content", List.of(Map.of("type", "text", "text", (httpEnabled ? "Upload disponible. " : "Upload HTTP no disponible en esta instancia. ") + "POST " + path + " con multipart/form-data; campo obligatorio: file. Si corre en Docker/devcontainer, use docker ps/docker compose ps para identificar host y puerto publicados, y construya http://<host>:<puerto>" + path + ".")));
         return out;
     }
 

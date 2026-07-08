@@ -12,8 +12,9 @@ show_help() {
     echo "Usage: docker run [options] mcp-azure-devops [mode]"
     echo ""
     echo "Modes:"
-    echo "  stdio          - STDIO mode (default, para clientes MCP locales)"
-    echo "  http           - HTTP wrapper mode (expone endpoint HTTP)"
+    echo "  stdio-http     - STDIO + HTTP real (default recomendado; permite MCP + uploads multipart)"
+    echo "  stdio          - STDIO puro (sin endpoint HTTP de uploads)"
+    echo "  http           - HTTP real (expone /mcp y /mcp/uploads)"
     echo "  websocket      - WebSocket mode (futuro)"
     echo ""
     echo "Environment Variables:"
@@ -23,10 +24,10 @@ show_help() {
     echo "  HTTP_PORT                - Puerto HTTP (default: 8080)"
     echo ""
     echo "Examples:"
-    echo "  # STDIO mode (para uso con clients MCP locales)"
-    echo "  docker run -e AZURE_DEVOPS_ORGANIZATION=myorg -e AZURE_DEVOPS_PAT=xxx mcp-azure-devops stdio"
+    echo "  # STDIO + HTTP para clientes MCP locales y uploads grandes"
+    echo "  docker run -i -p 9090:8080 -e AZURE_DEVOPS_ORGANIZATION=myorg -e AZURE_DEVOPS_PAT=xxx mcp-azure-devops stdio-http"
     echo ""
-    echo "  # HTTP wrapper mode (para acceso remoto)"
+    echo "  # HTTP real (para acceso remoto sin STDIO)"
     echo "  docker run -p 8080:8080 -e AZURE_DEVOPS_ORGANIZATION=myorg -e AZURE_DEVOPS_PAT=xxx mcp-azure-devops http"
 }
 
@@ -43,8 +44,8 @@ validate_env() {
     fi
 }
 
-# Modo por defecto
-MODE="${1:-stdio}"
+# Modo por defecto recomendado para contenedor: conserva STDIO y habilita HTTP uploads.
+MODE="${1:-stdio-http}"
 
 case "$MODE" in
     "help"|"-h"|"--help")
@@ -59,18 +60,14 @@ case "$MODE" in
     "http")
         validate_env
         export HTTP_PORT="${HTTP_PORT:-8080}"
-        echo "Starting MCP Server in HTTP wrapper mode on port $HTTP_PORT..."
-        
-        # Crear un script simple que ejecute el servidor
-        cat > /tmp/mcp-server.sh << 'EOF'
-#!/bin/bash
-exec java $JAVA_OPTS -jar /app/app.jar --mcp.stdio=true
-EOF
-        chmod +x /tmp/mcp-server.sh
-        
-        # Usar socat de manera más simple - cada conexión inicia su propio proceso
-        # Esto es correcto para MCP ya que cada sesión es independiente
-        exec socat TCP4-LISTEN:$HTTP_PORT,reuseaddr,fork EXEC:"/tmp/mcp-server.sh"
+        echo "Starting MCP Server in real HTTP mode on port $HTTP_PORT..."
+        exec java $JAVA_OPTS -Dspring.main.web-application-type=servlet -Dserver.port=$HTTP_PORT -Dmcp.http=true -jar app.jar --mcp.http=true
+        ;;
+    "stdio-http")
+        validate_env
+        export HTTP_PORT="${HTTP_PORT:-8080}"
+        echo "Starting MCP Server in STDIO + HTTP mode on port $HTTP_PORT..."
+        exec java $JAVA_OPTS -Dspring.main.web-application-type=servlet -Dserver.port=$HTTP_PORT -Dmcp.http=true -Dmcp.stdio=true -jar app.jar --mcp.stdio=true --mcp.http=true
         ;;
     "websocket")
         validate_env

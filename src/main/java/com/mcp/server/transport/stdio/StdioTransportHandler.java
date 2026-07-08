@@ -40,7 +40,26 @@ public class StdioTransportHandler implements CommandLineRunner {
             System.err.println("STDIO mode not enabled, exiting handler");
             return;
         }
-        
+
+        if ("true".equals(System.getProperty("mcp.http"))) {
+            Thread stdioThread = new Thread(() -> {
+                try {
+                    runStdioLoop();
+                } catch (Exception e) {
+                    System.err.println("Fatal error in async stdio handler: " + e.getClass().getName() + ": " + e.getMessage());
+                    e.printStackTrace(System.err);
+                }
+            }, "mcp-stdio-http-handler");
+            stdioThread.setDaemon(false);
+            stdioThread.start();
+            System.err.println("STDIO handler started asynchronously because HTTP mode is enabled");
+            return;
+        }
+
+        runStdioLoop();
+    }
+
+    private void runStdioLoop() throws Exception {
         System.err.println("Starting MCP stdio handler...");
         System.err.println("ObjectMapper configuration: " + objectMapper.getClass().getName());
         

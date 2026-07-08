@@ -25,7 +25,9 @@ import java.util.Arrays;
 public class McpServerApplication {
 
     private static final String STDIO_ARG = "--mcp.stdio=true";
+    private static final String HTTP_ARG = "--mcp.http=true";
     private static final String STDIO_PROPERTY = "mcp.stdio";
+    private static final String HTTP_PROPERTY = "mcp.http";
     private static final String WEB_APP_TYPE_PROPERTY = "spring.main.web-application-type";
 
     /**
@@ -46,7 +48,7 @@ public class McpServerApplication {
             // Configurar modo STDIO si está habilitado
             if (isStdioModeEnabled(args)) {
                 System.err.println("STDIO mode enabled");
-                configureStdioMode();
+                configureStdioMode(isHttpModeEnabled(args));
             } else {
                 System.err.println("STDIO mode disabled");
             }
@@ -69,15 +71,23 @@ public class McpServerApplication {
      * @return true si el modo STDIO está habilitado
      */
     private static boolean isStdioModeEnabled(String[] args) {
-        return Arrays.asList(args).contains(STDIO_ARG);
+        return Arrays.asList(args).contains(STDIO_ARG)
+                || "true".equalsIgnoreCase(System.getProperty(STDIO_PROPERTY));
+    }
+
+    private static boolean isHttpModeEnabled(String[] args) {
+        return Arrays.asList(args).contains(HTTP_ARG)
+                || "true".equalsIgnoreCase(System.getProperty(HTTP_PROPERTY));
     }
 
     /**
      * Configura las propiedades del sistema para el modo STDIO.
      */
-    private static void configureStdioMode() {
+    private static void configureStdioMode(boolean httpEnabled) {
         System.setProperty(STDIO_PROPERTY, "true");
-        System.setProperty(WEB_APP_TYPE_PROPERTY, "none");
+        if (!httpEnabled) {
+            System.setProperty(WEB_APP_TYPE_PROPERTY, "none");
+        }
     }
     
     /**
