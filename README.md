@@ -437,7 +437,7 @@ Resumen rápido de cantidad por dominio:
 - `azuredevops_git_api`
   - `operation: (catálogo dinámico de operaciones Git REST 7.2; cobertura total API-first)`
 - `azuredevops_git_repositories`
-  - `operation: list | get | create | update | delete | items_get | items_list | items_batch | commits_list | refs_list | refs_update | pushes_list | pushes_get | pushes_create | download_zip`
+  - `operation: list | search | find | get_by_name | get | create | update | delete | items_get | items_get_safe | items_list | items_list_recursive | items_batch | search_files | find_files | search_content | explore_repo | commits_list | refs_list | refs_update | pushes_list | pushes_get | pushes_create | download_zip`
 - `azuredevops_git_pull_requests`
   - `operation: get | list | list_by_project | assigned_to_me | create | update | reviewers_list | reviewer_add | reviewer_update | threads_list | thread_create | thread_update | comments_add | comment_update | comment_delete | statuses_list | status_add | labels_list | label_add | label_delete | iterations_list | iteration_changes_get | work_items_list | query | share`
 - `azuredevops_git_local`
@@ -452,10 +452,22 @@ Notas importantes para `azuredevops_git_api`:
 Notas importantes para `azuredevops_git_repositories`:
 
 - `pushes_create` permite crear commits/cambios por API REST sin clonar repositorio local (`bodyJson`, `commitsJson`, `changesJson` o modo simplificado de un cambio).
+- `list` ahora soporta alcance por proyecto u organización completa (si `project` se omite) y filtros `nameContains`/`nameSearch` con paginación local (`skip`/`top`) y metadatos (`count`, `totalCount`, `hasMore`).
+- `search` y `find` ejecutan búsqueda por patrón de nombre (`nameContains` o `nameSearch`) con alcance opcional cross-project.
+- `get_by_name` resuelve nombre exacto (case-insensitive). Si hay múltiples coincidencias, retorna error por ambigüedad con candidatos para desambiguar.
+- Operaciones de contenido aceptan `repositoryId` o `repositoryName` para evitar llamadas de resolución manual.
+- Versionado por familia de endpoint: repos/commits/refs usan `7.2-preview.2`; items/trees/blobs/itemsbatch usan `7.2-preview.1`; pushes usan `7.2-preview.3` (con override opcional por `apiVersion`).
+- `items_list_recursive` intenta `items_list` con recursión y hace fallback a `trees_get` si la API responde error/inconsistencia.
+- `items_get_safe` intenta `items_get includeContent=true` y usa fallback `blobs/get` cuando la API no devuelve contenido.
+- `search_files`/`find_files` permiten localizar archivos por `filePattern` (glob), `pathRegex` y/o `extensions`.
+- `search_content` agrega búsqueda por texto/regex sobre archivos con límites conservadores por defecto (`maxFiles=200`, `maxBytesPerFile=262144`), configurables por parámetro con advertencias.
+- `explore_repo` devuelve estructura resumida y archivos clave de integración/configuración en una sola operación.
 
 Notas importantes para `azuredevops_git_pull_requests`:
 
 - `list_by_project` con `status=all` ejecuta consulta por `active`, `completed` y `abandoned`, y devuelve respuesta combinada con `statusQueryMode=all`.
+- El default de `apiVersion` ahora se ajusta por operación: endpoints PR principales (`get|list|list_by_project|assigned_to_me|create|update|statuses_list|status_add|iterations_list`) usan `7.2-preview.2`; endpoints legacy de reviewers/threads/comments/labels/iteration_changes/work_items/query/share usan `7.2-preview.1`.
+- Se puede forzar una versión específica por llamada con `apiVersion`.
 
 Notas importantes para `azuredevops_git_local`:
 

@@ -20,6 +20,7 @@ public class GitPullRequestsTool extends AbstractAzureDevOpsTool {
     private static final String NAME = "azuredevops_git_pull_requests";
     private static final String DESC = "Operaciones Git Pull Requests. operation: get|list|list_by_project|assigned_to_me|create|update|reviewers_list|reviewer_add|reviewer_update|threads_list|thread_create|thread_update|comments_add|comment_update|comment_delete|statuses_list|status_add|labels_list|label_add|label_delete|iterations_list|iteration_changes_get|work_items_list|query|share.";
     private static final String DEFAULT_API_VERSION = "7.2-preview.2";
+    private static final String DEFAULT_LEGACY_API_VERSION = "7.2-preview.1";
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -565,7 +566,18 @@ public class GitPullRequestsTool extends AbstractAzureDevOpsTool {
 
     private String apiVersion(Map<String, Object> args) {
         String v = str(args, "apiVersion");
-        return v.isBlank() ? DEFAULT_API_VERSION : v;
+        if (!v.isBlank()) return v;
+
+        String op = str(args, "operation").toLowerCase(Locale.ROOT);
+        return switch (op) {
+            case "reviewers_list", "reviewer_add", "reviewer_update",
+                 "threads_list", "thread_create", "thread_update",
+                 "comments_add", "comment_update", "comment_delete",
+                 "labels_list", "label_add", "label_delete",
+                 "iteration_changes_get", "work_items_list",
+                 "query", "share" -> DEFAULT_LEGACY_API_VERSION;
+            default -> DEFAULT_API_VERSION;
+        };
     }
 
     private Map<String, String> baseQuery(Map<String, Object> args) {
