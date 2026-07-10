@@ -50,7 +50,8 @@ RUN apk add --no-cache \
     netcat-openbsd \
     curl \
     bash \
-    jq && \
+    jq \
+    git && \
     # Limpiar cache de apk
     rm -rf /var/cache/apk/*
 

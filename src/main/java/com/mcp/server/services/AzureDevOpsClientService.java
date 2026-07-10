@@ -6,6 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.BodyInserters;
 import reactor.core.publisher.Mono;
 
@@ -13,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -25,6 +27,7 @@ import java.util.Map;
 public class AzureDevOpsClientService {
 
     private final WebClient webClient;
+    private final String organization;
     private final String apiVersion;
     private final String vsspsApiVersion;
 
@@ -36,6 +39,7 @@ public class AzureDevOpsClientService {
             @Value("${AZURE_DEVOPS_API_VERSION:${azure.devops.api-version:7.2-preview.1}}") String apiVersion,
             @Value("${AZURE_DEVOPS_VSSPS_API_VERSION:${azure.devops.vssps-api-version:7.1}}") String vsspsApiVersion
     ) {
+        this.organization = organization;
         this.apiVersion = apiVersion;
         this.vsspsApiVersion = vsspsApiVersion;
         String credentials = ":" + pat;
@@ -50,6 +54,10 @@ public class AzureDevOpsClientService {
                 configurer.defaultCodecs().maxInMemorySize(50 * 1024 * 1024); // 50MB
             })
             .build();
+    }
+
+    public String getOrganization() {
+        return organization;
     }
 
     public Map<String, Object> getWorkApi(String project, String team, String path) {
@@ -177,13 +185,19 @@ public class AzureDevOpsClientService {
         Map<String,Object> resp = webClient.method(method)
             .uri(builder -> {
                 var b = builder.pathSegment(segments.toArray(new String[0]));
+                boolean hasApiVersion = false;
                 if (query != null) {
                     for (Map.Entry<String,String> e : query.entrySet()) {
                         b.queryParam(e.getKey(), e.getValue());
+                        if ("api-version".equalsIgnoreCase(e.getKey())) {
+                            hasApiVersion = true;
+                        }
                     }
                 }
-                String ver = (apiVersionOverride != null && !apiVersionOverride.isBlank()) ? apiVersionOverride : this.apiVersion;
-                b.queryParam("api-version", ver);
+                if (!hasApiVersion) {
+                    String ver = (apiVersionOverride != null && !apiVersionOverride.isBlank()) ? apiVersionOverride : this.apiVersion;
+                    b.queryParam("api-version", ver);
+                }
                 return b.build();
             })
             .headers(h -> { if (contentType != null) h.set(HttpHeaders.CONTENT_TYPE, contentType.toString()); })
@@ -479,13 +493,19 @@ public class AzureDevOpsClientService {
         return webClient.get()
             .uri(builder -> {
                 var b = builder.pathSegment(segments.toArray(new String[0]));
+                boolean hasApiVersion = false;
                 if (query != null) {
                     for (Map.Entry<String,String> e : query.entrySet()) {
                         b.queryParam(e.getKey(), e.getValue());
+                        if ("api-version".equalsIgnoreCase(e.getKey())) {
+                            hasApiVersion = true;
+                        }
                     }
                 }
-                String ver = (apiVersionOverride != null && !apiVersionOverride.isBlank()) ? apiVersionOverride : this.apiVersion;
-                b.queryParam("api-version", ver);
+                if (!hasApiVersion) {
+                    String ver = (apiVersionOverride != null && !apiVersionOverride.isBlank()) ? apiVersionOverride : this.apiVersion;
+                    b.queryParam("api-version", ver);
+                }
                 return b.build();
             })
             .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_OCTET_STREAM_VALUE)
@@ -498,6 +518,208 @@ public class AzureDevOpsClientService {
                 return m;
             }).onErrorResume(e -> Mono.just(Map.of("error", e.getMessage()))))
             .block();
+    }
+
+    private List<String> buildGitSegments(String project, String path) {
+        String proj = project == null ? "" : project.trim();
+        String pth = path == null ? "" : path.trim();
+        List<String> segments = new ArrayList<>();
+        if (!proj.isEmpty()) segments.add(proj);
+        segments.add("_apis");
+        segments.add("git");
+        for (String part : pth.split("/")) {
+            if (!part.isBlank()) segments.add(part);
+        }
+        return segments;
+    }
+
+    public Map<String,Object> getGitApiWithQuery(String project, String path, Map<String,String> query, String apiVersionOverride) {
+        List<String> segments = buildGitSegments(project, path);
+        Map<String,String> q = new LinkedHashMap<>();
+        if (query != null) q.putAll(query);
+        if (!q.containsKey("api-version")) {
+            q.put("api-version", (apiVersionOverride != null && !apiVersionOverride.isBlank()) ? apiVersionOverride : this.apiVersion);
+        }
+        return doGetWithSegmentsAndQuery(segments, q, this.apiVersion);
+    }
+
+    public Map<String,Object> postGitApiWithQuery(String project, String path, Map<String,String> query, Object body, String apiVersionOverride, MediaType contentType) {
+        List<String> segments = buildGitSegments(project, path);
+        return doExchangeWithSegments(HttpMethod.POST, segments, query, body, apiVersionOverride, contentType);
+    }
+
+    public Map<String,Object> patchGitApiWithQuery(String project, String path, Map<String,String> query, Object body, String apiVersionOverride, MediaType contentType) {
+        List<String> segments = buildGitSegments(project, path);
+        return doExchangeWithSegments(HttpMethod.PATCH, segments, query, body, apiVersionOverride, contentType);
+    }
+
+    public Map<String,Object> putGitApiWithQuery(String project, String path, Map<String,String> query, Object body, String apiVersionOverride, MediaType contentType) {
+        List<String> segments = buildGitSegments(project, path);
+        return doExchangeWithSegments(HttpMethod.PUT, segments, query, body, apiVersionOverride, contentType);
+    }
+
+    public Map<String,Object> deleteGitApiWithQuery(String project, String path, Map<String,String> query, String apiVersionOverride) {
+        List<String> segments = buildGitSegments(project, path);
+        return doExchangeWithSegments(HttpMethod.DELETE, segments, query, null, apiVersionOverride, null);
+    }
+
+    public Map<String,Object> getGitBinary(String project, String path, Map<String,String> query, String apiVersionOverride) {
+        List<String> segments = buildGitSegments(project, path);
+        return webClient.get()
+            .uri(builder -> {
+                var b = builder.pathSegment(segments.toArray(new String[0]));
+                boolean hasApiVersion = false;
+                if (query != null) {
+                    for (Map.Entry<String,String> e : query.entrySet()) {
+                        b.queryParam(e.getKey(), e.getValue());
+                        if ("api-version".equalsIgnoreCase(e.getKey())) {
+                            hasApiVersion = true;
+                        }
+                    }
+                }
+                if (!hasApiVersion) {
+                    String ver = (apiVersionOverride != null && !apiVersionOverride.isBlank()) ? apiVersionOverride : this.apiVersion;
+                    b.queryParam("api-version", ver);
+                }
+                return b.build();
+            })
+            .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_OCTET_STREAM_VALUE)
+            .exchangeToMono(resp -> resp.bodyToMono(byte[].class).map(bytes -> {
+                String b64 = Base64.getEncoder().encodeToString(bytes != null ? bytes : new byte[0]);
+                String ct = resp.headers().contentType().map(MediaType::toString).orElse(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+                Map<String,Object> m = new HashMap<>();
+                m.put("data", b64);
+                m.put("contentType", ct);
+                return m;
+            }).onErrorResume(e -> Mono.just(Map.of("error", e.getMessage()))))
+            .block();
+    }
+
+    public Map<String,Object> exchangeGitApi(String project,
+                                             HttpMethod method,
+                                             String path,
+                                             Map<String,String> query,
+                                             Object body,
+                                             String apiVersionOverride,
+                                             MediaType contentType,
+                                             MediaType acceptType,
+                                             boolean binaryResponse) {
+        List<String> segments = buildGitSegments(project, path);
+        @SuppressWarnings("unchecked")
+        Map<String,Object> resp = webClient.method(method)
+                .uri(builder -> {
+                    var b = builder.pathSegment(segments.toArray(new String[0]));
+                    boolean hasApiVersion = false;
+                    if (query != null) {
+                        for (Map.Entry<String,String> e : query.entrySet()) {
+                            b.queryParam(e.getKey(), e.getValue());
+                            if ("api-version".equalsIgnoreCase(e.getKey())) {
+                                hasApiVersion = true;
+                            }
+                        }
+                    }
+                    if (!hasApiVersion) {
+                        String ver = (apiVersionOverride != null && !apiVersionOverride.isBlank()) ? apiVersionOverride : this.apiVersion;
+                        b.queryParam("api-version", ver);
+                    }
+                    return b.build();
+                })
+                .headers(h -> {
+                    if (contentType != null) h.set(HttpHeaders.CONTENT_TYPE, contentType.toString());
+                    if (acceptType != null) h.set(HttpHeaders.ACCEPT, acceptType.toString());
+                })
+                .body(body != null ? BodyInserters.fromValue(body) : BodyInserters.empty())
+                .exchangeToMono(r -> {
+                    if (r.statusCode().isError()) {
+                        return parseErrorResponse(r);
+                    }
+                    return parseSuccessResponse(r, binaryResponse);
+                })
+                .onErrorResume(e -> Mono.just(Map.of("error", e.getMessage())))
+                .block();
+        return resp != null ? resp : new HashMap<>();
+    }
+
+    private Mono<Map<String,Object>> parseSuccessResponse(ClientResponse response, boolean binaryResponse) {
+        MediaType ctype = response.headers().contentType().orElse(MediaType.APPLICATION_OCTET_STREAM);
+
+        if (!binaryResponse && isJsonMediaType(ctype)) {
+            return response.bodyToMono(Object.class)
+                    .defaultIfEmpty(Map.of())
+                    .map(obj -> {
+                        if (obj instanceof Map<?, ?> m) {
+                            Map<String,Object> out = new HashMap<>();
+                            for (Map.Entry<?, ?> e : m.entrySet()) {
+                                if (e.getKey() != null) out.put(e.getKey().toString(), e.getValue());
+                            }
+                            return out;
+                        }
+                        Map<String,Object> out = new HashMap<>();
+                        out.put("value", obj);
+                        return out;
+                    });
+        }
+
+        if (!binaryResponse && isTextMediaType(ctype)) {
+            return response.bodyToMono(String.class)
+                    .defaultIfEmpty("")
+                    .map(s -> {
+                        Map<String,Object> out = new HashMap<>();
+                        out.put("text", s);
+                        out.put("contentType", ctype.toString());
+                        return out;
+                    });
+        }
+
+        return response.bodyToMono(byte[].class)
+                .defaultIfEmpty(new byte[0])
+                .map(bytes -> {
+                    Map<String,Object> out = new HashMap<>();
+                    out.put("data", Base64.getEncoder().encodeToString(bytes));
+                    out.put("contentType", ctype.toString());
+                    out.put("bytes", bytes.length);
+                    out.put("isBinaryResponse", true);
+                    return out;
+                });
+    }
+
+    private Mono<Map<String,Object>> parseErrorResponse(ClientResponse response) {
+        var ctype = response.headers().contentType().orElse(null);
+        boolean isJson = isJsonMediaType(ctype);
+        if (isJson) {
+            return response.bodyToMono(Map.class).defaultIfEmpty(Map.of()).map(b -> {
+                Map<String,Object> m = new HashMap<>();
+                if (b != null) m.putAll(b);
+                m.put("isHttpError", true);
+                m.put("httpStatus", response.statusCode().value());
+                m.put("httpReason", response.statusCode().toString());
+                return m;
+            });
+        }
+        return response.bodyToMono(String.class).defaultIfEmpty("").map(s -> {
+            Map<String,Object> m = new HashMap<>();
+            m.put("isHttpError", true);
+            m.put("httpStatus", response.statusCode().value());
+            m.put("httpReason", response.statusCode().toString());
+            if (s != null && !s.isBlank()) m.put("bodyRaw", s);
+            return m;
+        });
+    }
+
+    private boolean isJsonMediaType(MediaType mediaType) {
+        if (mediaType == null) return false;
+        if (MediaType.APPLICATION_JSON.includes(mediaType)) return true;
+        String subtype = mediaType.getSubtype();
+        return subtype != null && subtype.toLowerCase().contains("json");
+    }
+
+    private boolean isTextMediaType(MediaType mediaType) {
+        if (mediaType == null) return false;
+        if ("text".equalsIgnoreCase(mediaType.getType())) return true;
+        String subtype = mediaType.getSubtype();
+        if (subtype == null) return false;
+        String s = subtype.toLowerCase();
+        return s.contains("xml") || s.contains("html") || s.contains("yaml") || s.contains("csv") || s.contains("plain");
     }
 
 }

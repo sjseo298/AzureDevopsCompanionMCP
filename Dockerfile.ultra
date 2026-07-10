@@ -58,7 +58,8 @@ RUN apk add --no-cache \
     gcompat \
     bash \
     curl \
-    socat && \
+    socat \
+    git && \
     # Crear usuario
     addgroup -g 1001 mcpuser && \
     adduser -D -u 1001 -G mcpuser mcpuser && \

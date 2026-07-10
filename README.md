@@ -15,7 +15,7 @@ Servidor MCP (Model Context Protocol) para Azure DevOps que proporciona acceso c
 
 ## 🔁 Refactorización de tools (routers)
 
-Este servidor pasó de exponer decenas de tools individuales (p.ej. `azuredevops_wit_work_item_get`, `azuredevops_core_get_projects`, etc.) a exponer **exactamente 12 tools “router”**.
+Este servidor pasó de exponer decenas de tools individuales (p.ej. `azuredevops_wit_work_item_get`, `azuredevops_core_get_projects`, etc.) a exponer un set compacto de **16 tools router**.
 
 Cada router tool recibe un parámetro obligatorio `operation` y enruta internamente hacia la implementación existente.
 
@@ -150,6 +150,10 @@ Variables opcionales del script:
 | `AZURE_DEVOPS_MCP_ENV_FILE` | Archivo de variables para Docker | `<repo>/.env` |
 | `AZURE_DEVOPS_MCP_HOST` | Host donde publicar HTTP si el puerto está libre | `127.0.0.1` |
 | `AZURE_DEVOPS_MCP_HTTP_PORT` | Puerto HTTP esperado para uploads | `9091` |
+| `AZURE_DEVOPS_MCP_GIT_PERSIST` | Si `true`, monta volumen/bind para persistir repos locales Git | `false` |
+| `AZURE_DEVOPS_MCP_GIT_VOLUME` | Nombre de volumen Docker para persistencia Git | `mcp-azure-devops-git-workspace` |
+| `AZURE_DEVOPS_MCP_GIT_BIND` | Ruta host opcional para bind mount Git (si se define, tiene prioridad sobre volumen) | - |
+| `AZURE_DEVOPS_MCP_GIT_ROOT` | Ruta interna del contenedor para workspace Git local | `/tmp/mcp-git` |
 
 #### Recursos MCP de configuración
 
@@ -333,6 +337,45 @@ http://127.0.0.1:9091/mcp/uploads/wit/workitems/{id}/attachment?project={project
 
 Si el script detecta que `9091` ya estaba ocupado, no publica un nuevo puerto para evitar que Docker falle. En ese caso las URLs siguen apuntando a `127.0.0.1:9091`, bajo la premisa de que el servicio existente en ese puerto es otra instancia compatible de esta misma imagen.
 
+### Persistencia opcional de repos Git locales
+
+El workspace Git local del MCP vive en `MCP_GIT_WORKSPACE_ROOT` (default `/tmp/mcp-git`).
+
+- Sin volumen/bind montado: los clones viven mientras el contenedor exista (efímero).
+- Con volumen/bind montado: los clones persisten entre reinicios.
+
+Estructura administrada de carpetas para evitar desorden:
+
+```text
+{MCP_GIT_WORKSPACE_ROOT}/{organization}/{project}/{repository}
+```
+
+Ejemplo con volumen Docker:
+
+```bash
+docker run --rm -i \
+  -p 9090:8080 \
+  -v mcp-azure-devops-git-workspace:/tmp/mcp-git \
+  --env MCP_GIT_WORKSPACE_ROOT=/tmp/mcp-git \
+  --env MCP_GIT_PERSISTENT=true \
+  --env-file .env \
+  mcp-azure-devops stdio-http
+```
+
+Ejemplos con el script local de opencode:
+
+```bash
+# Persistencia con volumen Docker nombrado
+AZURE_DEVOPS_MCP_GIT_PERSIST=true \
+AZURE_DEVOPS_MCP_GIT_VOLUME=mcp-azure-devops-git-workspace \
+./scripts/opencode-mcp-azure-devops.sh
+
+# Persistencia con carpeta host (bind mount)
+AZURE_DEVOPS_MCP_GIT_PERSIST=true \
+AZURE_DEVOPS_MCP_GIT_BIND=/ruta/host/mcp-git \
+./scripts/opencode-mcp-azure-devops.sh
+```
+
 ## 🔧 Variables de Entorno
 
 | Variable | Descripción | Requerido | Default |
@@ -341,12 +384,22 @@ Si el script detecta que `9091` ya estaba ocupado, no publica un nuevo puerto pa
 | `AZURE_DEVOPS_PAT` | Personal Access Token | ✅ | - |
 | `AZURE_DEVOPS_API_VERSION` | Versión de la API | ❌ | `7.2-preview.1` |
 | `AZURE_DEVOPS_VSSPS_API_VERSION` | Versión API VSSPS | ❌ | `7.1` |
+| `MCP_GIT_WORKSPACE_ROOT` | Root interno para clones Git locales del MCP | ❌ | `/tmp/mcp-git` |
+| `MCP_GIT_PERSISTENT` | Indicador informativo de persistencia del workspace Git local | ❌ | `false` |
 | `HTTP_PORT` | Puerto HTTP (modo http) | ❌ | `8080` |
 | `WS_PORT` | Puerto WebSocket (modo websocket) | ❌ | `8081` |
 
 ## 🎯 Herramientas Disponibles
 
-El servidor expone **12 tools router**. Cada una recibe `operation` y parámetros según la operación.
+El servidor expone **16 tools router**. Cada una recibe `operation` y parámetros según la operación.
+
+Resumen rápido de cantidad por dominio:
+
+- 1 de identidad/perfil
+- 4 de Core
+- 1 de Work/Planning
+- 6 de WIT
+- 4 de Git
 
 ### 1) Identidad / Perfil
 - `azuredevops_profile_identity`
@@ -379,6 +432,38 @@ El servidor expone **12 tools router**. Cada una recibe `operation` y parámetro
   - `operation: wiql_query | wiql_by_id | search_queries | list_root_folders | recent_created_by_me | recent_changed_by_me | assigned_to_me`
 - `azuredevops_wit_reporting`
   - `operation: revisions_list | revisions_get | reporting_links_get | reporting_revisions_get | reporting_revisions_post`
+
+### 5) Git
+- `azuredevops_git_api`
+  - `operation: (catálogo dinámico de operaciones Git REST 7.2; cobertura total API-first)`
+- `azuredevops_git_repositories`
+  - `operation: list | get | create | update | delete | items_get | items_list | items_batch | commits_list | refs_list | refs_update | pushes_list | pushes_get | pushes_create | download_zip`
+- `azuredevops_git_pull_requests`
+  - `operation: get | list | list_by_project | assigned_to_me | create | update | reviewers_list | reviewer_add | reviewer_update | threads_list | thread_create | thread_update | comments_add | comment_update | comment_delete | statuses_list | status_add | labels_list | label_add | label_delete | iterations_list | iteration_changes_get | work_items_list | query | share`
+- `azuredevops_git_local`
+  - `operation: workspace_info | workspace_list | clone_or_sync | status | checkout | create_branch | log | commit | push`
+
+Notas importantes para `azuredevops_git_api`:
+
+- Diseñado para uso API-first y cobertura completa del área Git REST 7.2 (112 operaciones documentadas).
+- Usa `operation` + path params + `query/queryJson` + `bodyJson` para evitar depender de clone local.
+- Soporta respuestas JSON/text/binario y guardado opcional con `outputPath`.
+
+Notas importantes para `azuredevops_git_repositories`:
+
+- `pushes_create` permite crear commits/cambios por API REST sin clonar repositorio local (`bodyJson`, `commitsJson`, `changesJson` o modo simplificado de un cambio).
+
+Notas importantes para `azuredevops_git_pull_requests`:
+
+- `list_by_project` con `status=all` ejecuta consulta por `active`, `completed` y `abandoned`, y devuelve respuesta combinada con `statusQueryMode=all`.
+
+Notas importantes para `azuredevops_git_local`:
+
+- El workspace local Git siempre se mantiene dentro de `MCP_GIT_WORKSPACE_ROOT`.
+- Estructura administrada: `{root}/{organization}/{project}/{repository}`.
+- Si hay colisión de nombre de repo con distinto `repositoryId`, se agrega sufijo `__{id8}` automáticamente.
+- Cada repo guarda metadata en `.mcp-repo.json` para resolución consistente.
+- Requiere binario `git` en runtime (incluido en las imágenes Docker publicadas por este repositorio).
 
 Nota: existen tools internos (“leaf”) en el código, pero no se exponen en `tools/list` tras esta refactorización.
 

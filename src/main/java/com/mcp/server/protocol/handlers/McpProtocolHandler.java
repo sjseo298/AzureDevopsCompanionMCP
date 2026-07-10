@@ -23,8 +23,8 @@ public class McpProtocolHandler {
     private final Map<String, McpPrompt> availablePrompts = new HashMap<>();
     private final Map<String, String> availableResources = new LinkedHashMap<>();
 
-            private static final Set<String> EXPOSED_TOOL_NAMES = Set.of(
-                // Azure DevOps consolidated router tools (exactly 12)
+    private static final Set<String> EXPOSED_TOOL_NAMES = Set.of(
+            // Azure DevOps consolidated router tools
             "azuredevops_profile_identity",
             "azuredevops_core_projects",
             "azuredevops_core_teams",
@@ -36,8 +36,12 @@ public class McpProtocolHandler {
             "azuredevops_wit_attachments",
             "azuredevops_wit_classification_nodes",
             "azuredevops_wit_queries",
-            "azuredevops_wit_reporting"
-        );
+            "azuredevops_wit_reporting",
+            "azuredevops_git_api",
+            "azuredevops_git_repositories",
+            "azuredevops_git_pull_requests",
+            "azuredevops_git_local"
+    );
     
     @Autowired
     public McpProtocolHandler(List<McpTool> tools, List<McpPrompt> prompts) {

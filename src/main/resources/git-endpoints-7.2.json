@@ -1,0 +1,1433 @@
+{
+  "count": 112,
+  "entries": [
+    {
+      "operation": "annotated_tags_create",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/annotatedtags",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/annotated-tags/create",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/annotated-tags/create?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "annotated_tags_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/annotatedtags/{objectId}",
+      "pathParams": [
+        "repositoryId",
+        "objectId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/annotated-tags/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/annotated-tags/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "blobs_get_blob",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/blobs/{sha1}",
+      "pathParams": [
+        "repositoryId",
+        "sha1"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/blobs/get-blob",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/blobs/get-blob?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "blobs_get_blobs_zip",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/blobs",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/blobs/get-blobs-zip",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/blobs/get-blobs-zip?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "cherry_picks_create",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/cherryPicks",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/cherry-picks/create",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/cherry-picks/create?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "cherry_picks_get_cherry_pick",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/cherryPicks/{cherryPickId}",
+      "pathParams": [
+        "repositoryId",
+        "cherryPickId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/cherry-picks/get-cherry-pick",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/cherry-picks/get-cherry-pick?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "cherry_picks_get_cherry_pick_for_ref_name",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/cherryPicks",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/cherry-picks/get-cherry-pick-for-ref-name",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/cherry-picks/get-cherry-pick-for-ref-name?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "commits_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/commits/{commitId}",
+      "pathParams": [
+        "repositoryId",
+        "commitId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/commits/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/commits/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "commits_get_changes",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/commits/{commitId}/changes",
+      "pathParams": [
+        "repositoryId",
+        "commitId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/commits/get-changes",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/commits/get-changes?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "commits_get_commits",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/commits",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/commits/get-commits",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/commits/get-commits?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "commits_get_commits_batch",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/commitsbatch",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/commits/get-commits-batch",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/commits/get-commits-batch?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "commits_get_push_commits",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/commits",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/commits/get-push-commits",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/commits/get-push-commits?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "diffs_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/diffs/commits",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/diffs/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/diffs/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "forks_create_fork_sync_request",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryNameOrId}/forkSyncRequests",
+      "pathParams": [
+        "repositoryNameOrId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/forks/create-fork-sync-request",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/forks/create-fork-sync-request?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "forks_get_fork_sync_request",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryNameOrId}/forkSyncRequests/{forkSyncOperationId}",
+      "pathParams": [
+        "repositoryNameOrId",
+        "forkSyncOperationId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/forks/get-fork-sync-request",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/forks/get-fork-sync-request?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "forks_get_fork_sync_requests",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryNameOrId}/forkSyncRequests",
+      "pathParams": [
+        "repositoryNameOrId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/forks/get-fork-sync-requests",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/forks/get-fork-sync-requests?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "forks_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryNameOrId}/forks/{collectionId}",
+      "pathParams": [
+        "repositoryNameOrId",
+        "collectionId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/forks/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/forks/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "import_requests_create",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/importRequests",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/import-requests/create",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/import-requests/create?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "import_requests_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/importRequests/{importRequestId}",
+      "pathParams": [
+        "repositoryId",
+        "importRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/import-requests/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/import-requests/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "import_requests_query",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/importRequests",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/import-requests/query",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/import-requests/query?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "import_requests_update",
+      "method": "PATCH",
+      "pathTemplate": "repositories/{repositoryId}/importRequests/{importRequestId}",
+      "pathParams": [
+        "repositoryId",
+        "importRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/import-requests/update",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/import-requests/update?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "items_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/items",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/items/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/items/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "items_get_items_batch",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/itemsbatch",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/items/get-items-batch",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/items/get-items-batch?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "items_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/items",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/items/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/items/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "merge_bases_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryNameOrId}/commits/{commitId}/mergebases",
+      "pathParams": [
+        "repositoryNameOrId",
+        "commitId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/merge-bases/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/merge-bases/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "merges_create",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryNameOrId}/merges",
+      "pathParams": [
+        "repositoryNameOrId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/merges/create",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/merges/create?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "merges_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryNameOrId}/merges/{mergeOperationId}",
+      "pathParams": [
+        "repositoryNameOrId",
+        "mergeOperationId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/merges/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/merges/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "policy_configurations_get",
+      "method": "GET",
+      "pathTemplate": "policy/configurations",
+      "pathParams": [],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/policy-configurations/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/policy-configurations/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_attachments_create",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/attachments/{fileName}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "fileName"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-attachments/create",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-attachments/create?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_attachments_delete",
+      "method": "DELETE",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/attachments/{fileName}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "fileName"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-attachments/delete",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-attachments/delete?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_attachments_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/attachments/{fileName}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "fileName"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-attachments/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-attachments/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_attachments_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/attachments",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-attachments/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-attachments/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_comment_likes_create",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/threads/{threadId}/comments/{commentId}/likes",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "threadId",
+        "commentId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-comment-likes/create",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-comment-likes/create?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_comment_likes_delete",
+      "method": "DELETE",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/threads/{threadId}/comments/{commentId}/likes",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "threadId",
+        "commentId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-comment-likes/delete",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-comment-likes/delete?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_comment_likes_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/threads/{threadId}/comments/{commentId}/likes",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "threadId",
+        "commentId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-comment-likes/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-comment-likes/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_commits_get_pull_request_commits",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/commits",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-commits/get-pull-request-commits",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-commits/get-pull-request-commits?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_commits_get_pull_request_iteration_commits",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/iterations/{iterationId}/commits",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "iterationId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-commits/get-pull-request-iteration-commits",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-commits/get-pull-request-iteration-commits?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_iteration_changes_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/iterations/{iterationId}/changes",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "iterationId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-iteration-changes/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-iteration-changes/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_iteration_statuses_create",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/iterations/{iterationId}/statuses",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "iterationId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-request-iteration-statuses/create",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-iteration-statuses/create?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_iteration_statuses_delete",
+      "method": "DELETE",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/iterations/{iterationId}/statuses/{statusId}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "iterationId",
+        "statusId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-request-iteration-statuses/delete",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-iteration-statuses/delete?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_iteration_statuses_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/iterations/{iterationId}/statuses/{statusId}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "iterationId",
+        "statusId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-request-iteration-statuses/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-iteration-statuses/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_iteration_statuses_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/iterations/{iterationId}/statuses",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "iterationId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-request-iteration-statuses/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-iteration-statuses/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_iteration_statuses_update",
+      "method": "PATCH",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/iterations/{iterationId}/statuses",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "iterationId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-request-iteration-statuses/update",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-iteration-statuses/update?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_iterations_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/iterations/{iterationId}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "iterationId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-request-iterations/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-iterations/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_iterations_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/iterations",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-request-iterations/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-iterations/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_labels_create",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/labels",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-labels/create",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-labels/create?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_labels_delete",
+      "method": "DELETE",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/labels/{labelIdOrName}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "labelIdOrName"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-labels/delete",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-labels/delete?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_labels_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/labels/{labelIdOrName}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "labelIdOrName"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-labels/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-labels/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_labels_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/labels",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-labels/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-labels/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_properties_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/properties",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-properties/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-properties/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_properties_update",
+      "method": "PATCH",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/properties",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-properties/update",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-properties/update?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_query_get",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/pullrequestquery",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-query/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-query/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_reviewers_create_pull_request_reviewer",
+      "method": "PUT",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/reviewers/{reviewerId}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "reviewerId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-reviewers/create-pull-request-reviewer",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-reviewers/create-pull-request-reviewer?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_reviewers_create_pull_request_reviewers",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/reviewers",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-reviewers/create-pull-request-reviewers",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-reviewers/create-pull-request-reviewers?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_reviewers_create_unmaterialized_pull_request_reviewer",
+      "method": "PUT",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/reviewers",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-reviewers/create-unmaterialized-pull-request-reviewer",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-reviewers/create-unmaterialized-pull-request-reviewer?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_reviewers_delete",
+      "method": "DELETE",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/reviewers/{reviewerId}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "reviewerId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-reviewers/delete",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-reviewers/delete?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_reviewers_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/reviewers/{reviewerId}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "reviewerId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-reviewers/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-reviewers/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_reviewers_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/reviewers",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-reviewers/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-reviewers/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_reviewers_update_pull_request_reviewer",
+      "method": "PATCH",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/reviewers/{reviewerId}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "reviewerId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-reviewers/update-pull-request-reviewer",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-reviewers/update-pull-request-reviewer?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_reviewers_update_pull_request_reviewers",
+      "method": "PATCH",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/reviewers",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-reviewers/update-pull-request-reviewers",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-reviewers/update-pull-request-reviewers?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_share_share_pull_request",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/share",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-share/share-pull-request",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-share/share-pull-request?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_statuses_create",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/statuses",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-request-statuses/create",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-statuses/create?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_statuses_delete",
+      "method": "DELETE",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/statuses/{statusId}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "statusId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-request-statuses/delete",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-statuses/delete?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_statuses_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/statuses/{statusId}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "statusId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-request-statuses/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-statuses/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_statuses_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/statuses",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-request-statuses/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-statuses/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_statuses_update",
+      "method": "PATCH",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/statuses",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-request-statuses/update",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-statuses/update?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_thread_comments_create",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/threads/{threadId}/comments",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "threadId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-thread-comments/create",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-thread-comments/create?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_thread_comments_delete",
+      "method": "DELETE",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/threads/{threadId}/comments/{commentId}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "threadId",
+        "commentId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-thread-comments/delete",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-thread-comments/delete?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_thread_comments_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/threads/{threadId}/comments/{commentId}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "threadId",
+        "commentId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-thread-comments/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-thread-comments/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_thread_comments_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/threads/{threadId}/comments",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "threadId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-thread-comments/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-thread-comments/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_thread_comments_update",
+      "method": "PATCH",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/threads/{threadId}/comments/{commentId}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "threadId",
+        "commentId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-thread-comments/update",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-thread-comments/update?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_threads_create",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/threads",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-threads/create",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-threads/create?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_threads_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/threads/{threadId}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "threadId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-threads/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-threads/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_threads_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/threads",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-threads/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-threads/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_threads_update",
+      "method": "PATCH",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/threads/{threadId}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId",
+        "threadId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-threads/update",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-threads/update?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_request_work_items_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullRequests/{pullRequestId}/workitems",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/pull-request-work-items/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-work-items/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_requests_create",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/pullrequests",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-requests/create",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-requests/create?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_requests_get_pull_request",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullrequests/{pullRequestId}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-requests/get-pull-request",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-requests/get-pull-request?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_requests_get_pull_request_by_id",
+      "method": "GET",
+      "pathTemplate": "pullrequests/{pullRequestId}",
+      "pathParams": [
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-requests/get-pull-request-by-id",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-requests/get-pull-request-by-id?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_requests_get_pull_requests",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pullrequests",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-requests/get-pull-requests",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-requests/get-pull-requests?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_requests_get_pull_requests_by_project",
+      "method": "GET",
+      "pathTemplate": "pullrequests",
+      "pathParams": [],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-requests/get-pull-requests-by-project",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-requests/get-pull-requests-by-project?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pull_requests_update",
+      "method": "PATCH",
+      "pathTemplate": "repositories/{repositoryId}/pullrequests/{pullRequestId}",
+      "pathParams": [
+        "repositoryId",
+        "pullRequestId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/pull-requests/update",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-requests/update?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pushes_create",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/pushes",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.3",
+      "href": "git/pushes/create",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pushes/create?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pushes_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pushes/{pushId}",
+      "pathParams": [
+        "repositoryId",
+        "pushId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.3",
+      "href": "git/pushes/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pushes/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "pushes_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/pushes",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.3",
+      "href": "git/pushes/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pushes/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "refs_favorites_for_project_list",
+      "method": "GET",
+      "pathTemplate": "favorites/refsForProject",
+      "pathParams": [],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/refs-favorites-for-project/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/refs-favorites-for-project/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "refs_favorites_create",
+      "method": "POST",
+      "pathTemplate": "favorites/refs",
+      "pathParams": [],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/refs-favorites/create",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/refs-favorites/create?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "refs_favorites_delete",
+      "method": "DELETE",
+      "pathTemplate": "favorites/refs/{favoriteId}",
+      "pathParams": [
+        "favoriteId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/refs-favorites/delete",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/refs-favorites/delete?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "refs_favorites_get",
+      "method": "GET",
+      "pathTemplate": "favorites/refs/{favoriteId}",
+      "pathParams": [
+        "favoriteId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/refs-favorites/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/refs-favorites/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "refs_favorites_list",
+      "method": "GET",
+      "pathTemplate": "favorites/refs",
+      "pathParams": [],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/refs-favorites/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/refs-favorites/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "refs_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/refs",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/refs/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/refs/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "refs_update_ref",
+      "method": "PATCH",
+      "pathTemplate": "repositories/{repositoryId}/refs",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/refs/update-ref",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/refs/update-ref?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "refs_update_refs",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/refs",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/refs/update-refs",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/refs/update-refs?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "repositories_create",
+      "method": "POST",
+      "pathTemplate": "repositories",
+      "pathParams": [],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/repositories/create",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/repositories/create?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "repositories_delete",
+      "method": "DELETE",
+      "pathTemplate": "repositories/{repositoryId}",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/repositories/delete",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/repositories/delete?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "repositories_delete_repository_from_recycle_bin",
+      "method": "DELETE",
+      "pathTemplate": "recycleBin/repositories/{repositoryId}",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/repositories/delete-repository-from-recycle-bin",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/repositories/delete-repository-from-recycle-bin?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "repositories_get_deleted_repositories",
+      "method": "GET",
+      "pathTemplate": "deletedrepositories",
+      "pathParams": [],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/repositories/get-deleted-repositories",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/repositories/get-deleted-repositories?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "repositories_get_recycle_bin_repositories",
+      "method": "GET",
+      "pathTemplate": "recycleBin/repositories",
+      "pathParams": [],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/repositories/get-recycle-bin-repositories",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/repositories/get-recycle-bin-repositories?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "repositories_get_repository",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/repositories/get-repository",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/repositories/get-repository?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "repositories_get_repository_with_parent",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/repositories/get-repository-with-parent",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/repositories/get-repository-with-parent?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "repositories_list",
+      "method": "GET",
+      "pathTemplate": "repositories",
+      "pathParams": [],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/repositories/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/repositories/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "repositories_restore_repository_from_recycle_bin",
+      "method": "PATCH",
+      "pathTemplate": "recycleBin/repositories/{repositoryId}",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/repositories/restore-repository-from-recycle-bin",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/repositories/restore-repository-from-recycle-bin?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "repositories_update",
+      "method": "PATCH",
+      "pathTemplate": "repositories/{repositoryId}",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/repositories/update",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/repositories/update?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "reverts_create",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/reverts",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/reverts/create",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/reverts/create?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "reverts_get_revert",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/reverts/{revertId}",
+      "pathParams": [
+        "repositoryId",
+        "revertId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/reverts/get-revert",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/reverts/get-revert?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "reverts_get_revert_for_ref_name",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/reverts",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/reverts/get-revert-for-ref-name",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/reverts/get-revert-for-ref-name?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "stats_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/stats/branches",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/stats/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/stats/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "stats_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/stats/branches",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/stats/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/stats/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "statuses_create",
+      "method": "POST",
+      "pathTemplate": "repositories/{repositoryId}/commits/{commitId}/statuses",
+      "pathParams": [
+        "repositoryId",
+        "commitId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/statuses/create",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/statuses/create?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "statuses_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/commits/{commitId}/statuses",
+      "pathParams": [
+        "repositoryId",
+        "commitId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.2",
+      "href": "git/statuses/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/statuses/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "suggestions_list",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/suggestions",
+      "pathParams": [
+        "repositoryId"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/suggestions/list",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/suggestions/list?view=azure-devops-rest-7.2&accept=text/markdown"
+    },
+    {
+      "operation": "trees_get",
+      "method": "GET",
+      "pathTemplate": "repositories/{repositoryId}/trees/{sha1}",
+      "pathParams": [
+        "repositoryId",
+        "sha1"
+      ],
+      "requiresProject": true,
+      "apiVersion": "7.2-preview.1",
+      "href": "git/trees/get",
+      "doc": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/trees/get?view=azure-devops-rest-7.2&accept=text/markdown"
+    }
+  ]
+}
