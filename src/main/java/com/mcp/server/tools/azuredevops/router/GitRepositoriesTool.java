@@ -430,10 +430,21 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
     private Map<String, Object> opItemsList(Map<String, Object> args) {
         String project = requireProject(args, "items_list");
         String repo = resolveRepositoryId(project, args, "items_list");
+        String recursionLevel = str(args, "recursionLevel");
+        String scopePathArg = str(args, "scopePath");
+        String pathArg = str(args, "path");
+        boolean missingScopeAndPath = scopePathArg.isBlank() && pathArg.isBlank();
+
+        List<String> warnings = new ArrayList<>();
         Map<String, String> q = baseQuery(args);
-        putIfNotBlank(q, "scopePath", str(args, "scopePath"));
-        putIfNotBlank(q, "path", str(args, "path"));
-        putIfNotBlank(q, "recursionLevel", str(args, "recursionLevel"));
+        if (missingScopeAndPath && !recursionLevel.isBlank()) {
+            q.put("scopePath", "/");
+            warnings.add("items_list: 'scopePath/path' no informado con recursionLevel; se aplica scopePath='/' automáticamente.");
+        } else {
+            putIfNotBlank(q, "scopePath", scopePathArg);
+            putIfNotBlank(q, "path", pathArg);
+        }
+        putIfNotBlank(q, "recursionLevel", recursionLevel);
         putBool(q, "includeContentMetadata", args.get("includeContentMetadata"));
         putBool(q, "latestProcessedChange", args.get("latestProcessedChange"));
         putBool(q, "download", args.get("download"));
@@ -441,6 +452,21 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
         putVersionDescriptor(q, args);
 
         Map<String, Object> resp = azureService.getGitApiWithQuery(project, "repositories/" + repo + "/items", q, itemsApiVersion(args));
+        String err = tryFormatRemoteError(resp);
+        if (err != null && isScopePathRequiredError(resp, err)) {
+            Map<String, Object> fallbackArgs = new LinkedHashMap<>(args);
+            fallbackArgs.put("repositoryId", repo);
+            if (missingScopeAndPath) fallbackArgs.put("scopePath", "/");
+            fallbackArgs.put("_itemsListFallbackWarning", "items_list fallback automático a items_list_recursive por requerimiento de scopePath.");
+            return opItemsListRecursive(fallbackArgs);
+        }
+        if (err != null) return error(err);
+
+        if (!warnings.isEmpty()) {
+            Map<String, Object> out = new LinkedHashMap<>(resp);
+            out.put("warnings", warnings);
+            return done(args, out);
+        }
         return done(args, resp);
     }
 
@@ -473,6 +499,7 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
         result.put("hasMore", to < total);
         result.put("value", new ArrayList<>(items.subList(from, to)));
         copyWarnings(collected, result);
+        appendWarning(result, str(args, "_itemsListFallbackWarning"));
         return doneResult(args, result);
     }
 
@@ -1254,6 +1281,30 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
         if (!warnings.isEmpty()) target.put("warnings", warnings);
     }
 
+    private void appendWarning(Map<String, Object> target, String warning) {
+        if (warning == null || warning.isBlank()) return;
+        List<String> warnings = toStringList(target.get("warnings"));
+        warnings.add(warning.trim());
+        target.put("warnings", warnings);
+    }
+
+    private boolean isScopePathRequiredError(Map<String, Object> response, String formattedError) {
+        StringBuilder joined = new StringBuilder();
+        if (formattedError != null) joined.append(formattedError).append(' ');
+        if (response != null) {
+            Object message = response.get("message");
+            if (message != null) joined.append(message).append(' ');
+            Object bodyRaw = response.get("bodyRaw");
+            if (bodyRaw != null) joined.append(bodyRaw).append(' ');
+            Object typeName = response.get("typeName");
+            if (typeName != null) joined.append(typeName).append(' ');
+            Object typeKey = response.get("typeKey");
+            if (typeKey != null) joined.append(typeKey);
+        }
+        String lower = joined.toString().toLowerCase(Locale.ROOT);
+        return lower.contains("valid scopepath") || (lower.contains("scopepath") && lower.contains("required"));
+    }
+
     private List<String> toStringList(Object value) {
         List<String> out = new ArrayList<>();
         if (!(value instanceof List<?> list)) return out;
@@ -1536,6 +1587,7 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
     }
 
     private Map<String, Object> doneResult(Map<String, Object> args, Map<String, Object> result) {
+        result.remove("_itemsListFallbackWarning");
         if (parseBool(args.get("raw"))) return rawSuccess(result);
         return Map.of("isError", false, "result", result);
     }

@@ -106,6 +106,25 @@ public class GitRepositoriesToolTest {
         }
     }
 
+    public void testScopePathRequiredErrorDetection() {
+        try {
+            var tool = new GitRepositoriesTool(null);
+            Method method = GitRepositoriesTool.class.getDeclaredMethod("isScopePathRequiredError", Map.class, String.class);
+            method.setAccessible(true);
+
+            Map<String, Object> resp = Map.of("message", "A valid scopePath is required for this request");
+            boolean detected = (Boolean) method.invoke(tool, resp, "Error remoto (HTTP 400)");
+            assert detected : "Debe detectar errores de scopePath requerido";
+
+            boolean notDetected = (Boolean) method.invoke(tool, Map.of("message", "Some unrelated error"), "Error remoto (HTTP 404)");
+            assert !notDetected : "No debe marcar errores no relacionados";
+
+            System.out.println("✓ testScopePathRequiredErrorDetection passed");
+        } catch (Exception e) {
+            System.err.println("✗ testScopePathRequiredErrorDetection failed: " + e.getMessage());
+        }
+    }
+
     public static void main(String[] args) {
         GitRepositoriesToolTest test = new GitRepositoriesToolTest();
         test.testToolDefinition();
@@ -113,5 +132,6 @@ public class GitRepositoriesToolTest {
         test.testSearchWithoutPatternReturnsError();
         test.testVersionDefaultsByFamily();
         test.testVersionOverrideWinsAcrossFamilies();
+        test.testScopePathRequiredErrorDetection();
     }
 }

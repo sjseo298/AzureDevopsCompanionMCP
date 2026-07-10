@@ -448,6 +448,7 @@ Notas importantes para `azuredevops_git_api`:
 - Diseñado para uso API-first y cobertura completa del área Git REST 7.2 (112 operaciones documentadas).
 - Usa `operation` + path params + `query/queryJson` + `bodyJson` para evitar depender de clone local.
 - Soporta respuestas JSON/text/binario y guardado opcional con `outputPath`.
+- Compatibilidad adicional para `operation=items_list`: si llega `recursionLevel` sin `scopePath/path`, aplica `scopePath='/'`; si la API remota aún exige scopePath válido, realiza fallback automático a `trees_get` y reporta `warnings`.
 
 Notas importantes para `azuredevops_git_repositories`:
 
@@ -458,6 +459,7 @@ Notas importantes para `azuredevops_git_repositories`:
 - Operaciones de contenido aceptan `repositoryId` o `repositoryName` para evitar llamadas de resolución manual.
 - Versionado por familia de endpoint: repos/commits/refs usan `7.2-preview.2`; items/trees/blobs/itemsbatch usan `7.2-preview.1`; pushes usan `7.2-preview.3` (con override opcional por `apiVersion`).
 - `items_list_recursive` intenta `items_list` con recursión y hace fallback a `trees_get` si la API responde error/inconsistencia.
+- `items_list` aplica `scopePath='/'` automáticamente cuando recibe `recursionLevel` sin `scopePath/path`; si aun así la API exige scopePath válido, realiza fallback automático a `items_list_recursive` y retorna `warnings`.
 - `items_get_safe` intenta `items_get includeContent=true` y usa fallback `blobs/get` cuando la API no devuelve contenido.
 - `search_files`/`find_files` permiten localizar archivos por `filePattern` (glob), `pathRegex` y/o `extensions`.
 - `search_content` agrega búsqueda por texto/regex sobre archivos con límites conservadores por defecto (`maxFiles=200`, `maxBytesPerFile=262144`), configurables por parámetro con advertencias.

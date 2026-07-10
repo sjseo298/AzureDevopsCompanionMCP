@@ -129,9 +129,14 @@ public class GitApiTool extends AbstractAzureDevOpsTool {
             String resolvedPath = resolvePathTemplate(spec, arguments);
             Map<String, String> query = buildQuery(arguments);
             Object body = parseBodyJsonIfPresent(arguments);
+            List<String> warnings = new ArrayList<>();
 
             String apiVersion = str(arguments, "apiVersion");
             if (apiVersion.isBlank()) apiVersion = spec.apiVersion;
+
+            if (isItemsListOperation(spec.operation)) {
+                applyItemsListCompatibility(query, warnings);
+            }
 
             HttpMethod method = HttpMethod.valueOf(spec.method);
             MediaType contentType = parseMediaType(str(arguments, "contentType"));
@@ -153,9 +158,19 @@ public class GitApiTool extends AbstractAzureDevOpsTool {
             );
 
             String remoteErr = tryFormatRemoteError(resp);
-            if (remoteErr != null) return error(remoteErr);
+            if (remoteErr != null) {
+                if (isItemsListOperation(spec.operation) && isScopePathRequiredError(resp, remoteErr)) {
+                    Map<String, Object> fallback = tryItemsListFallback(spec, project, arguments, query, apiVersion, warnings);
+                    if (fallback != null) {
+                        if (parseBool(arguments.get("raw"))) return rawSuccess(fallback);
+                        return Map.of("isError", false, "result", fallback);
+                    }
+                }
+                return error(remoteErr);
+            }
 
             Map<String, Object> result = postProcessResponse(arguments, spec, resolvedPath, apiVersion, resp);
+            appendWarnings(result, warnings);
 
             if (parseBool(arguments.get("raw"))) return rawSuccess(result);
             return Map.of("isError", false, "result", result);
@@ -233,6 +248,232 @@ public class GitApiTool extends AbstractAzureDevOpsTool {
         String bodyJson = str(args, "bodyJson");
         if (bodyJson.isBlank()) return null;
         return JSON.readValue(bodyJson, Object.class);
+    }
+
+    private boolean isItemsListOperation(String operation) {
+        return "items_list".equalsIgnoreCase(operation);
+    }
+
+    private void applyItemsListCompatibility(Map<String, String> query, List<String> warnings) {
+        String recursion = query.getOrDefault("recursionLevel", "").trim();
+        String scopePath = query.getOrDefault("scopePath", "").trim();
+        String path = query.getOrDefault("path", "").trim();
+        if (!recursion.isBlank() && scopePath.isBlank() && path.isBlank()) {
+            query.put("scopePath", "/");
+            warnings.add("items_list: 'scopePath/path' no informado con recursionLevel; se aplica scopePath='/' automáticamente.");
+        }
+    }
+
+    private boolean isScopePathRequiredError(Map<String, Object> response, String formattedError) {
+        StringBuilder joined = new StringBuilder();
+        if (formattedError != null) joined.append(formattedError).append(' ');
+        if (response != null) {
+            Object message = response.get("message");
+            if (message != null) joined.append(message).append(' ');
+            Object bodyRaw = response.get("bodyRaw");
+            if (bodyRaw != null) joined.append(bodyRaw).append(' ');
+            Object typeName = response.get("typeName");
+            if (typeName != null) joined.append(typeName).append(' ');
+            Object typeKey = response.get("typeKey");
+            if (typeKey != null) joined.append(typeKey);
+        }
+        String lower = joined.toString().toLowerCase(Locale.ROOT);
+        return lower.contains("valid scopepath") || (lower.contains("scopepath") && lower.contains("required"));
+    }
+
+    private Map<String, Object> tryItemsListFallback(EndpointSpec spec,
+                                                     String project,
+                                                     Map<String, Object> args,
+                                                     Map<String, String> query,
+                                                     String apiVersion,
+                                                     List<String> warnings) {
+        String repo = firstNonBlank(str(args, "repositoryId"), str(args, "repositoryNameOrId"), str(args, "repositoryName"));
+        if (repo.isBlank()) return null;
+
+        String rootSha = resolveRootTreeSha(project, repo, query, apiVersion);
+        if (rootSha.isBlank()) return null;
+
+        Map<String, String> treeQ = new LinkedHashMap<>();
+        treeQ.put("recursive", "true");
+        Map<String, Object> treeResp = azureService.getGitApiWithQuery(project, "repositories/" + repo + "/trees/" + rootSha, treeQ, apiVersion);
+        String treeErr = tryFormatRemoteError(treeResp);
+        if (treeErr != null) return null;
+
+        List<Map<String, Object>> rows = normalizeTreeEntries(treeResp.get("treeEntries"));
+        String scopePath = effectiveScopePath(query);
+        rows = filterByScopePath(rows, scopePath);
+        warnings.add("items_list fallback automático a trees_get por requerimiento de scopePath.");
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("operation", spec.operation);
+        out.put("method", spec.method);
+        out.put("path", "repositories/" + repo + "/items");
+        out.put("apiVersion", apiVersion);
+        out.put("doc", spec.doc);
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("count", rows.size());
+        response.put("value", rows);
+        response.put("strategy", "trees_get");
+        response.put("strategyFallback", true);
+        response.put("rootTreeSha", rootSha);
+        response.put("scopePath", scopePath);
+        out.put("response", response);
+        appendWarnings(out, warnings);
+        return out;
+    }
+
+    private String resolveRootTreeSha(String project, String repo, Map<String, String> query, String apiVersion) {
+        Map<String, String> oneLevelQ = new LinkedHashMap<>();
+        oneLevelQ.put("scopePath", "/");
+        oneLevelQ.put("recursionLevel", "oneLevel");
+        if (!query.containsKey("includeContentMetadata")) oneLevelQ.put("includeContentMetadata", "true");
+        copyVersionDescriptor(query, oneLevelQ);
+        Map<String, Object> rootList = azureService.getGitApiWithQuery(project, "repositories/" + repo + "/items", oneLevelQ, apiVersion);
+        String rootListErr = tryFormatRemoteError(rootList);
+        if (rootListErr == null) {
+            String root = findRootTreeObjectId(rootList);
+            if (!root.isBlank()) return root;
+        }
+
+        Map<String, String> rootItemQ = new LinkedHashMap<>();
+        rootItemQ.put("path", "/");
+        rootItemQ.put("includeContentMetadata", "true");
+        rootItemQ.put("latestProcessedChange", "true");
+        copyVersionDescriptor(query, rootItemQ);
+        Map<String, Object> rootItem = azureService.getGitApiWithQuery(project, "repositories/" + repo + "/items", rootItemQ, apiVersion);
+        String rootItemErr = tryFormatRemoteError(rootItem);
+        if (rootItemErr == null) {
+            String root = extractObjectId(rootItem);
+            if (!root.isBlank()) return root;
+        }
+        return "";
+    }
+
+    private void copyVersionDescriptor(Map<String, String> source, Map<String, String> target) {
+        for (Map.Entry<String, String> e : source.entrySet()) {
+            if (e.getKey() == null) continue;
+            String key = e.getKey();
+            if (!key.startsWith("versionDescriptor.")) continue;
+            String value = e.getValue();
+            if (value == null || value.isBlank()) continue;
+            target.put(key, value);
+        }
+    }
+
+    private String findRootTreeObjectId(Map<String, Object> itemsResp) {
+        for (Map<String, Object> row : extractItemsFromItemsResponse(itemsResp)) {
+            String path = normalizePath(strObj(row.get("path")));
+            if (!"/".equals(path)) continue;
+            if (!isDirectory(row)) continue;
+            String objectId = strObj(row.get("objectId"));
+            if (!objectId.isBlank()) return objectId;
+        }
+        return "";
+    }
+
+    private String extractObjectId(Map<String, Object> item) {
+        if (item == null || item.isEmpty()) return "";
+        String direct = strObj(item.get("objectId"));
+        if (!direct.isBlank()) return direct;
+
+        Object value = item.get("value");
+        if (value instanceof List<?> list && !list.isEmpty() && list.get(0) instanceof Map<?, ?> first) {
+            Object nested = first.get("objectId");
+            if (nested != null) return nested.toString().trim();
+        }
+        return "";
+    }
+
+    private List<Map<String, Object>> extractItemsFromItemsResponse(Map<String, Object> resp) {
+        if (resp == null || resp.isEmpty()) return List.of();
+        Object value = resp.get("value");
+        if (value instanceof List<?> list) {
+            List<Map<String, Object>> out = new ArrayList<>();
+            for (Object item : list) {
+                if (!(item instanceof Map<?, ?> m)) continue;
+                Map<String, Object> row = new LinkedHashMap<>();
+                for (Map.Entry<?, ?> e : m.entrySet()) {
+                    if (e.getKey() != null) row.put(e.getKey().toString(), e.getValue());
+                }
+                out.add(row);
+            }
+            return out;
+        }
+        if (resp.containsKey("path")) {
+            return List.of(new LinkedHashMap<>(resp));
+        }
+        return List.of();
+    }
+
+    private List<Map<String, Object>> normalizeTreeEntries(Object entriesObj) {
+        if (!(entriesObj instanceof List<?> entries)) return List.of();
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Object e : entries) {
+            if (!(e instanceof Map<?, ?> row)) continue;
+            String relative = strObj(row.get("relativePath"));
+            if (relative.isBlank()) continue;
+
+            String path = relative.startsWith("/") ? relative : "/" + relative;
+            String gitObjectType = strObj(row.get("gitObjectType"));
+            boolean folder = "tree".equalsIgnoreCase(gitObjectType);
+
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("path", path);
+            if (row.get("objectId") != null) item.put("objectId", row.get("objectId"));
+            if (!gitObjectType.isBlank()) item.put("gitObjectType", gitObjectType);
+            item.put("isFolder", folder);
+            if (row.get("url") != null) item.put("url", row.get("url"));
+            out.add(item);
+        }
+        return out;
+    }
+
+    private List<Map<String, Object>> filterByScopePath(List<Map<String, Object>> items, String scopePath) {
+        String scope = normalizePath(scopePath);
+        if (scope.isBlank() || "/".equals(scope)) return items;
+
+        List<Map<String, Object>> out = new ArrayList<>();
+        String prefix = scope.endsWith("/") ? scope : scope + "/";
+        for (Map<String, Object> item : items) {
+            String path = normalizePath(strObj(item.get("path")));
+            if (path.equals(scope) || path.startsWith(prefix)) out.add(item);
+        }
+        return out;
+    }
+
+    private String effectiveScopePath(Map<String, String> query) {
+        String scopePath = query.getOrDefault("scopePath", "");
+        if (!scopePath.isBlank()) return normalizePath(scopePath);
+        String path = query.getOrDefault("path", "");
+        if (!path.isBlank()) return normalizePath(path);
+        return "/";
+    }
+
+    private boolean isDirectory(Map<String, Object> item) {
+        Object isFolderObj = item.get("isFolder");
+        if (parseBool(isFolderObj)) return true;
+        String type = strObj(item.get("gitObjectType"));
+        return "tree".equalsIgnoreCase(type);
+    }
+
+    private String normalizePath(String path) {
+        if (path == null || path.isBlank()) return "";
+        String p = path.replace('\\', '/').trim();
+        if (!p.startsWith("/")) p = "/" + p;
+        while (p.contains("//")) p = p.replace("//", "/");
+        return p;
+    }
+
+    private void appendWarnings(Map<String, Object> target, List<String> warnings) {
+        if (warnings == null || warnings.isEmpty()) return;
+        List<String> clean = new ArrayList<>();
+        for (String warning : warnings) {
+            if (warning == null) continue;
+            String w = warning.trim();
+            if (!w.isBlank()) clean.add(w);
+        }
+        if (!clean.isEmpty()) target.put("warnings", clean);
     }
 
     private Map<String, String> buildQuery(Map<String, Object> args) throws Exception {
