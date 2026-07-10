@@ -30,13 +30,28 @@ public final class AzureDevOpsRichHtmlHelper {
         if (!isKnownHtmlField(referenceName) || !(value instanceof String text)) {
             return value;
         }
-        return normalize(text);
+        return normalize(text, referenceName);
     }
 
     public static String normalize(String input) {
+        return normalize(input, null);
+    }
+
+    public static String normalize(String input, String fieldName) {
         if (input == null || input.isBlank()) return input;
-        String html = looksLikeHtml(input) ? input : plainTextToHtml(input);
-        html = sanitizeDangerousHtml(html);
+        if (looksLikeMarkdown(input)) {
+            String msg = fieldName != null
+                    ? "El campo '" + fieldName + "' contiene formato markdown. Use HTML enriquecido: <p>, <b>, <i>, <ul>, <li>, <table>, etc."
+                    : "El contenido contiene formato markdown. Use HTML enriquecido: <p>, <b>, <i>, <ul>, <li>, <table>, etc.";
+            throw new IllegalArgumentException(msg);
+        }
+        if (!looksLikeHtml(input)) {
+            String msg = fieldName != null
+                    ? "El campo '" + fieldName + "' requiere HTML enriquecido. El texto plano no está permitido. Use etiquetas HTML como <p>, <b>, <ul>, <li>, <table>, etc."
+                    : "El contenido requiere HTML enriquecido. El texto plano no está permitido. Use etiquetas HTML como <p>, <b>, <ul>, <li>, <table>, etc.";
+            throw new IllegalArgumentException(msg);
+        }
+        String html = sanitizeDangerousHtml(input);
         html = applyAzureDevOpsTableStyle(html);
         return html;
     }
@@ -45,18 +60,53 @@ public final class AzureDevOpsRichHtmlHelper {
         return Pattern.compile("<\\s*/?\\s*[a-zA-Z][a-zA-Z0-9]*(\\s|>|/>)").matcher(input).find();
     }
 
-    private static String plainTextToHtml(String text) {
-        String escaped = text
-                .replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;");
-        String[] paragraphs = escaped.split("\\R\\s*\\R");
-        StringBuilder sb = new StringBuilder();
-        for (String paragraph : paragraphs) {
-            String p = paragraph.trim().replaceAll("\\R", "<br/>");
-            if (!p.isEmpty()) sb.append("<p>").append(p).append("</p>");
-        }
-        return sb.toString();
+    private static boolean looksLikeMarkdown(String input) {
+        if (input == null || input.isBlank()) return false;
+        String trimmed = input.trim();
+        return looksLikeMdHeading(trimmed)
+                || looksLikeMdBold(trimmed)
+                || looksLikeMdItalic(trimmed)
+                || looksLikeMdList(trimmed)
+                || looksLikeMdCode(trimmed)
+                || looksLikeMdBlockquote(trimmed)
+                || looksLikeMdLink(trimmed)
+                || looksLikeMdHorizontalRule(trimmed);
+    }
+
+    private static boolean looksLikeMdHeading(String s) {
+        return Pattern.compile("(?m)^#{1,6}\\s").matcher(s).find();
+    }
+
+    private static boolean looksLikeMdBold(String s) {
+        return s.contains("**") || s.contains("__");
+    }
+
+    private static boolean looksLikeMdItalic(String s) {
+        return Pattern.compile("(?<!\\*)\\*(?!\\*)(?:[^*]|\\*[^*])*\\*(?!\\*)").matcher(s).find()
+                || Pattern.compile("(?<!_)_(?!_)(?:[^_]|_[^_])*_(?!_)").matcher(s).find();
+    }
+
+    private static boolean looksLikeMdList(String s) {
+        return Pattern.compile("(?m)^\\s*[-*+]\\s").matcher(s).find()
+                || Pattern.compile("(?m)^\\s*\\d+\\.\\s").matcher(s).find();
+    }
+
+    private static boolean looksLikeMdCode(String s) {
+        return s.contains("```") || Pattern.compile("(?<!`)`[^`]+`").matcher(s).find();
+    }
+
+    private static boolean looksLikeMdBlockquote(String s) {
+        return Pattern.compile("(?m)^\\s*>\\s").matcher(s).find();
+    }
+
+    private static boolean looksLikeMdLink(String s) {
+        return Pattern.compile("\\[.+?\\]\\(https?://[^)]+\\)").matcher(s).find();
+    }
+
+    private static boolean looksLikeMdHorizontalRule(String s) {
+        return Pattern.compile("(?m)^\\s*[-]{3,}\\s*$").matcher(s).find()
+                || Pattern.compile("(?m)^\\s*\\*{3,}\\s*$").matcher(s).find()
+                || Pattern.compile("(?m)^\\s*[=]{3,}\\s*$").matcher(s).find();
     }
 
     private static String sanitizeDangerousHtml(String html) {

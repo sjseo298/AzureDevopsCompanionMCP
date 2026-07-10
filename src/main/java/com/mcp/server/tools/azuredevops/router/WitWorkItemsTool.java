@@ -88,8 +88,8 @@ public class WitWorkItemsTool extends AbstractAzureDevOpsTool {
 
         props.put("type", Map.of("type", "string", "description", "Tipo de work item (create)"));
         props.put("title", Map.of("type", "string", "description", "Título (create/update shortcut)"));
-        props.put("description", Map.of("type", "string", "description", "Descripción HTML enriquecida segura (create/update shortcut). Use <p>, listas, negrita, código y tablas; el MCP estiliza tablas automáticamente."));
-        props.put("acceptanceCriteria", Map.of("type", "string", "description", "Criterios de aceptación HTML enriquecidos. Alias de Microsoft.VSTS.Common.AcceptanceCriteria; tablas estilizadas automáticamente."));
+        props.put("description", Map.of("type", "string", "description", "Descripción HTML enriquecida segura (create/update shortcut). NO markdown, NO texto plano. Use etiquetas HTML como <p>, <b>, <i>, <ul>, <li>, <table>; el MCP estiliza tablas automáticamente."));
+        props.put("acceptanceCriteria", Map.of("type", "string", "description", "Criterios de aceptación HTML enriquecidos. NO markdown, NO texto plano. Alias de Microsoft.VSTS.Common.AcceptanceCriteria; tablas estilizadas automáticamente."));
         props.put("criteria", Map.of("type", "string", "description", "Alias de acceptanceCriteria"));
         props.put("state", Map.of("type", "string", "description", "Estado (create/update shortcut)"));
         props.put("area", Map.of("type", "string", "description", "AreaPath (create/update shortcut)"));

@@ -183,8 +183,8 @@ public class WitWorkItemCreateHelper {
         java.util.List<Map<String,Object>> patch = new java.util.ArrayList<>();
         patch.add(Map.of("op","add","path","/fields/System.Title","value",title));
         if (state != null && !state.isEmpty()) patch.add(Map.of("op","add","path","/fields/System.State","value",state));
-        if (description != null && !description.isEmpty()) patch.add(Map.of("op","add","path","/fields/System.Description","value",AzureDevOpsRichHtmlHelper.normalize(description)));
-        if (acceptanceCriteria != null && !acceptanceCriteria.isEmpty()) patch.add(Map.of("op","add","path","/fields/Microsoft.VSTS.Common.AcceptanceCriteria","value",AzureDevOpsRichHtmlHelper.normalize(acceptanceCriteria)));
+        if (description != null && !description.isEmpty()) patch.add(Map.of("op","add","path","/fields/System.Description","value",AzureDevOpsRichHtmlHelper.normalize(description, "System.Description")));
+        if (acceptanceCriteria != null && !acceptanceCriteria.isEmpty()) patch.add(Map.of("op","add","path","/fields/Microsoft.VSTS.Common.AcceptanceCriteria","value",AzureDevOpsRichHtmlHelper.normalize(acceptanceCriteria, "Microsoft.VSTS.Common.AcceptanceCriteria")));
         if (area != null && !area.isEmpty()) patch.add(Map.of("op","add","path","/fields/System.AreaPath","value",area));
         if (iteration != null && !iteration.isEmpty()) patch.add(Map.of("op","add","path","/fields/System.IterationPath","value",iteration));
 

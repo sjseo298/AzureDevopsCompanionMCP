@@ -85,7 +85,7 @@ public class WitCommentsTool extends AbstractAzureDevOpsTool {
         // parámetros frecuentes
         props.put("workItemId", Map.of("type", "integer", "description", "ID del work item"));
         props.put("commentId", Map.of("type", "integer", "description", "ID del comentario"));
-        props.put("text", Map.of("type", "string", "description", "Texto/markdown"));
+        props.put("text", Map.of("type", "string", "description", "Texto HTML enriquecido (no markdown, no texto plano). Use etiquetas como <p>, <b>, <i>, <ul>, <li>, <table>, etc."));
         props.put("reactionType", Map.of("type", "string", "description", "Tipo de reacción"));
         props.put("top", Map.of("type", "integer", "description", "Límite"));
         props.put("skip", Map.of("type", "integer", "description", "Offset"));

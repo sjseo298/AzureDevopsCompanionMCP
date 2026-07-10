@@ -67,8 +67,8 @@ public class WitWorkItemUpdateHelper {
         // Atajos (script usa op add para todos)
         if (state != null && !state.isEmpty()) patch.add(addField("System.State", state));
         if (title != null && !title.isEmpty()) patch.add(addField("System.Title", title));
-        if (description != null && !description.isEmpty()) patch.add(addField("System.Description", AzureDevOpsRichHtmlHelper.normalize(description)));
-        if (acceptanceCriteria != null && !acceptanceCriteria.isEmpty()) patch.add(addField("Microsoft.VSTS.Common.AcceptanceCriteria", AzureDevOpsRichHtmlHelper.normalize(acceptanceCriteria)));
+        if (description != null && !description.isEmpty()) patch.add(addField("System.Description", AzureDevOpsRichHtmlHelper.normalize(description, "System.Description")));
+        if (acceptanceCriteria != null && !acceptanceCriteria.isEmpty()) patch.add(addField("Microsoft.VSTS.Common.AcceptanceCriteria", AzureDevOpsRichHtmlHelper.normalize(acceptanceCriteria, "Microsoft.VSTS.Common.AcceptanceCriteria")));
         if (area != null && !area.isEmpty()) patch.add(addField("System.AreaPath", area));
         if (iteration != null && !iteration.isEmpty()) patch.add(addField("System.IterationPath", iteration));
 
