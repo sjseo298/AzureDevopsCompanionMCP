@@ -29,7 +29,7 @@ import java.util.Set;
 public class GitApiTool extends AbstractAzureDevOpsTool {
 
     private static final String NAME = "azuredevops_git_api";
-    private static final String DESC = "Router universal Git REST 7.2 (cobertura completa). operation: catálogo dinámico desde src/main/resources/git-endpoints-7.2.json.";
+    private static final String DESC = "Router universal Git REST 7.2 (API-first, cobertura completa sin clone local). operation: catálogo dinámico desde src/main/resources/git-endpoints-7.2.json.";
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final EndpointCatalog CATALOG = loadCatalog();
 

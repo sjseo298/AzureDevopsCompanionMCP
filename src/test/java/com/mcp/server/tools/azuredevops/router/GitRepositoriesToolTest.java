@@ -40,14 +40,39 @@ public class GitRepositoriesToolTest {
             assert values.contains("search_files") : "Falta operación 'search_files'";
             assert values.contains("search_content") : "Falta operación 'search_content'";
             assert values.contains("explore_repo") : "Falta operación 'explore_repo'";
+            assert values.contains("repo_to_pipelines") : "Falta operación 'repo_to_pipelines'";
+            assert values.contains("pipeline_to_repo") : "Falta operación 'pipeline_to_repo'";
 
             assert props.containsKey("filePattern") : "Falta propiedad 'filePattern'";
             assert props.containsKey("textPattern") : "Falta propiedad 'textPattern'";
             assert props.containsKey("maxFiles") : "Falta propiedad 'maxFiles'";
             assert props.containsKey("maxBytesPerFile") : "Falta propiedad 'maxBytesPerFile'";
+            assert props.containsKey("pipelineId") : "Falta propiedad 'pipelineId'";
             System.out.println("✓ testSchemaIncludesNewOperationsAndFilters passed");
         } catch (Exception e) {
             System.err.println("✗ testSchemaIncludesNewOperationsAndFilters failed: " + e.getMessage());
+        }
+    }
+
+    public void testRepoToPipelinesRequiresProject() {
+        try {
+            var tool = new GitRepositoriesTool(null);
+            var resp = tool.execute(Map.of("operation", "repo_to_pipelines", "repositoryId", "abc"));
+            assert Boolean.TRUE.equals(resp.get("isError")) : "Debe fallar repo_to_pipelines sin project";
+            System.out.println("✓ testRepoToPipelinesRequiresProject passed");
+        } catch (Exception e) {
+            System.err.println("✗ testRepoToPipelinesRequiresProject failed: " + e.getMessage());
+        }
+    }
+
+    public void testPipelineToRepoRequiresPipelineId() {
+        try {
+            var tool = new GitRepositoriesTool(null);
+            var resp = tool.execute(Map.of("operation", "pipeline_to_repo", "project", "Demo"));
+            assert Boolean.TRUE.equals(resp.get("isError")) : "Debe fallar pipeline_to_repo sin pipelineId";
+            System.out.println("✓ testPipelineToRepoRequiresPipelineId passed");
+        } catch (Exception e) {
+            System.err.println("✗ testPipelineToRepoRequiresPipelineId failed: " + e.getMessage());
         }
     }
 
@@ -81,6 +106,9 @@ public class GitRepositoriesToolTest {
             String pushes = invokeVersionMethod(tool, "pushesApiVersion", Map.of());
             assert "7.2-preview.3".equals(pushes) : "pushesApiVersion default debe ser 7.2-preview.3";
 
+            String build = invokeVersionMethod(tool, "buildApiVersion", Map.of());
+            assert "7.2-preview.7".equals(build) : "buildApiVersion default debe ser 7.2-preview.7";
+
             System.out.println("✓ testVersionDefaultsByFamily passed");
         } catch (Exception e) {
             System.err.println("✗ testVersionDefaultsByFamily failed: " + e.getMessage());
@@ -95,10 +123,12 @@ public class GitRepositoriesToolTest {
             String api = invokeVersionMethod(tool, "apiVersion", args);
             String items = invokeVersionMethod(tool, "itemsApiVersion", args);
             String pushes = invokeVersionMethod(tool, "pushesApiVersion", args);
+            String build = invokeVersionMethod(tool, "buildApiVersion", args);
 
             assert "7.1".equals(api) : "apiVersion override debe aplicar";
             assert "7.1".equals(items) : "itemsApiVersion override debe aplicar";
             assert "7.1".equals(pushes) : "pushesApiVersion override debe aplicar";
+            assert "7.1".equals(build) : "buildApiVersion override debe aplicar";
 
             System.out.println("✓ testVersionOverrideWinsAcrossFamilies passed");
         } catch (Exception e) {
@@ -130,6 +160,8 @@ public class GitRepositoriesToolTest {
         test.testToolDefinition();
         test.testSchemaIncludesNewOperationsAndFilters();
         test.testSearchWithoutPatternReturnsError();
+        test.testRepoToPipelinesRequiresProject();
+        test.testPipelineToRepoRequiresPipelineId();
         test.testVersionDefaultsByFamily();
         test.testVersionOverrideWinsAcrossFamilies();
         test.testScopePathRequiredErrorDetection();

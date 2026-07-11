@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
@@ -531,6 +532,150 @@ public class AzureDevOpsClientService {
             if (!part.isBlank()) segments.add(part);
         }
         return segments;
+    }
+
+    private List<String> buildAreaSegments(String project, String area, String path) {
+        String proj = project == null ? "" : project.trim();
+        String ar = area == null ? "" : area.trim();
+        String pth = path == null ? "" : path.trim();
+        List<String> segments = new ArrayList<>();
+        if (!proj.isEmpty()) segments.add(proj);
+        segments.add("_apis");
+        if (!ar.isEmpty()) segments.add(ar);
+        for (String part : pth.split("/")) {
+            if (!part.isBlank()) segments.add(part);
+        }
+        return segments;
+    }
+
+    private String buildVsrmUrl(String project, String area, String path, Map<String,String> query, String apiVersionOverride) {
+        String proj = project == null ? "" : project.trim();
+        String ar = area == null ? "" : area.trim();
+        String pth = path == null ? "" : path.trim();
+
+        UriComponentsBuilder b = UriComponentsBuilder.fromHttpUrl("https://vsrm.dev.azure.com/" + organization);
+        if (!proj.isEmpty()) b.pathSegment(proj);
+        b.pathSegment("_apis");
+        if (!ar.isEmpty()) b.pathSegment(ar);
+        for (String part : pth.split("/")) {
+            if (!part.isBlank()) b.pathSegment(part);
+        }
+
+        boolean hasApiVersion = false;
+        if (query != null) {
+            for (Map.Entry<String,String> e : query.entrySet()) {
+                b.queryParam(e.getKey(), e.getValue());
+                if ("api-version".equalsIgnoreCase(e.getKey())) {
+                    hasApiVersion = true;
+                }
+            }
+        }
+        if (!hasApiVersion) {
+            String ver = (apiVersionOverride != null && !apiVersionOverride.isBlank()) ? apiVersionOverride : this.apiVersion;
+            b.queryParam("api-version", ver);
+        }
+
+        return b.build(true).toUriString();
+    }
+
+    public Map<String,Object> exchangeDevAreaApi(String project,
+                                                 String area,
+                                                 HttpMethod method,
+                                                 String path,
+                                                 Map<String,String> query,
+                                                 Object body,
+                                                 String apiVersionOverride,
+                                                 MediaType contentType,
+                                                 MediaType acceptType,
+                                                 boolean binaryResponse) {
+        List<String> segments = buildAreaSegments(project, area, path);
+        @SuppressWarnings("unchecked")
+        Map<String,Object> resp = webClient.method(method)
+                .uri(builder -> {
+                    var b = builder.pathSegment(segments.toArray(new String[0]));
+                    boolean hasApiVersion = false;
+                    if (query != null) {
+                        for (Map.Entry<String,String> e : query.entrySet()) {
+                            b.queryParam(e.getKey(), e.getValue());
+                            if ("api-version".equalsIgnoreCase(e.getKey())) {
+                                hasApiVersion = true;
+                            }
+                        }
+                    }
+                    if (!hasApiVersion) {
+                        String ver = (apiVersionOverride != null && !apiVersionOverride.isBlank()) ? apiVersionOverride : this.apiVersion;
+                        b.queryParam("api-version", ver);
+                    }
+                    return b.build();
+                })
+                .headers(h -> {
+                    if (contentType != null) h.set(HttpHeaders.CONTENT_TYPE, contentType.toString());
+                    if (acceptType != null) h.set(HttpHeaders.ACCEPT, acceptType.toString());
+                })
+                .body(body != null ? BodyInserters.fromValue(body) : BodyInserters.empty())
+                .exchangeToMono(r -> {
+                    if (r.statusCode().isError()) {
+                        return parseErrorResponse(r);
+                    }
+                    return parseSuccessResponse(r, binaryResponse);
+                })
+                .onErrorResume(e -> Mono.just(Map.of("error", e.getMessage())))
+                .block();
+        return resp != null ? resp : new HashMap<>();
+    }
+
+    public Map<String,Object> exchangeVsrmAreaApi(String project,
+                                                  String area,
+                                                  HttpMethod method,
+                                                  String path,
+                                                  Map<String,String> query,
+                                                  Object body,
+                                                  String apiVersionOverride,
+                                                  MediaType contentType,
+                                                  MediaType acceptType,
+                                                  boolean binaryResponse) {
+        String url = buildVsrmUrl(project, area, path, query, apiVersionOverride);
+        @SuppressWarnings("unchecked")
+        Map<String,Object> resp = webClient.method(method)
+                .uri(url)
+                .headers(h -> {
+                    if (contentType != null) h.set(HttpHeaders.CONTENT_TYPE, contentType.toString());
+                    if (acceptType != null) h.set(HttpHeaders.ACCEPT, acceptType.toString());
+                })
+                .body(body != null ? BodyInserters.fromValue(body) : BodyInserters.empty())
+                .exchangeToMono(r -> {
+                    if (r.statusCode().isError()) {
+                        return parseErrorResponse(r);
+                    }
+                    return parseSuccessResponse(r, binaryResponse);
+                })
+                .onErrorResume(e -> Mono.just(Map.of("error", e.getMessage())))
+                .block();
+        return resp != null ? resp : new HashMap<>();
+    }
+
+    public Map<String,Object> getPipelinesApiWithQuery(String project, String path, Map<String,String> query, String apiVersionOverride) {
+        return exchangeDevAreaApi(project, "pipelines", HttpMethod.GET, path, query, null, apiVersionOverride, null, null, false);
+    }
+
+    public Map<String,Object> postPipelinesApiWithQuery(String project, String path, Map<String,String> query, Object body, String apiVersionOverride, MediaType contentType) {
+        return exchangeDevAreaApi(project, "pipelines", HttpMethod.POST, path, query, body, apiVersionOverride, contentType, null, false);
+    }
+
+    public Map<String,Object> patchPipelinesApiWithQuery(String project, String path, Map<String,String> query, Object body, String apiVersionOverride, MediaType contentType) {
+        return exchangeDevAreaApi(project, "pipelines", HttpMethod.PATCH, path, query, body, apiVersionOverride, contentType, null, false);
+    }
+
+    public Map<String,Object> deletePipelinesApiWithQuery(String project, String path, Map<String,String> query, String apiVersionOverride) {
+        return exchangeDevAreaApi(project, "pipelines", HttpMethod.DELETE, path, query, null, apiVersionOverride, null, null, false);
+    }
+
+    public Map<String,Object> getReleaseApiWithQuery(String project, String path, Map<String,String> query, String apiVersionOverride) {
+        return exchangeVsrmAreaApi(project, "release", HttpMethod.GET, path, query, null, apiVersionOverride, null, null, false);
+    }
+
+    public Map<String,Object> postReleaseApiWithQuery(String project, String path, Map<String,String> query, Object body, String apiVersionOverride, MediaType contentType) {
+        return exchangeVsrmAreaApi(project, "release", HttpMethod.POST, path, query, body, apiVersionOverride, contentType, null, false);
     }
 
     public Map<String,Object> getGitApiWithQuery(String project, String path, Map<String,String> query, String apiVersionOverride) {

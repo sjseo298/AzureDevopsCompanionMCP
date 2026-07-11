@@ -27,7 +27,7 @@ import java.util.Objects;
 public class GitLocalTool extends AbstractAzureDevOpsTool {
 
     private static final String NAME = "azuredevops_git_local";
-    private static final String DESC = "Operaciones Git local en workspace gestionado. operation: workspace_info|workspace_list|clone_or_sync|status|checkout|create_branch|log|commit|push.";
+    private static final String DESC = "Operaciones Git local en workspace gestionado (usar como última opción; preferir routers API-first). operation: workspace_info|workspace_list|clone_or_sync|status|checkout|create_branch|log|commit|push.";
     private static final String DEFAULT_WORKSPACE_ROOT = "/tmp/mcp-git";
     private static final int DEFAULT_TIMEOUT_SECONDS = 60;
     private static final String META_FILE = ".mcp-repo.json";

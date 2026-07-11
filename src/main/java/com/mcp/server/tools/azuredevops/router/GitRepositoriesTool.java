@@ -28,10 +28,11 @@ import java.util.regex.PatternSyntaxException;
 public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
 
     private static final String NAME = "azuredevops_git_repositories";
-    private static final String DESC = "Operaciones Git Repositories/Code. operation: list|search|find|get_by_name|get|create|update|delete|items_get|items_get_safe|items_list|items_list_recursive|items_batch|search_files|find_files|search_content|explore_repo|commits_list|refs_list|refs_update|pushes_list|pushes_get|pushes_create|download_zip.";
+    private static final String DESC = "Operaciones Git Repositories/Code (API-first, evita clone local). operation: list|search|find|get_by_name|get|create|update|delete|items_get|items_get_safe|items_list|items_list_recursive|items_batch|search_files|find_files|search_content|explore_repo|commits_list|refs_list|refs_update|pushes_list|pushes_get|pushes_create|download_zip|repo_to_pipelines|pipeline_to_repo.";
     private static final String DEFAULT_API_VERSION = "7.2-preview.2";
     private static final String DEFAULT_ITEMS_API_VERSION = "7.2-preview.1";
     private static final String DEFAULT_PUSHES_API_VERSION = "7.2-preview.3";
+    private static final String DEFAULT_BUILD_API_VERSION = "7.2-preview.7";
     private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
     private static final int DEFAULT_MAX_FILES = 200;
     private static final int DEFAULT_MAX_BYTES_PER_FILE = 262_144;
@@ -73,7 +74,8 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
                         "items_get", "items_get_safe", "items_list", "items_list_recursive", "items_batch",
                         "search_files", "find_files", "search_content", "explore_repo",
                         "commits_list", "refs_list", "refs_update",
-                        "pushes_list", "pushes_get", "pushes_create", "download_zip"
+                        "pushes_list", "pushes_get", "pushes_create", "download_zip",
+                        "repo_to_pipelines", "pipeline_to_repo"
                 ),
                 "description", "Operación a ejecutar"
         ));
@@ -131,6 +133,7 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
         props.put("isLocked", Map.of("type", "boolean", "description", "refs_update: bloqueo de ref"));
 
         props.put("pushId", Map.of("type", "integer", "description", "pushes_get: ID del push"));
+        props.put("pipelineId", Map.of("type", "integer", "description", "pipeline_to_repo: ID del pipeline"));
         props.put("commitComment", Map.of("type", "string", "description", "pushes_create: comentario del commit"));
         props.put("changeType", Map.of("type", "string", "description", "pushes_create: add|edit|delete|rename"));
         props.put("sourcePath", Map.of("type", "string", "description", "pushes_create rename/move: ruta origen"));
@@ -182,6 +185,8 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
                 case "pushes_get" -> opPushesGet(arguments);
                 case "pushes_create" -> opPushesCreate(arguments);
                 case "download_zip" -> opDownloadZip(arguments);
+                case "repo_to_pipelines" -> opRepoToPipelines(arguments);
+                case "pipeline_to_repo" -> opPipelineToRepo(arguments);
                 default -> error("Operación no soportada: " + op);
             };
         } catch (IllegalArgumentException e) {
@@ -954,6 +959,182 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
         return doneResult(args, result);
     }
 
+    private Map<String, Object> opRepoToPipelines(Map<String, Object> args) {
+        String project = requireProject(args, "repo_to_pipelines");
+        String repoId = resolveRepositoryId(project, args, "repo_to_pipelines");
+
+        Map<String, Object> repoResp = azureService.getGitApiWithQuery(project, "repositories/" + repoId, baseQuery(args), apiVersion(args));
+        String repoErr = tryFormatRemoteError(repoResp);
+        if (repoErr != null) return error(repoErr);
+
+        String repoName = Objects.toString(repoResp.get("name"), "").trim();
+        List<String> warnings = new ArrayList<>();
+        Set<String> repoPipelineFiles = collectRepositoryPipelineYamlPaths(project, repoId, args, warnings);
+
+        Map<String, String> q = new LinkedHashMap<>();
+        q.put("name", repoName);
+        q.put("includeAllProperties", "true");
+        Map<String, Object> defsResp = azureService.exchangeDevAreaApi(
+                project,
+                "build",
+                HttpMethod.GET,
+                "definitions",
+                q,
+                null,
+                buildApiVersion(args),
+                null,
+                null,
+                false
+        );
+        String defsErr = tryFormatRemoteError(defsResp);
+        if (defsErr != null) return error(defsErr);
+
+        List<Map<String, Object>> definitions = toObjectList(defsResp.get("value"));
+        List<Map<String, Object>> found = new ArrayList<>();
+        for (Map<String, Object> def : definitions) {
+            String defRepoId = extractBuildRepositoryId(def);
+            String yamlPath = extractBuildYamlPath(def);
+
+            boolean byRepoId = !defRepoId.isBlank() && defRepoId.equalsIgnoreCase(repoId);
+            boolean byCiPath = !yamlPath.isBlank() && repoPipelineFiles.contains(yamlPath);
+            if (!byRepoId && !byCiPath) continue;
+
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("pipelineId", def.get("id"));
+            row.put("pipelineName", def.get("name"));
+            row.put("folder", def.get("path"));
+            row.put("configurationPath", yamlPath);
+            row.put("confirmedByRepositoryId", byRepoId);
+            row.put("confirmedByCiPath", byCiPath);
+            row.put("confidence", byRepoId ? "high" : "medium");
+            found.add(row);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("project", project);
+        result.put("repository", repositorySummary(repoResp));
+        result.put("repositoryPipelineFiles", new ArrayList<>(repoPipelineFiles));
+        result.put("scannedPipelines", definitions.size());
+        result.put("count", found.size());
+        result.put("pipelines", found);
+        if (!warnings.isEmpty()) result.put("warnings", warnings);
+        return doneResult(args, result);
+    }
+
+    private Map<String, Object> opPipelineToRepo(Map<String, Object> args) {
+        String project = requireProject(args, "pipeline_to_repo");
+        Integer pipelineId = requireIntArg(args, "pipelineId", "pipeline_to_repo");
+
+        List<String> warnings = new ArrayList<>();
+        List<String> evidence = new ArrayList<>();
+
+        Map<String, Object> defResp = azureService.exchangeDevAreaApi(
+                project,
+                "build",
+                HttpMethod.GET,
+                "definitions/" + pipelineId,
+                Map.of("includeAllProperties", "true"),
+                null,
+                buildApiVersion(args),
+                null,
+                null,
+                false
+        );
+
+        String defErr = tryFormatRemoteError(defResp);
+        if (defErr != null) return error(defErr);
+
+        String repoId = extractBuildRepositoryId(defResp);
+        String repoName = extractBuildRepositoryName(defResp);
+        String yamlPath = extractBuildYamlPath(defResp);
+
+        Map<String, Object> parentRepository = null;
+        if (!repoId.isBlank()) {
+            Map<String, Object> repoResp = azureService.getGitApiWithQuery(project, "repositories/" + repoId, baseQuery(args), apiVersion(args));
+            String repoErr = tryFormatRemoteError(repoResp);
+            if (repoErr == null) {
+                parentRepository = repoResp;
+                evidence.add("build.definition.repository.id apunta al repositorio padre");
+            } else {
+                warnings.add("No se pudo obtener repositorio por repository.id: " + repoErr);
+            }
+        }
+
+        if (parentRepository == null && !repoName.isBlank()) {
+            try {
+                String resolvedId = resolveRepositoryId(project, Map.of("repositoryName", repoName), "pipeline_to_repo");
+                Map<String, Object> repoResp = azureService.getGitApiWithQuery(project, "repositories/" + resolvedId, baseQuery(args), apiVersion(args));
+                String repoErr = tryFormatRemoteError(repoResp);
+                if (repoErr == null) {
+                    parentRepository = repoResp;
+                    evidence.add("fallback por nombre de repositorio en definición");
+                } else {
+                    warnings.add("No se pudo resolver repo por nombre en definición: " + repoErr);
+                }
+            } catch (Exception ex) {
+                warnings.add("No se pudo resolver repo por nombre en definición: " + ex.getMessage());
+            }
+        }
+
+        if (parentRepository == null) {
+            RepoCandidate fallback = resolveParentRepositoryByHeuristics(project, defResp, args, warnings);
+            if (fallback.repository() != null) {
+                parentRepository = fallback.repository();
+                evidence.addAll(fallback.evidence());
+            }
+            if (!fallback.candidates().isEmpty()) {
+                warnings.add("Se usó heurística de nombre para resolver repositorio padre");
+            }
+        }
+
+        if (parentRepository == null) {
+            return error("No se pudo resolver el repositorio padre del pipeline");
+        }
+
+        boolean pathExists = false;
+        if (!yamlPath.isBlank()) {
+            String parentRepoId = Objects.toString(parentRepository.get("id"), "");
+            pathExists = pathExistsInRepository(project, parentRepoId, yamlPath, args);
+            if (pathExists) evidence.add("yamlFilename existe en el repositorio padre");
+        }
+
+        Map<String, Object> pipeline = new LinkedHashMap<>();
+        pipeline.put("id", defResp.get("id"));
+        pipeline.put("name", defResp.get("name"));
+        pipeline.put("folder", defResp.get("path"));
+        pipeline.put("configurationPath", yamlPath);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("project", project);
+        result.put("pipeline", pipeline);
+        result.put("parentRepository", repositorySummary(parentRepository));
+        result.put("pipelinePathExistsInParentRepository", pathExists);
+        result.put("confidence", !repoId.isBlank() ? "high" : "medium");
+        result.put("evidence", evidence);
+        if (!warnings.isEmpty()) result.put("warnings", warnings);
+        return doneResult(args, result);
+    }
+
+    private String extractBuildRepositoryId(Map<String, Object> definition) {
+        Map<String, Object> repository = toObjectMap(definition.get("repository"));
+        String id = Objects.toString(repository.get("id"), "").trim();
+        if (!id.isBlank()) return id;
+
+        Map<String, Object> props = toObjectMap(repository.get("properties"));
+        String safe = Objects.toString(props.get("safeRepository"), "").trim();
+        return safe;
+    }
+
+    private String extractBuildRepositoryName(Map<String, Object> definition) {
+        Map<String, Object> repository = toObjectMap(definition.get("repository"));
+        return Objects.toString(repository.get("name"), "").trim();
+    }
+
+    private String extractBuildYamlPath(Map<String, Object> definition) {
+        Map<String, Object> process = toObjectMap(definition.get("process"));
+        return normalizePath(Objects.toString(process.get("yamlFilename"), "").trim());
+    }
+
     private String resolveRepositoryId(String project, Map<String, Object> args, String op) {
         String id = str(args, "repositoryId");
         if (!id.isBlank()) return id;
@@ -974,6 +1155,237 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
             throw new IllegalArgumentException("No se encontró ID para repositoryName='" + name + "'");
         }
         return resolved;
+    }
+
+    private Set<String> collectRepositoryPipelineYamlPaths(String project,
+                                                           String repo,
+                                                           Map<String, Object> args,
+                                                           List<String> warnings) {
+        Map<String, String> q = baseQuery(args);
+        q.put("scopePath", "/CI");
+        q.put("recursionLevel", "full");
+        q.put("includeContentMetadata", "false");
+        Map<String, Object> resp = azureService.getGitApiWithQuery(project, "repositories/" + repo + "/items", q, itemsApiVersion(args));
+        String err = tryFormatRemoteError(resp);
+        if (err != null) {
+            warnings.add("No se encontró carpeta CI o no fue posible listarla: " + err);
+            return Set.of();
+        }
+
+        List<Map<String, Object>> items = extractItemsFromItemsResponse(resp);
+        Set<String> paths = new LinkedHashSet<>();
+        for (Map<String, Object> item : items) {
+            if (isDirectory(item)) continue;
+            String path = normalizePath(itemPath(item));
+            String lower = path.toLowerCase(Locale.ROOT);
+            if (!(lower.endsWith(".yml") || lower.endsWith(".yaml"))) continue;
+            paths.add(path);
+        }
+        return paths;
+    }
+
+    private List<Map<String, Object>> prefilterPipelinesForRepository(List<Map<String, Object>> stubs, String repositoryName) {
+        if (stubs == null || stubs.isEmpty()) return List.of();
+
+        String repoNorm = normalizeName(repositoryName);
+        Set<String> repoTokens = tokenSet(repoNorm);
+        String strongToken = strongestToken(repoTokens);
+
+        List<Map<String, Object>> exact = new ArrayList<>();
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> stub : stubs) {
+            String pipelineName = Objects.toString(stub.get("name"), "");
+            String nameNorm = normalizeName(pipelineName);
+
+            if (!repoNorm.isBlank() && nameNorm.equals(repoNorm)) {
+                exact.add(stub);
+                continue;
+            }
+
+            if (!repoNorm.isBlank() && (nameNorm.contains(repoNorm) || repoNorm.contains(nameNorm))) {
+                out.add(stub);
+                continue;
+            }
+
+            int similarity = nameSimilarityScore(repositoryName, pipelineName);
+            if (similarity >= 10) {
+                out.add(stub);
+                continue;
+            }
+
+            if (strongToken != null && !strongToken.isBlank()) {
+                Set<String> pipelineTokens = tokenSet(nameNorm);
+                if (pipelineTokens.contains(strongToken)) {
+                    out.add(stub);
+                }
+            }
+        }
+        if (!exact.isEmpty()) return exact;
+        return out;
+    }
+
+    private String strongestToken(Set<String> tokens) {
+        String best = null;
+        int bestLen = -1;
+        for (String token : tokens) {
+            if (token == null || token.isBlank()) continue;
+            if (token.length() > bestLen) {
+                bestLen = token.length();
+                best = token;
+            }
+        }
+        return best;
+    }
+
+    private RepoCandidate resolveParentRepositoryByHeuristics(String project,
+                                                              Map<String, Object> pipeline,
+                                                              Map<String, Object> args,
+                                                              List<String> warnings) {
+        Map<String, Object> reposResp = azureService.getGitApiWithQuery(project, "repositories", baseQuery(args), apiVersion(args));
+        String reposErr = tryFormatRemoteError(reposResp);
+        if (reposErr != null) {
+            warnings.add("No se pudieron listar repos para fallback pipeline_to_repo: " + reposErr);
+            return new RepoCandidate(null, 0, List.of(), List.of());
+        }
+
+        String pipelineName = Objects.toString(pipeline.get("name"), "").trim();
+        List<Map<String, Object>> repos = toObjectList(reposResp.get("value"));
+        List<Map<String, Object>> candidates = new ArrayList<>();
+
+        Map<String, Object> best = null;
+        int bestScore = -1;
+        List<String> bestEvidence = List.of();
+
+        for (Map<String, Object> repo : repos) {
+            String repoName = Objects.toString(repo.get("name"), "").trim();
+            String repoId = Objects.toString(repo.get("id"), "").trim();
+            if (repoId.isBlank()) continue;
+
+            int score = 0;
+            List<String> evidence = new ArrayList<>();
+
+            int nameScore = nameSimilarityScore(repoName, pipelineName);
+            if (nameScore > 0) {
+                score += nameScore;
+                evidence.add("similitud nombre pipeline/repositorio");
+            }
+
+            if (score <= 0) continue;
+
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("repositoryId", repoId);
+            row.put("repositoryName", repoName);
+            row.put("score", score);
+            row.put("confidence", confidenceFromScore(score));
+            row.put("evidence", evidence);
+            candidates.add(row);
+
+            if (score > bestScore) {
+                best = repo;
+                bestScore = score;
+                bestEvidence = new ArrayList<>(evidence);
+            }
+        }
+
+        candidates.sort((a, b) -> Integer.compare(asInt(b.get("score"), 0), asInt(a.get("score"), 0)));
+        return new RepoCandidate(best, Math.max(bestScore, 0), bestEvidence, candidates);
+    }
+
+    private String confidenceFromScore(int score) {
+        if (score >= 80) return "high";
+        if (score >= 55) return "medium";
+        return "low";
+    }
+
+    private boolean pathExistsInRepository(String project,
+                                           String repositoryId,
+                                           String path,
+                                           Map<String, Object> args) {
+        String normalized = normalizePath(path);
+        if (normalized.isBlank()) return false;
+
+        Map<String, Object> itemArgs = new LinkedHashMap<>(args);
+        itemArgs.put("repositoryId", repositoryId);
+        itemArgs.put("path", normalized);
+        itemArgs.put("includeContent", false);
+        itemArgs.put("includeContentMetadata", true);
+
+        Map<String, Object> item = opItemsGetRaw(itemArgs, project, repositoryId);
+        String err = tryFormatRemoteError(item);
+        return err == null;
+    }
+
+    private int nameSimilarityScore(String left, String right) {
+        String a = normalizeName(left);
+        String b = normalizeName(right);
+        if (a.isBlank() || b.isBlank()) return 0;
+        if (a.equals(b)) return 30;
+        if (a.contains(b) || b.contains(a)) return 18;
+
+        Set<String> at = tokenSet(a);
+        Set<String> bt = tokenSet(b);
+        int overlap = 0;
+        for (String t : at) {
+            if (bt.contains(t)) overlap++;
+        }
+        if (overlap >= 4) return 16;
+        if (overlap >= 2) return 10;
+        if (overlap == 1) return 4;
+        return 0;
+    }
+
+    private String normalizeName(String value) {
+        if (value == null) return "";
+        return value.toLowerCase(Locale.ROOT)
+                .replace('_', '-')
+                .replaceAll("[^a-z0-9-]", "-")
+                .replaceAll("-+", "-")
+                .replaceAll("^-|-$", "")
+                .trim();
+    }
+
+    private Set<String> tokenSet(String value) {
+        Set<String> out = new LinkedHashSet<>();
+        if (value == null || value.isBlank()) return out;
+        for (String part : value.split("-")) {
+            String token = part.trim();
+            if (token.length() < 2) continue;
+            out.add(token);
+        }
+        return out;
+    }
+
+    private Map<String, Object> toObjectMap(Object value) {
+        if (!(value instanceof Map<?, ?> row)) return Map.of();
+        Map<String, Object> out = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> e : row.entrySet()) {
+            if (e.getKey() != null) out.put(e.getKey().toString(), e.getValue());
+        }
+        return out;
+    }
+
+    private Map<String, Object> pipelineSummary(Map<String, Object> pipeline) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("id", pipeline.get("id"));
+        out.put("name", pipeline.get("name"));
+        out.put("folder", pipeline.get("folder"));
+
+        Map<String, Object> config = toObjectMap(pipeline.get("configuration"));
+        if (!config.isEmpty()) {
+            out.put("configurationType", config.get("type"));
+            out.put("configurationPath", normalizePath(Objects.toString(config.get("path"), "")));
+            Map<String, Object> repo = toObjectMap(config.get("repository"));
+            if (!repo.isEmpty()) out.put("configurationRepositoryId", repo.get("id"));
+        }
+        return out;
+    }
+
+    private Integer requireIntArg(Map<String, Object> args, String key, String op) {
+        Integer value = parseInt(args.get(key));
+        if (value == null) {
+            throw new IllegalArgumentException("'" + key + "' es requerido para " + op);
+        }
+        return value;
     }
 
     private Map<String, Object> opItemsGetRaw(Map<String, Object> args, String project, String repo) {
@@ -1579,6 +1991,11 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
 
     private record TruncatedText(String text, boolean truncated) {}
 
+    private record RepoCandidate(Map<String, Object> repository,
+                                 int score,
+                                 List<String> evidence,
+                                 List<Map<String, Object>> candidates) {}
+
     private Map<String, Object> done(Map<String, Object> args, Map<String, Object> resp) {
         String err = tryFormatRemoteError(resp);
         if (err != null) return error(err);
@@ -1796,6 +2213,11 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
     private String pushesApiVersion(Map<String, Object> args) {
         String v = str(args, "apiVersion");
         return v.isBlank() ? DEFAULT_PUSHES_API_VERSION : v;
+    }
+
+    private String buildApiVersion(Map<String, Object> args) {
+        String v = str(args, "apiVersion");
+        return v.isBlank() ? DEFAULT_BUILD_API_VERSION : v;
     }
 
     private Integer parseInt(Object value) {

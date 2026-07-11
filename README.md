@@ -15,7 +15,7 @@ Servidor MCP (Model Context Protocol) para Azure DevOps que proporciona acceso c
 
 ## 🔁 Refactorización de tools (routers)
 
-Este servidor pasó de exponer decenas de tools individuales (p.ej. `azuredevops_wit_work_item_get`, `azuredevops_core_get_projects`, etc.) a exponer un set compacto de **16 tools router**.
+Este servidor pasó de exponer decenas de tools individuales (p.ej. `azuredevops_wit_work_item_get`, `azuredevops_core_get_projects`, etc.) a exponer un set compacto de **20 tools router**.
 
 Cada router tool recibe un parámetro obligatorio `operation` y enruta internamente hacia la implementación existente.
 
@@ -391,13 +391,14 @@ AZURE_DEVOPS_MCP_GIT_BIND=/ruta/host/mcp-git \
 
 ## 🎯 Herramientas Disponibles
 
-El servidor expone **16 tools router**. Cada una recibe `operation` y parámetros según la operación.
+El servidor expone **20 tools router**. Cada una recibe `operation` y parámetros según la operación.
 
 Resumen rápido de cantidad por dominio:
 
 - 1 de identidad/perfil
 - 4 de Core
 - 1 de Work/Planning
+- 4 de CI/CD (Pipelines, Environments, Approvals/Checks, Release)
 - 6 de WIT
 - 4 de Git
 
@@ -433,11 +434,21 @@ Resumen rápido de cantidad por dominio:
 - `azuredevops_wit_reporting`
   - `operation: revisions_list | revisions_get | reporting_links_get | reporting_revisions_get | reporting_revisions_post`
 
-### 5) Git
+### 5) CI/CD
+- `azuredevops_pipelines`
+  - `operation: list | get | create | runs_list | runs_get | run | logs_list | logs_get | preview | artifact_get`
+- `azuredevops_environments`
+  - `operation: list | get | create | update | delete`
+- `azuredevops_approvals_checks`
+  - `operation: check_configurations_list | check_configurations_add | approvals_get | approvals_update | pipeline_permissions_get | pipeline_permissions_update_resource | pipeline_permissions_update_resources | evaluations_get | evaluations_evaluate`
+- `azuredevops_release`
+  - `operation: definitions_list | releases_list | releases_get | releases_create | approvals_list`
+
+### 6) Git
 - `azuredevops_git_api`
   - `operation: (catálogo dinámico de operaciones Git REST 7.2; cobertura total API-first)`
 - `azuredevops_git_repositories`
-  - `operation: list | search | find | get_by_name | get | create | update | delete | items_get | items_get_safe | items_list | items_list_recursive | items_batch | search_files | find_files | search_content | explore_repo | commits_list | refs_list | refs_update | pushes_list | pushes_get | pushes_create | download_zip`
+  - `operation: list | search | find | get_by_name | get | create | update | delete | items_get | items_get_safe | items_list | items_list_recursive | items_batch | search_files | find_files | search_content | explore_repo | commits_list | refs_list | refs_update | pushes_list | pushes_get | pushes_create | download_zip | repo_to_pipelines | pipeline_to_repo`
 - `azuredevops_git_pull_requests`
   - `operation: get | list | list_by_project | assigned_to_me | create | update | reviewers_list | reviewer_add | reviewer_update | threads_list | thread_create | thread_update | comments_add | comment_update | comment_delete | statuses_list | status_add | labels_list | label_add | label_delete | iterations_list | iteration_changes_get | work_items_list | query | share`
 - `azuredevops_git_local`
@@ -453,6 +464,8 @@ Notas importantes para `azuredevops_git_api`:
 Notas importantes para `azuredevops_git_repositories`:
 
 - `pushes_create` permite crear commits/cambios por API REST sin clonar repositorio local (`bodyJson`, `commitsJson`, `changesJson` o modo simplificado de un cambio).
+- `repo_to_pipelines` está optimizado para velocidad: lista `CI/*.yml|yaml` del repositorio y cruza contra Build Definitions por `name=<repositoryName>` (`includeAllProperties=true`) para devolver los pipelines encontrados.
+- `pipeline_to_repo` devuelve el repositorio padre usando Build Definition (`repository.id` / `properties.safeRepository`) y valida rápidamente que `process.yamlFilename` exista en ese repo; si falta repo en definición, aplica fallback por nombre.
 - `list` ahora soporta alcance por proyecto u organización completa (si `project` se omite) y filtros `nameContains`/`nameSearch` con paginación local (`skip`/`top`) y metadatos (`count`, `totalCount`, `hasMore`).
 - `search` y `find` ejecutan búsqueda por patrón de nombre (`nameContains` o `nameSearch`) con alcance opcional cross-project.
 - `get_by_name` resuelve nombre exacto (case-insensitive). Si hay múltiples coincidencias, retorna error por ambigüedad con candidatos para desambiguar.
@@ -474,6 +487,7 @@ Notas importantes para `azuredevops_git_pull_requests`:
 Notas importantes para `azuredevops_git_local`:
 
 - El workspace local Git siempre se mantiene dentro de `MCP_GIT_WORKSPACE_ROOT`.
+- Este router es de última opción para agentes; priorizar `azuredevops_git_api` y `azuredevops_git_repositories` (REST-first) cuando sea posible.
 - Estructura administrada: `{root}/{organization}/{project}/{repository}`.
 - Si hay colisión de nombre de repo con distinto `repositoryId`, se agrega sufijo `__{id8}` automáticamente.
 - Cada repo guarda metadata en `.mcp-repo.json` para resolución consistente.
