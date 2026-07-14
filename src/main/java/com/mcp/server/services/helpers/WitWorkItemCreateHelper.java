@@ -46,6 +46,12 @@ public class WitWorkItemCreateHelper {
         String state = args.getOrDefault("state",null) != null ? args.get("state").toString() : null;
         Integer parentId = args.getOrDefault("parentId",null) != null ? Integer.valueOf(args.get("parentId").toString()) : null;
         String fields = args.getOrDefault("fields",null) != null ? args.get("fields").toString() : null;
+        // "add" es alias de "fields"; se combinan con punto y coma si ambos se proveen
+        String addParam = args.getOrDefault("add",null) != null ? args.get("add").toString() : null;
+        if (addParam != null && !addParam.isBlank()) {
+            fields = (fields != null && !fields.isBlank()) ? fields + ";" + addParam : addParam;
+        }
+        String tags = args.getOrDefault("tags",null) != null ? args.get("tags").toString() : null;
         String relations = args.getOrDefault("relations",null) != null ? args.get("relations").toString() : null;
         boolean raw = Boolean.TRUE.equals(args.get("raw"));
         boolean validateOnly = Boolean.TRUE.equals(args.get("validateOnly"));
@@ -54,8 +60,9 @@ public class WitWorkItemCreateHelper {
         boolean debug = Boolean.TRUE.equals(args.get("debug"));
         boolean noDiagnostic = Boolean.TRUE.equals(args.get("noDiagnostic"));
 
-        // Pre-validar campos requeridos antes de crear
-        if (!bypassRules && !project.isEmpty() && !type.isEmpty()) {
+        // Pre-validar campos requeridos antes de crear (solo en modo create real, no en validateOnly:
+        // para validateOnly el patch real se envía a AzDO con ?validateOnly=true para validación auténtica).
+        if (!bypassRules && !validateOnly && !project.isEmpty() && !type.isEmpty()) {
             Map<String, Object> validation;
             try {
                 validation = getFieldsHelper.validateRequiredFields(project, type, fields, apiVersion);
@@ -107,77 +114,6 @@ public class WitWorkItemCreateHelper {
                 );
             }
 
-            // Si validateOnly=true, devolver diagnóstico sin crear
-            if (validateOnly) {
-                Map<String, Object> fieldsData;
-                try {
-                    fieldsData = getFieldsHelper.getFieldsForType(project, type, apiVersion, false, false);
-                } catch (Exception e) {
-                    return Map.of(
-                        "isError", true,
-                        "error", "Error al obtener campos para validación: " + e.getMessage(),
-                        "content", List.of(Map.of("type", "text", "text", "Error al obtener campos para validación: " + e.getMessage()))
-                    );
-                }
-                if (fieldsData == null) {
-                    return Map.of(
-                        "isError", true,
-                        "error", "No se pudieron obtener los campos para el tipo '" + type + "'",
-                        "content", List.of(Map.of("type", "text", "text", "No se pudieron obtener los campos para el tipo '" + type + "'"))
-                    );
-                }
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> reqFields = (List<Map<String, Object>>) fieldsData.get("requiredFields");
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> sugFields = (List<Map<String, Object>>) fieldsData.get("suggestedFields");
-                @SuppressWarnings("unchecked")
-                List<String> validStates = (List<String>) fieldsData.get("validStates");
-
-                StringBuilder sb = new StringBuilder();
-                sb.append("## Validación para tipo: ").append(type).append("\n\n");
-                sb.append("Proyecto: ").append(project).append("\n");
-
-                sb.append("\n### Campos Requeridos (").append(reqFields != null ? reqFields.size() : 0).append(")\n");
-                if (reqFields != null && !reqFields.isEmpty()) {
-                    for (Map<String, Object> f : reqFields) {
-                        sb.append("- **").append(f.get("referenceName")).append("**");
-                        if (Boolean.TRUE.equals(f.get("isPicklist"))) {
-                            Object items = f.get("picklistItems");
-                            if (items instanceof List && !((List<?>) items).isEmpty()) {
-                                sb.append(" | Valores: ").append(String.join(", ", ((List<?>) items).stream().map(Object::toString).toList()));
-                            }
-                        }
-                        sb.append("\n");
-                    }
-                } else {
-                    sb.append("No hay campos estrictamente requeridos.\n");
-                }
-
-                if (sugFields != null && !sugFields.isEmpty()) {
-                    sb.append("\n### Campos Sugeridos\n");
-                    for (Map<String, Object> f : sugFields) {
-                        sb.append("- ").append(f.get("referenceName")).append("\n");
-                    }
-                }
-
-                if (validStates != null && !validStates.isEmpty()) {
-                    sb.append("\n### Estados Válidos\n");
-                    sb.append("System.State puede ser: ").append(String.join(", ", validStates)).append("\n");
-                }
-
-                sb.append("\n✅ No se detectaron problemas. El work item se puede crear.");
-                return Map.of(
-                    "isError", false,
-                    "validated", true,
-                    "type", type,
-                    "project", project,
-                    "content", List.of(Map.of("type", "text", "text", sb.toString())),
-                    "diagnostic", sb.toString(),
-                    "requiredFields", reqFields != null ? reqFields : List.of(),
-                    "suggestedFields", sugFields != null ? sugFields : List.of(),
-                    "validStates", validStates != null ? validStates : List.of()
-                );
-            }
         }
 
         java.util.List<Map<String,Object>> patch = new java.util.ArrayList<>();
@@ -187,6 +123,7 @@ public class WitWorkItemCreateHelper {
         if (acceptanceCriteria != null && !acceptanceCriteria.isEmpty()) patch.add(Map.of("op","add","path","/fields/Microsoft.VSTS.Common.AcceptanceCriteria","value",AzureDevOpsRichHtmlHelper.normalize(acceptanceCriteria, "Microsoft.VSTS.Common.AcceptanceCriteria")));
         if (area != null && !area.isEmpty()) patch.add(Map.of("op","add","path","/fields/System.AreaPath","value",area));
         if (iteration != null && !iteration.isEmpty()) patch.add(Map.of("op","add","path","/fields/System.IterationPath","value",iteration));
+        if (tags != null && !tags.isEmpty()) patch.add(Map.of("op","add","path","/fields/System.Tags","value",tags));
 
         if (fields != null && !fields.isEmpty()) {
             List<String> fieldPairs = smartSplitByCommaOrSemicolon(fields);

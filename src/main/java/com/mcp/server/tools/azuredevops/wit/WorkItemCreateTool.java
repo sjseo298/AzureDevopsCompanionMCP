@@ -46,10 +46,12 @@ public class WorkItemCreateTool extends AbstractAzureDevOpsTool {
         props.put("state", Map.of("type","string","description","Estado inicial (opcional)"));
         props.put("parentId", Map.of("type","integer","description","ID de work item padre (opcional)"));
         props.put("fields", Map.of("type","string","description","Campos extra k=v separados por coma o punto y coma. Campos HTML conocidos se normalizan; tablas reciben estilos compatibles automáticamente."));
+        props.put("add", Map.of("type","string","description","Alias de fields: campos k=v separados por coma o punto y coma (incluyendo Custom.GUID=valor). Idéntico a fields; se combinan si ambos se proveen."));
+        props.put("tags", Map.of("type","string","description","Etiquetas del work item separadas por punto y coma (System.Tags), p.ej. \"TAG1; TAG2\"."));
         props.put("relations", Map.of("type","string","description","Relaciones extra tipo:id[:comentario] separados por coma (opcional)"));
         props.put("apiVersion", Map.of("type","string","description","Versión de la API", "default", DEFAULT_API_VERSION));
         props.put("raw", Map.of("type","boolean","description","Devuelve JSON crudo de la respuesta"));
-        props.put("validateOnly", Map.of("type","boolean","description","Valida sin persistir"));
+        props.put("validateOnly", Map.of("type","boolean","description","Valida sin persistir (envía el patch real a AzDO con ?validateOnly=true)"));
         props.put("bypassRules", Map.of("type","boolean","description","Bypass rules"));
         props.put("suppressNotifications", Map.of("type","boolean","description","Suprime notificaciones"));
     props.put("debug", Map.of("type","boolean","description","Imprime JSON Patch (stderr)"));
@@ -81,18 +83,6 @@ public class WorkItemCreateTool extends AbstractAzureDevOpsTool {
             String formattedErr = tryFormatRemoteError(resp);
             boolean raw = Boolean.TRUE.equals(args.get("raw"));
             boolean validateOnly = Boolean.TRUE.equals(args.get("validateOnly"));
-
-            // Manejar respuesta de validateOnly estructurada
-            if (validateOnly && Boolean.TRUE.equals(resp.get("validated"))) {
-                @SuppressWarnings("unchecked")
-                Map<String,Object> validationResult = new java.util.LinkedHashMap<>(resp);
-                Object diag = validationResult.get("diagnostic");
-                String text = diag != null ? diag.toString() : "Validación completada sin errores.";
-                validationResult.remove("content");
-                validationResult.remove("diagnostic");
-                validationResult.put("content", List.of(Map.of("type", "text", "text", text != null ? text : "")));
-                return validationResult;
-            }
 
             if (formattedErr != null) {
                 // Adjuntar diagnóstico si existe

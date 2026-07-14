@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export AZURE_DEVOPS_ORGANIZATION="YOUR_ORGANIZATION"
-export AZURE_DEVOPS_PAT="FNOMiDi3UgdF3m8f7XHupnZPgcgTiS7oqR3APbC6QViLYwkBYIeoJQQJ99BHACAAAAA5G0YpAAASAZDO2DhS"
+export AZURE_DEVOPS_ORGANIZATION="SuraColombia"
+export AZURE_DEVOPS_PAT="${AZURE_DEVOPS_PAT}"
 
 # Variables requeridas
 : "${AZURE_DEVOPS_PAT:?AZURE_DEVOPS_PAT es requerido}"
