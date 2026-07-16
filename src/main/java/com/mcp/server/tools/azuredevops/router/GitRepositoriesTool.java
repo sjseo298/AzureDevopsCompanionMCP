@@ -54,6 +54,14 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
     private static final int RECOMMENDED_MAX_BYTES_PER_FILE = 262_144;
     private static final int HARD_MAX_FILES = 5_000;
     private static final int HARD_MAX_BYTES_PER_FILE = 2_097_152;
+    private static final int DEFAULT_SEARCH_MAX_RESULTS = 250;
+    private static final int HARD_SEARCH_MAX_RESULTS = 10_000;
+    private static final int DEFAULT_SEARCH_MAX_SNIPPET_CHARS = 280;
+    private static final int HARD_SEARCH_MAX_SNIPPET_CHARS = 8_000;
+    private static final int DEFAULT_SEARCH_MAX_PREVIEW_CHARS = 1_200;
+    private static final int HARD_SEARCH_MAX_PREVIEW_CHARS = 24_000;
+    private static final long DEFAULT_SEARCH_SCAN_BUDGET_MS = 20_000L;
+    private static final long HARD_SEARCH_SCAN_BUDGET_MS = 300_000L;
     private static final int DEFAULT_WINDOW_OFFSET = 1;
     private static final int DEFAULT_WINDOW_LIMIT = 200;
     private static final int HARD_WINDOW_LIMIT = 5_000;
@@ -149,6 +157,9 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
         props.put("caseSensitive", Map.of("type", "boolean", "description", "search_content: búsqueda sensible a mayúsculas"));
         props.put("maxFiles", Map.of("type", "integer", "description", "search_content/explore_repo: máximo de archivos a escanear (default 200, configurable)"));
         props.put("maxBytesPerFile", Map.of("type", "integer", "description", "search_content/explore_repo: máximo bytes por archivo (default 262144, configurable)"));
+        props.put("maxResults", Map.of("type", "integer", "description", "search_content: máximo de resultados a materializar antes de paginar (default 250, configurable)"));
+        props.put("maxSnippetChars", Map.of("type", "integer", "description", "search_content: máximo de caracteres por snippet/muestra de contenido"));
+        props.put("scanBudgetMs", Map.of("type", "integer", "description", "search_content: presupuesto máximo de escaneo en ms (default 20000)"));
         props.put("includeContentPreview", Map.of("type", "boolean", "description", "search_content/explore_repo: incluir preview de contenido en resultados"));
         props.put("recursive", Map.of("type", "boolean", "description", "items_list_recursive: forzar estrategia recursiva fallback trees_get"));
 
@@ -854,8 +865,11 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
         String textPattern = str(args, "textPattern");
         if (textPattern.isBlank()) throw new IllegalArgumentException("'textPattern' es requerido para search_content");
 
+        int skip = parseSkip(args.get("skip"));
+        Integer top = parseTop(args.get("top"));
         FileFilters filters = resolveFileFilters(args);
         LimitSettings limits = resolveLimits(args);
+        SearchRuntimeSettings runtime = resolveSearchRuntimeSettings(args, skip, top);
         Pattern compiled = compileSearchPattern(textPattern, parseBool(args.get("regex")), parseBool(args.get("caseSensitive")));
 
         Map<String, Object> collected = collectRepositoryItems(project, repo, args);
@@ -873,17 +887,25 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
 
         List<Map<String, Object>> matches = new ArrayList<>();
         int scanned = 0;
-        boolean stoppedByLimit = false;
+        boolean stoppedByFileLimit = false;
+        boolean stoppedByBudget = false;
+        boolean stoppedByResultLimit = false;
         boolean includePreview = parseBool(args.get("includeContentPreview"));
+        long startedAtNs = System.nanoTime();
         for (Map<String, Object> file : candidateFiles) {
             if (scanned >= limits.maxFiles()) {
-                stoppedByLimit = true;
+                stoppedByFileLimit = true;
+                break;
+            }
+            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAtNs);
+            if (elapsedMs >= runtime.scanBudgetMs()) {
+                stoppedByBudget = true;
                 break;
             }
             scanned++;
 
             String path = itemPath(file);
-            ContentRead read = readFileText(project, repo, path, limits.maxBytesPerFile(), args);
+            ContentRead read = readFileText(project, repo, file, path, limits.maxBytesPerFile(), args);
             if (!read.readable()) continue;
 
             Matcher matcher = compiled.matcher(read.text());
@@ -894,21 +916,36 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
             row.put("contentTruncated", read.truncated());
             row.put("matchIndex", matcher.start());
             row.put("matchLength", matcher.end() - matcher.start());
-            row.put("snippet", snippet(read.text(), matcher.start(), matcher.end()));
+            row.put("snippet", snippet(read.text(), matcher.start(), matcher.end(), runtime.maxSnippetChars()));
             if (includePreview) {
-                row.put("contentPreview", truncate(read.text(), 1200));
+                row.put("contentPreview", truncate(read.text(), runtime.maxPreviewChars()));
             }
             matches.add(row);
+
+            if (matches.size() >= runtime.maxResults()) {
+                stoppedByResultLimit = true;
+                break;
+            }
         }
 
         Map<String, Object> result = paginateRows(args, project, repo, matches, collected);
+        long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAtNs);
         result.put("textPattern", textPattern);
         result.put("regex", parseBool(args.get("regex")));
         result.put("caseSensitive", parseBool(args.get("caseSensitive")));
         result.put("candidateFiles", candidateFiles.size());
         result.put("scannedFiles", scanned);
-        result.put("scanLimited", stoppedByLimit);
-        addLimitWarnings(result, limits, stoppedByLimit);
+        result.put("scanBudgetMs", runtime.scanBudgetMs());
+        result.put("elapsedMs", elapsedMs);
+        result.put("maxResults", runtime.maxResults());
+        result.put("maxSnippetChars", runtime.maxSnippetChars());
+        result.put("scanLimited", stoppedByFileLimit || stoppedByBudget || stoppedByResultLimit);
+        result.put("scanComplete", !(stoppedByFileLimit || stoppedByBudget || stoppedByResultLimit));
+        if (stoppedByFileLimit) result.put("stopReason", "maxFiles");
+        else if (stoppedByBudget) result.put("stopReason", "scanBudgetMs");
+        else if (stoppedByResultLimit) result.put("stopReason", "maxResults");
+        addLimitWarnings(result, limits, stoppedByFileLimit);
+        addSearchRuntimeWarnings(result, runtime, stoppedByBudget, stoppedByResultLimit);
         return doneResult(args, result);
     }
 
@@ -2190,6 +2227,142 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
         if (!warnings.isEmpty()) result.put("warnings", warnings);
     }
 
+    private SearchRuntimeSettings resolveSearchRuntimeSettings(Map<String, Object> args, int skip, Integer top) {
+        int requiredByPagination;
+        boolean paginationRequirementClamped = false;
+        if (top == null) {
+            long required = (long) skip + 1L;
+            if (required <= 0L) {
+                requiredByPagination = 1;
+            } else if (required > HARD_SEARCH_MAX_RESULTS) {
+                requiredByPagination = HARD_SEARCH_MAX_RESULTS;
+                paginationRequirementClamped = true;
+            } else {
+                requiredByPagination = (int) required;
+            }
+        } else {
+            long required = (long) skip + (long) top;
+            if (required <= 0L) {
+                requiredByPagination = 1;
+            } else if (required > HARD_SEARCH_MAX_RESULTS) {
+                requiredByPagination = HARD_SEARCH_MAX_RESULTS;
+                paginationRequirementClamped = true;
+            } else {
+                requiredByPagination = (int) required;
+            }
+        }
+
+        boolean topProvided = top != null;
+        int maxResults = topProvided
+                ? requiredByPagination
+                : Math.max(DEFAULT_SEARCH_MAX_RESULTS, requiredByPagination);
+        boolean customMaxResults = false;
+        boolean clampedMaxResults = false;
+        boolean raisedForPagination = false;
+        if (args.containsKey("maxResults") && !str(args, "maxResults").isBlank()) {
+            Integer v = parseInt(args.get("maxResults"));
+            if (v == null || v < 1) throw new IllegalArgumentException("'maxResults' debe ser entero >= 1");
+            customMaxResults = true;
+            maxResults = v;
+        }
+        if (maxResults > HARD_SEARCH_MAX_RESULTS) {
+            maxResults = HARD_SEARCH_MAX_RESULTS;
+            clampedMaxResults = true;
+        }
+        if (maxResults < requiredByPagination) {
+            maxResults = requiredByPagination;
+            raisedForPagination = true;
+        }
+
+        int maxSnippetChars = DEFAULT_SEARCH_MAX_SNIPPET_CHARS;
+        boolean customSnippet = false;
+        boolean clampedSnippet = false;
+        if (args.containsKey("maxSnippetChars") && !str(args, "maxSnippetChars").isBlank()) {
+            Integer v = parseInt(args.get("maxSnippetChars"));
+            if (v == null || v < 32) throw new IllegalArgumentException("'maxSnippetChars' debe ser entero >= 32");
+            customSnippet = true;
+            maxSnippetChars = v;
+        }
+        if (maxSnippetChars > HARD_SEARCH_MAX_SNIPPET_CHARS) {
+            maxSnippetChars = HARD_SEARCH_MAX_SNIPPET_CHARS;
+            clampedSnippet = true;
+        }
+
+        long scanBudgetMs = DEFAULT_SEARCH_SCAN_BUDGET_MS;
+        boolean customBudget = false;
+        boolean clampedBudget = false;
+        if (args.containsKey("scanBudgetMs") && !str(args, "scanBudgetMs").isBlank()) {
+            Integer v = parseInt(args.get("scanBudgetMs"));
+            if (v == null || v < 500) throw new IllegalArgumentException("'scanBudgetMs' debe ser entero >= 500");
+            customBudget = true;
+            scanBudgetMs = v.longValue();
+        }
+        if (scanBudgetMs > HARD_SEARCH_SCAN_BUDGET_MS) {
+            scanBudgetMs = HARD_SEARCH_SCAN_BUDGET_MS;
+            clampedBudget = true;
+        }
+
+        int maxPreviewChars = Math.max(DEFAULT_SEARCH_MAX_PREVIEW_CHARS, maxSnippetChars);
+        if (maxPreviewChars > HARD_SEARCH_MAX_PREVIEW_CHARS) maxPreviewChars = HARD_SEARCH_MAX_PREVIEW_CHARS;
+
+        return new SearchRuntimeSettings(maxResults,
+                maxSnippetChars,
+                maxPreviewChars,
+                scanBudgetMs,
+                customMaxResults,
+                clampedMaxResults,
+                raisedForPagination,
+                customSnippet,
+                clampedSnippet,
+                customBudget,
+                clampedBudget,
+                paginationRequirementClamped);
+    }
+
+    private void addSearchRuntimeWarnings(Map<String, Object> result,
+                                          SearchRuntimeSettings runtime,
+                                          boolean stoppedByBudget,
+                                          boolean stoppedByResultLimit) {
+        List<String> warnings = toStringList(result.get("warnings"));
+        if (runtime.clampedMaxResults()) {
+            warnings.add("'maxResults' excedía límite duro; se ajustó a " + HARD_SEARCH_MAX_RESULTS + ".");
+        }
+        if (runtime.raisedForPagination()) {
+            warnings.add("'maxResults' se elevó para cubrir la paginación solicitada (skip/top).");
+        }
+        if (runtime.paginationRequirementClamped()) {
+            warnings.add("La paginación solicitada (skip+top) excede el máximo permitido; se acotó evaluación a " + HARD_SEARCH_MAX_RESULTS + " resultados.");
+        }
+        if (runtime.clampedSnippet()) {
+            warnings.add("'maxSnippetChars' excedía límite duro; se ajustó a " + HARD_SEARCH_MAX_SNIPPET_CHARS + ".");
+        }
+        if (runtime.clampedBudget()) {
+            warnings.add("'scanBudgetMs' excedía límite duro; se ajustó a " + HARD_SEARCH_SCAN_BUDGET_MS + " ms.");
+        }
+        if (stoppedByBudget) {
+            warnings.add("Escaneo detenido por presupuesto de tiempo (scanBudgetMs=" + runtime.scanBudgetMs() + ").");
+        }
+        if (stoppedByResultLimit) {
+            warnings.add("Escaneo detenido por límite de resultados (maxResults=" + runtime.maxResults() + ").");
+        }
+        if (!warnings.isEmpty()) result.put("warnings", warnings);
+    }
+
+    private ContentRead readFileText(String project,
+                                     String repo,
+                                     Map<String, Object> itemHint,
+                                     String path,
+                                     int maxBytes,
+                                     Map<String, Object> args) {
+        String hintedObjectId = extractObjectId(itemHint);
+        if (!hintedObjectId.isBlank()) {
+            ContentRead fromHint = readBlobText(project, repo, hintedObjectId, maxBytes, args);
+            if (fromHint.readable()) return fromHint;
+        }
+
+        return readFileText(project, repo, path, maxBytes, args);
+    }
+
     private ContentRead readFileText(String project,
                                      String repo,
                                      String path,
@@ -2214,6 +2387,15 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
         String objectId = extractObjectId(itemResp);
         if (objectId.isBlank()) return new ContentRead(false, "", "none", false);
 
+        return readBlobText(project, repo, objectId, maxBytes, args);
+    }
+
+    private ContentRead readBlobText(String project,
+                                     String repo,
+                                     String objectId,
+                                     int maxBytes,
+                                     Map<String, Object> args) {
+        if (objectId == null || objectId.isBlank()) return new ContentRead(false, "", "none", false);
         Map<String, String> q = new LinkedHashMap<>();
         q.put("$format", "text");
         putBool(q, "resolveLfs", args.get("resolveLfs"));
@@ -2232,6 +2414,16 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
         if (blobErr != null) return new ContentRead(false, "", "none", false);
 
         String text = Objects.toString(blobResp.get("text"), "");
+        if (text.isBlank()) {
+            String b64 = Objects.toString(blobResp.get("data"), "");
+            if (!b64.isBlank()) {
+                try {
+                    text = new String(Base64.getDecoder().decode(b64), StandardCharsets.UTF_8);
+                } catch (Exception ignored) {
+                    text = "";
+                }
+            }
+        }
         if (text.isBlank()) return new ContentRead(false, "", "none", false);
         TruncatedText tt = truncateUtf8(text, maxBytes);
         return new ContentRead(true, tt.text(), "blob_fallback", tt.truncated());
@@ -2250,9 +2442,14 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
         return new TruncatedText(new String(bytes, 0, len, StandardCharsets.UTF_8), true);
     }
 
-    private String snippet(String text, int start, int end) {
-        int from = Math.max(0, start - 140);
-        int to = Math.min(text.length(), end + 140);
+    private String snippet(String text, int start, int end, int maxSnippetChars) {
+        int maxChars = Math.max(32, maxSnippetChars);
+        int half = Math.max(16, maxChars / 2);
+        int from = Math.max(0, start - half);
+        int to = Math.min(text.length(), end + half);
+        if (to - from > maxChars) {
+            to = Math.min(text.length(), from + maxChars);
+        }
         return text.substring(from, to);
     }
 
@@ -2320,6 +2517,19 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
                                  boolean customBytes,
                                  boolean clampedFiles,
                                  boolean clampedBytes) {}
+
+    private record SearchRuntimeSettings(int maxResults,
+                                         int maxSnippetChars,
+                                         int maxPreviewChars,
+                                         long scanBudgetMs,
+                                         boolean customMaxResults,
+                                         boolean clampedMaxResults,
+                                         boolean raisedForPagination,
+                                         boolean customSnippet,
+                                         boolean clampedSnippet,
+                                         boolean customBudget,
+                                         boolean clampedBudget,
+                                         boolean paginationRequirementClamped) {}
 
     private record ContentRead(boolean readable, String text, String source, boolean truncated) {}
 

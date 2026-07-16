@@ -48,6 +48,9 @@ public class GitRepositoriesToolTest {
             assert props.containsKey("textPattern") : "Falta propiedad 'textPattern'";
             assert props.containsKey("maxFiles") : "Falta propiedad 'maxFiles'";
             assert props.containsKey("maxBytesPerFile") : "Falta propiedad 'maxBytesPerFile'";
+            assert props.containsKey("maxResults") : "Falta propiedad 'maxResults'";
+            assert props.containsKey("maxSnippetChars") : "Falta propiedad 'maxSnippetChars'";
+            assert props.containsKey("scanBudgetMs") : "Falta propiedad 'scanBudgetMs'";
             assert props.containsKey("offset") : "Falta propiedad 'offset'";
             assert props.containsKey("limit") : "Falta propiedad 'limit'";
             assert props.containsKey("maxWaitMs") : "Falta propiedad 'maxWaitMs'";
@@ -197,6 +200,84 @@ public class GitRepositoriesToolTest {
         }
     }
 
+    public void testSearchRuntimeSettingsRaiseMaxResultsForPagination() {
+        try {
+            var tool = new GitRepositoriesTool(null);
+            Method method = GitRepositoriesTool.class.getDeclaredMethod("resolveSearchRuntimeSettings", Map.class, int.class, Integer.class);
+            method.setAccessible(true);
+
+            Object settings = method.invoke(tool, Map.of("maxResults", "5"), 10, Integer.valueOf(10));
+
+            Method maxResultsMethod = settings.getClass().getDeclaredMethod("maxResults");
+            Method raisedForPaginationMethod = settings.getClass().getDeclaredMethod("raisedForPagination");
+            maxResultsMethod.setAccessible(true);
+            raisedForPaginationMethod.setAccessible(true);
+
+            int maxResults = (Integer) maxResultsMethod.invoke(settings);
+            boolean raised = (Boolean) raisedForPaginationMethod.invoke(settings);
+
+            assert maxResults == 20 : "maxResults debe elevarse para cubrir skip+top";
+            assert raised : "Debe marcar ajuste por paginación";
+
+            System.out.println("✓ testSearchRuntimeSettingsRaiseMaxResultsForPagination passed");
+        } catch (Exception e) {
+            System.err.println("✗ testSearchRuntimeSettingsRaiseMaxResultsForPagination failed: " + e.getMessage());
+        }
+    }
+
+    public void testSearchRuntimeSettingsClampHardLimits() {
+        try {
+            var tool = new GitRepositoriesTool(null);
+            Method method = GitRepositoriesTool.class.getDeclaredMethod("resolveSearchRuntimeSettings", Map.class, int.class, Integer.class);
+            method.setAccessible(true);
+
+            Object settings = method.invoke(tool,
+                    Map.of(
+                            "maxResults", "999999",
+                            "maxSnippetChars", "999999",
+                            "scanBudgetMs", "999999"
+                    ),
+                    0,
+                    Integer.valueOf(10));
+
+            Method maxResultsMethod = settings.getClass().getDeclaredMethod("maxResults");
+            Method maxSnippetMethod = settings.getClass().getDeclaredMethod("maxSnippetChars");
+            Method scanBudgetMethod = settings.getClass().getDeclaredMethod("scanBudgetMs");
+            maxResultsMethod.setAccessible(true);
+            maxSnippetMethod.setAccessible(true);
+            scanBudgetMethod.setAccessible(true);
+
+            int maxResults = (Integer) maxResultsMethod.invoke(settings);
+            int maxSnippetChars = (Integer) maxSnippetMethod.invoke(settings);
+            long scanBudgetMs = (Long) scanBudgetMethod.invoke(settings);
+
+            assert maxResults == 10000 : "maxResults debe respetar límite duro";
+            assert maxSnippetChars == 8000 : "maxSnippetChars debe respetar límite duro";
+            assert scanBudgetMs == 300000L : "scanBudgetMs debe respetar límite duro";
+
+            System.out.println("✓ testSearchRuntimeSettingsClampHardLimits passed");
+        } catch (Exception e) {
+            System.err.println("✗ testSearchRuntimeSettingsClampHardLimits failed: " + e.getMessage());
+        }
+    }
+
+    public void testSnippetHonorsRequestedMaxChars() {
+        try {
+            var tool = new GitRepositoriesTool(null);
+            Method method = GitRepositoriesTool.class.getDeclaredMethod("snippet", String.class, int.class, int.class, int.class);
+            method.setAccessible(true);
+
+            String text = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".repeat(10);
+            String snippet = (String) method.invoke(tool, text, 120, 130, 50);
+
+            assert snippet.length() <= 50 : "Snippet debe respetar maxSnippetChars";
+
+            System.out.println("✓ testSnippetHonorsRequestedMaxChars passed");
+        } catch (Exception e) {
+            System.err.println("✗ testSnippetHonorsRequestedMaxChars failed: " + e.getMessage());
+        }
+    }
+
     public static void main(String[] args) {
         GitRepositoriesToolTest test = new GitRepositoriesToolTest();
         test.testToolDefinition();
@@ -209,5 +290,8 @@ public class GitRepositoriesToolTest {
         test.testScopePathRequiredErrorDetection();
         test.testItemsReadWindowRejectsBinaryMetadata();
         test.testItemsReadWindowRequiresPath();
+        test.testSearchRuntimeSettingsRaiseMaxResultsForPagination();
+        test.testSearchRuntimeSettingsClampHardLimits();
+        test.testSnippetHonorsRequestedMaxChars();
     }
 }
