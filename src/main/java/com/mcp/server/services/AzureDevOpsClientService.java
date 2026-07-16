@@ -11,7 +11,17 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -28,9 +38,11 @@ import java.util.Map;
 public class AzureDevOpsClientService {
 
     private final WebClient webClient;
+    private final HttpClient streamingHttpClient;
     private final String organization;
     private final String apiVersion;
     private final String vsspsApiVersion;
+    private final String authorizationHeaderValue;
 
     public AzureDevOpsClientService(
             WebClient.Builder webClientBuilder,
@@ -45,9 +57,14 @@ public class AzureDevOpsClientService {
         this.vsspsApiVersion = vsspsApiVersion;
         String credentials = ":" + pat;
         String encoded = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
+        this.authorizationHeaderValue = "Basic " + encoded;
+        this.streamingHttpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(30))
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
         this.webClient = webClientBuilder
             .baseUrl("https://dev.azure.com/" + organization)
-            .defaultHeader(HttpHeaders.AUTHORIZATION, "Basic " + encoded)
+            .defaultHeader(HttpHeaders.AUTHORIZATION, authorizationHeaderValue)
             .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
             // Configurar codecs para manejar responses más grandes
@@ -738,6 +755,126 @@ public class AzureDevOpsClientService {
                 return m;
             }).onErrorResume(e -> Mono.just(Map.of("error", e.getMessage()))))
             .block();
+    }
+
+    public Map<String, Object> downloadGitTextToFile(String project,
+                                                     String path,
+                                                     Map<String, String> query,
+                                                     String apiVersionOverride,
+                                                     Path outputPath,
+                                                     long maxBytes) {
+        if (outputPath == null) return Map.of("error", "outputPath es requerido");
+
+        try {
+            Path target = outputPath.toAbsolutePath().normalize();
+            Path parent = target.getParent();
+            if (parent != null) Files.createDirectories(parent);
+
+            URI uri = buildGitUri(project, path, query, apiVersionOverride);
+            HttpRequest request = HttpRequest.newBuilder(uri)
+                    .timeout(Duration.ofMinutes(10))
+                    .header(HttpHeaders.AUTHORIZATION, authorizationHeaderValue)
+                    .header(HttpHeaders.ACCEPT, MediaType.TEXT_PLAIN_VALUE)
+                    .GET()
+                    .build();
+
+            HttpResponse<InputStream> response = streamingHttpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+            int status = response.statusCode();
+            String contentType = response.headers().firstValue("content-type").orElse(MediaType.TEXT_PLAIN_VALUE);
+
+            if (status >= 400) {
+                String body = readLimitedBody(response.body(), 64 * 1024);
+                Map<String, Object> out = new HashMap<>();
+                out.put("isHttpError", true);
+                out.put("httpStatus", status);
+                out.put("httpReason", "HTTP " + status);
+                if (body != null && !body.isBlank()) out.put("bodyRaw", body);
+                return out;
+            }
+
+            long written = 0;
+            byte[] buffer = new byte[16 * 1024];
+            try (InputStream in = response.body();
+                 OutputStream out = Files.newOutputStream(target,
+                         StandardOpenOption.CREATE,
+                         StandardOpenOption.TRUNCATE_EXISTING,
+                         StandardOpenOption.WRITE)) {
+                int n;
+                while ((n = in.read(buffer)) >= 0) {
+                    if (n == 0) continue;
+                    written += n;
+                    if (maxBytes > 0 && written > maxBytes) {
+                        out.flush();
+                        try {
+                            Files.deleteIfExists(target);
+                        } catch (Exception ignored) {
+                            // best-effort
+                        }
+                        return Map.of(
+                                "error", "MAX_BYTES_EXCEEDED",
+                                "bytesRead", written,
+                                "maxBytes", maxBytes
+                        );
+                    }
+                    out.write(buffer, 0, n);
+                }
+                out.flush();
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("savedToPath", target.toString());
+            result.put("bytesWritten", written);
+            result.put("contentType", contentType);
+            return result;
+        } catch (Exception e) {
+            return Map.of("error", e.getMessage());
+        }
+    }
+
+    private URI buildGitUri(String project,
+                            String path,
+                            Map<String, String> query,
+                            String apiVersionOverride) {
+        List<String> segments = buildGitSegments(project, path);
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl("https://dev.azure.com/" + organization)
+                .pathSegment(segments.toArray(new String[0]));
+
+        boolean hasApiVersion = false;
+        if (query != null) {
+            for (Map.Entry<String, String> e : query.entrySet()) {
+                builder.queryParam(e.getKey(), e.getValue());
+                if ("api-version".equalsIgnoreCase(e.getKey())) {
+                    hasApiVersion = true;
+                }
+            }
+        }
+        if (!hasApiVersion) {
+            String ver = (apiVersionOverride != null && !apiVersionOverride.isBlank()) ? apiVersionOverride : this.apiVersion;
+            builder.queryParam("api-version", ver);
+        }
+
+        return URI.create(builder.build(true).toUriString());
+    }
+
+    private String readLimitedBody(InputStream in, int maxBytes) {
+        if (in == null) return "";
+        int safeLimit = Math.max(1024, maxBytes);
+        byte[] tmp = new byte[4096];
+        int total = 0;
+        StringBuilder sb = new StringBuilder();
+        try (InputStream stream = in) {
+            int n;
+            while ((n = stream.read(tmp)) >= 0 && total < safeLimit) {
+                if (n == 0) continue;
+                int copy = Math.min(n, safeLimit - total);
+                sb.append(new String(tmp, 0, copy, StandardCharsets.UTF_8));
+                total += copy;
+                if (total >= safeLimit) break;
+            }
+        } catch (Exception ignored) {
+            // best-effort
+        }
+        return sb.toString();
     }
 
     public Map<String,Object> exchangeGitApi(String project,

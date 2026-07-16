@@ -97,14 +97,15 @@ public class WitWorkItemsTool extends AbstractAzureDevOpsTool {
         props.put("parentId", Map.of("type", "integer", "description", "Work item padre (create/update)"));
         props.put("parent", Map.of("type", "integer", "description", "Alias de parentId"));
         props.put("relations", Map.of("type", "string", "description", "Relaciones extra (create/update)"));
-        props.put("add", Map.of("type", "string", "description", "Patch add k=v (update)"));
+        props.put("add", Map.of("type", "string", "description", "Campos extra k=v para create/update (alias de fields en create, op add en update). Soporta Custom.<referenceName>=<valor>."));
+        props.put("tags", Map.of("type", "string", "description", "System.Tags para create/update, separadas por punto y coma. Ej: TAG1; TAG2"));
         props.put("replace", Map.of("type", "string", "description", "Patch replace k=v (update)"));
         props.put("remove", Map.of("type", "string", "description", "Patch remove fields (update)"));
 
         props.put("apiVersion", Map.of("type", "string", "description", "Override apiVersion"));
         props.put("api-version", Map.of("type", "string", "description", "Alias script apiVersion"));
         props.put("raw", Map.of("type", "boolean", "description", "Devuelve JSON crudo"));
-        props.put("validateOnly", Map.of("type", "boolean", "description", "validateOnly"));
+        props.put("validateOnly", Map.of("type", "boolean", "description", "validateOnly (create/update). En create usa el mismo JSON Patch que la operación real."));
         props.put("validate-only", Map.of("type", "boolean", "description", "Alias validateOnly"));
         props.put("bypassRules", Map.of("type", "boolean", "description", "bypassRules"));
         props.put("bypass-rules", Map.of("type", "boolean", "description", "Alias bypassRules"));

@@ -37,6 +37,7 @@ public class GitRepositoriesToolTest {
             assert values.contains("get_by_name") : "Falta operación 'get_by_name'";
             assert values.contains("items_list_recursive") : "Falta operación 'items_list_recursive'";
             assert values.contains("items_get_safe") : "Falta operación 'items_get_safe'";
+            assert values.contains("items_read_window") : "Falta operación 'items_read_window'";
             assert values.contains("search_files") : "Falta operación 'search_files'";
             assert values.contains("search_content") : "Falta operación 'search_content'";
             assert values.contains("explore_repo") : "Falta operación 'explore_repo'";
@@ -47,6 +48,9 @@ public class GitRepositoriesToolTest {
             assert props.containsKey("textPattern") : "Falta propiedad 'textPattern'";
             assert props.containsKey("maxFiles") : "Falta propiedad 'maxFiles'";
             assert props.containsKey("maxBytesPerFile") : "Falta propiedad 'maxBytesPerFile'";
+            assert props.containsKey("offset") : "Falta propiedad 'offset'";
+            assert props.containsKey("limit") : "Falta propiedad 'limit'";
+            assert props.containsKey("maxWaitMs") : "Falta propiedad 'maxWaitMs'";
             assert props.containsKey("pipelineId") : "Falta propiedad 'pipelineId'";
             System.out.println("✓ testSchemaIncludesNewOperationsAndFilters passed");
         } catch (Exception e) {
@@ -155,6 +159,44 @@ public class GitRepositoriesToolTest {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    public void testItemsReadWindowRejectsBinaryMetadata() {
+        try {
+            var tool = new GitRepositoriesTool(null);
+            Method method = GitRepositoriesTool.class.getDeclaredMethod("evaluateTextEligibility", Map.class);
+            method.setAccessible(true);
+
+            Map<String, Object> item = Map.of("contentMetadata", Map.of("contentType", "application/pdf"));
+            Object result = method.invoke(tool, item);
+
+            Method allowedMethod = result.getClass().getDeclaredMethod("allowed");
+            Method reasonCodeMethod = result.getClass().getDeclaredMethod("reasonCode");
+            allowedMethod.setAccessible(true);
+            reasonCodeMethod.setAccessible(true);
+
+            boolean allowed = (Boolean) allowedMethod.invoke(result);
+            String code = (String) reasonCodeMethod.invoke(result);
+
+            assert !allowed : "Content-Type binario debe rechazarse para lectura por líneas";
+            assert "BINARY_NOT_SUPPORTED".equals(code) : "Código esperado BINARY_NOT_SUPPORTED";
+
+            System.out.println("✓ testItemsReadWindowRejectsBinaryMetadata passed");
+        } catch (Exception e) {
+            System.err.println("✗ testItemsReadWindowRejectsBinaryMetadata failed: " + e.getMessage());
+        }
+    }
+
+    public void testItemsReadWindowRequiresPath() {
+        try {
+            var tool = new GitRepositoriesTool(null);
+            var resp = tool.execute(Map.of("operation", "items_read_window", "project", "Demo", "repositoryId", "r1"));
+            assert Boolean.TRUE.equals(resp.get("isError")) : "Debe fallar items_read_window sin path";
+            System.out.println("✓ testItemsReadWindowRequiresPath passed");
+        } catch (Exception e) {
+            System.err.println("✗ testItemsReadWindowRequiresPath failed: " + e.getMessage());
+        }
+    }
+
     public static void main(String[] args) {
         GitRepositoriesToolTest test = new GitRepositoriesToolTest();
         test.testToolDefinition();
@@ -165,5 +207,7 @@ public class GitRepositoriesToolTest {
         test.testVersionDefaultsByFamily();
         test.testVersionOverrideWinsAcrossFamilies();
         test.testScopePathRequiredErrorDetection();
+        test.testItemsReadWindowRejectsBinaryMetadata();
+        test.testItemsReadWindowRequiresPath();
     }
 }

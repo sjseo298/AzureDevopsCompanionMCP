@@ -25,6 +25,9 @@ Descripción:
 
 Opciones:
   --tag <nombre>      Nombre/tag para la imagen (default: sjseo298/mcp-azure-devops)
+  --dockerhub-user <usuario>
+                      Usuario/namespace para amarrar el nombre de la imagen
+                      (default: sjseo298)
   --dockerfile <file> Dockerfile a usar (default: Dockerfile)
                       Opciones: Dockerfile, Dockerfile.slim, Dockerfile.ultra
   --no-cache          Construir sin usar cache de Docker
@@ -45,6 +48,7 @@ Dockerfiles disponibles:
 
 Ejemplos:
   ./build-docker-image.sh
+  ./build-docker-image.sh --dockerhub-user sjseo298
   ./build-docker-image.sh --dockerfile Dockerfile.slim --tag sjseo298/mcp-azure-devops:slim
   ./build-docker-image.sh --dockerfile Dockerfile.ultra --tag sjseo298/mcp-azure-devops:ultra
   ./build-docker-image.sh --no-cache --clean --test --dockerfile Dockerfile.slim
@@ -54,7 +58,11 @@ USAGE
 }
 
 # Configuración por defecto
-DEFAULT_IMAGE_REPO="sjseo298/mcp-azure-devops"
+DEFAULT_IMAGE_NAME="mcp-azure-devops"
+# Permite override por variable de entorno AZURE_DEVOPS_DOCKERHUB_USER
+DEFAULT_DOCKERHUB_USER="${AZURE_DEVOPS_DOCKERHUB_USER:-sjseo298}"
+DOCKERHUB_USER="${DOCKERHUB_USER:-${DEFAULT_DOCKERHUB_USER}}"
+DEFAULT_IMAGE_REPO="${DOCKERHUB_USER}/${DEFAULT_IMAGE_NAME}"
 IMAGE_TAG="${DEFAULT_IMAGE_REPO}"
 DOCKERFILE="Dockerfile"
 NO_CACHE=""
@@ -65,12 +73,11 @@ RUN_TEST=false
 QUIET=false
 TAG_AS_LATEST=true
 DOCKER_ARGS=""
-# Usuario para Docker Hub (si no se especifica se pedirá al usuario en modo interactivo)
-DOCKERHUB_USER=""
 # Configuración multiplataforma (por defecto: activado con amd64+arm64)
 MULTIPLATFORM=true
 PLATFORMS="linux/amd64,linux/arm64"
 BUILDX_BUILDER="mcp-multiplatform-builder"
+TAG_SET_BY_ARG=false
 
 # Repetir la última configuración no interactiva guardada.
 if [[ $# -eq 1 && "${1}" == "--last" ]]; then
@@ -88,7 +95,7 @@ HAD_ARGS=$#
 # Parsear argumentos
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --tag) IMAGE_TAG="$2"; shift 2;;
+    --tag) IMAGE_TAG="$2"; TAG_SET_BY_ARG=true; shift 2;;
     --dockerfile) DOCKERFILE="$2"; shift 2;;
     --no-cache) NO_CACHE="--no-cache"; shift;;
     --push) PUSH_IMAGE=true; shift;;
@@ -104,6 +111,60 @@ while [[ $# -gt 0 ]]; do
     *) echo -e "${RED}Argumento no reconocido: $1${NC}" >&2; usage; exit 1;;
   esac
 done
+
+bind_image_tag_to_user() {
+  local image_ref="$1"
+  local docker_user="$2"
+
+  if [[ -z "${docker_user}" ]]; then
+    echo "${image_ref}"
+    return 0
+  fi
+
+  local repo="${image_ref}"
+  local tag=""
+
+  # Separar tag solo si aparece en el último segmento (repo:tag)
+  if [[ "${image_ref##*/}" == *:* ]]; then
+    repo="${image_ref%:*}"
+    tag=":${image_ref##*:}"
+  fi
+
+  if [[ "${repo}" == */* ]]; then
+    local first="${repo%%/*}"
+    local rest="${repo#*/}"
+
+    # Si ya está amarrado al usuario, no modificar
+    if [[ "${first}" == "${docker_user}" ]]; then
+      echo "${repo}${tag}"
+      return 0
+    fi
+
+    # Si hay registry explícito (ghcr.io, localhost:5000, etc.)
+    if [[ "${first}" == *.* || "${first}" == *:* || "${first}" == "localhost" ]]; then
+      if [[ "${rest}" == */* ]]; then
+        local current_ns="${rest%%/*}"
+        local remainder="${rest#*/}"
+        if [[ "${current_ns}" == "${docker_user}" ]]; then
+          echo "${repo}${tag}"
+        else
+          echo "${first}/${docker_user}/${remainder}${tag}"
+        fi
+      else
+        echo "${first}/${docker_user}/${rest}${tag}"
+      fi
+    else
+      # Namespace docker hub existente distinto al usuario -> reemplazar
+      echo "${docker_user}/${rest}${tag}"
+    fi
+  else
+    # Repo sin namespace -> prefijar usuario
+    echo "${docker_user}/${repo}${tag}"
+  fi
+}
+
+# Siempre amarrar el nombre de la imagen al usuario configurado
+IMAGE_TAG="$(bind_image_tag_to_user "${IMAGE_TAG}" "${DOCKERHUB_USER}")"
 
 log() {
   if [[ "${QUIET}" == false ]]; then
@@ -204,6 +265,13 @@ LATEST_TAG="$(compute_latest_tag "${IMAGE_TAG}")"
 interactive_mode() {
   echo -e "${BLUE}🚀 Construcción Interactiva de Imagen Docker MCP Azure DevOps${NC}"
   echo ""
+
+  # Usuario para namespace de imagen
+  local default_user="${DOCKERHUB_USER}"
+  read -p "👤 Usuario Docker Hub para nombre de imagen [default: ${default_user}]: " input_dh_user
+  DOCKERHUB_USER="${input_dh_user:-${default_user}}"
+  echo -e "${GREEN}   ✅ Namespace configurado: ${DOCKERHUB_USER}${NC}"
+  echo ""
   
   # Mostrar Dockerfiles disponibles
   echo -e "${YELLOW}📄 Dockerfiles disponibles:${NC}"
@@ -226,15 +294,17 @@ interactive_mode() {
   done
   
   # Configurar tag basado en dockerfile
-  default_tag="${DEFAULT_IMAGE_REPO}"
+  local default_tag_base="${DEFAULT_IMAGE_NAME}"
   case $DOCKERFILE in
-    "Dockerfile.slim") default_tag="${DEFAULT_IMAGE_REPO}:slim";;
-    "Dockerfile.ultra") default_tag="${DEFAULT_IMAGE_REPO}:ultra";;
+    "Dockerfile.slim") default_tag_base="${DEFAULT_IMAGE_NAME}:slim";;
+    "Dockerfile.ultra") default_tag_base="${DEFAULT_IMAGE_NAME}:ultra";;
   esac
+  default_tag="$(bind_image_tag_to_user "${default_tag_base}" "${DOCKERHUB_USER}")"
   
   # Nombre de la imagen
   read -p "🏷️  Tag de la imagen [default: $default_tag]: " user_tag
   IMAGE_TAG=${user_tag:-$default_tag}
+  IMAGE_TAG="$(bind_image_tag_to_user "${IMAGE_TAG}" "${DOCKERHUB_USER}")"
   LATEST_TAG="$(compute_latest_tag "${IMAGE_TAG}")"
   
   # Preguntar si también tagear como latest
@@ -329,6 +399,12 @@ interactive_mode() {
 # Verificar si se ejecuta sin argumentos (modo interactivo)
 if [[ ${HAD_ARGS} -eq 0 ]]; then
   interactive_mode
+fi
+
+# Si se ejecutó en modo no interactivo y se proporcionó --dockerhub-user,
+# amarrar también tags manuales (--tag) al namespace del usuario.
+if [[ ${HAD_ARGS} -gt 0 && -n "${DOCKERHUB_USER}" ]]; then
+  IMAGE_TAG="$(bind_image_tag_to_user "${IMAGE_TAG}" "${DOCKERHUB_USER}")"
 fi
 
 LATEST_TAG="$(compute_latest_tag "${IMAGE_TAG}")"

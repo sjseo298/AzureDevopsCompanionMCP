@@ -448,7 +448,7 @@ Resumen rápido de cantidad por dominio:
 - `azuredevops_git_api`
   - `operation: (catálogo dinámico de operaciones Git REST 7.2; cobertura total API-first)`
 - `azuredevops_git_repositories`
-  - `operation: list | search | find | get_by_name | get | create | update | delete | items_get | items_get_safe | items_list | items_list_recursive | items_batch | search_files | find_files | search_content | explore_repo | commits_list | refs_list | refs_update | pushes_list | pushes_get | pushes_create | download_zip | repo_to_pipelines | pipeline_to_repo`
+  - `operation: list | search | find | get_by_name | get | create | update | delete | items_get | items_get_safe | items_read_window | items_list | items_list_recursive | items_batch | search_files | find_files | search_content | explore_repo | commits_list | refs_list | refs_update | pushes_list | pushes_get | pushes_create | download_zip | repo_to_pipelines | pipeline_to_repo`
 - `azuredevops_git_pull_requests`
   - `operation: get | list | list_by_project | assigned_to_me | create | update | reviewers_list | reviewer_add | reviewer_update | threads_list | thread_create | thread_update | comments_add | comment_update | comment_delete | statuses_list | status_add | labels_list | label_add | label_delete | iterations_list | iteration_changes_get | work_items_list | query | share`
 - `azuredevops_git_local`
@@ -474,6 +474,7 @@ Notas importantes para `azuredevops_git_repositories`:
 - `items_list_recursive` intenta `items_list` con recursión y hace fallback a `trees_get` si la API responde error/inconsistencia.
 - `items_list` aplica `scopePath='/'` automáticamente cuando recibe `recursionLevel` sin `scopePath/path`; si aun así la API exige scopePath válido, realiza fallback automático a `items_list_recursive` y retorna `warnings`.
 - `items_get_safe` intenta `items_get includeContent=true` y usa fallback `blobs/get` cuando la API no devuelve contenido.
+- `items_read_window` habilita lectura por líneas (`offset`/`limit`) sobre archivos de texto, con cache temporal en disco y preparación asíncrona (`warming_up`) para archivos grandes; nunca procesa binarios.
 - `search_files`/`find_files` permiten localizar archivos por `filePattern` (glob), `pathRegex` y/o `extensions`.
 - `search_content` agrega búsqueda por texto/regex sobre archivos con límites conservadores por defecto (`maxFiles=200`, `maxBytesPerFile=262144`), configurables por parámetro con advertencias.
 - `explore_repo` devuelve estructura resumida y archivos clave de integración/configuración en una sola operación.

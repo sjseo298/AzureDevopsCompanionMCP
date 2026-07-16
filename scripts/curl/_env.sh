@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export AZURE_DEVOPS_ORGANIZATION="SuraColombia"
-export AZURE_DEVOPS_PAT="${AZURE_DEVOPS_PAT}"
+# Este script espera credenciales por variables de entorno.
+# Ejemplo de uso:
+#   export AZURE_DEVOPS_ORGANIZATION="mi_organizacion"
+#   export AZURE_DEVOPS_PAT="mi_pat"
 
 # Variables requeridas
 : "${AZURE_DEVOPS_PAT:?AZURE_DEVOPS_PAT es requerido}"

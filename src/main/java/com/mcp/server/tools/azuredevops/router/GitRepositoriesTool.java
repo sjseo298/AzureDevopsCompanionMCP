@@ -7,12 +7,20 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.FileStore;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.OffsetDateTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -20,6 +28,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -28,7 +42,7 @@ import java.util.regex.PatternSyntaxException;
 public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
 
     private static final String NAME = "azuredevops_git_repositories";
-    private static final String DESC = "Operaciones Git Repositories/Code (API-first, evita clone local). operation: list|search|find|get_by_name|get|create|update|delete|items_get|items_get_safe|items_list|items_list_recursive|items_batch|search_files|find_files|search_content|explore_repo|commits_list|refs_list|refs_update|pushes_list|pushes_get|pushes_create|download_zip|repo_to_pipelines|pipeline_to_repo.";
+    private static final String DESC = "Operaciones Git Repositories/Code (API-first, evita clone local). operation: list|search|find|get_by_name|get|create|update|delete|items_get|items_get_safe|items_read_window|items_list|items_list_recursive|items_batch|search_files|find_files|search_content|explore_repo|commits_list|refs_list|refs_update|pushes_list|pushes_get|pushes_create|download_zip|repo_to_pipelines|pipeline_to_repo.";
     private static final String DEFAULT_API_VERSION = "7.2-preview.2";
     private static final String DEFAULT_ITEMS_API_VERSION = "7.2-preview.1";
     private static final String DEFAULT_PUSHES_API_VERSION = "7.2-preview.3";
@@ -40,6 +54,24 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
     private static final int RECOMMENDED_MAX_BYTES_PER_FILE = 262_144;
     private static final int HARD_MAX_FILES = 5_000;
     private static final int HARD_MAX_BYTES_PER_FILE = 2_097_152;
+    private static final int DEFAULT_WINDOW_OFFSET = 1;
+    private static final int DEFAULT_WINDOW_LIMIT = 200;
+    private static final int HARD_WINDOW_LIMIT = 5_000;
+    private static final long DEFAULT_WINDOW_MAX_WAIT_MS = 3_500L;
+    private static final long HARD_WINDOW_MAX_WAIT_MS = 30_000L;
+    private static final String WINDOW_STATUS_READY = "ready";
+    private static final String WINDOW_STATUS_WARMING_UP = "warming_up";
+    private static final String WINDOW_STATUS_REJECTED = "rejected";
+    private static final String WINDOW_STATUS_FAILED = "failed";
+    private static final String CODE_BINARY_NOT_SUPPORTED = "BINARY_NOT_SUPPORTED";
+    private static final String CODE_CACHE_QUOTA_EXCEEDED = "CACHE_QUOTA_EXCEEDED";
+    private static final String CODE_FILE_TOO_LARGE = "FILE_TOO_LARGE";
+    private static final String CODE_PREPARING_TIMEOUT = "PREPARING_TIMEOUT";
+    private static final String CODE_DOWNLOAD_FAILED = "DOWNLOAD_FAILED";
+    private static final String CODE_TOO_MANY_IN_PROGRESS = "TOO_MANY_DOWNLOADS_IN_PROGRESS";
+    private static final String CODE_DISK_SPACE_LOW = "DISK_SPACE_LOW";
+    private static final int DEFAULT_RETRY_AFTER_SECONDS = 6;
+    private static final WindowFileCache WINDOW_CACHE = new WindowFileCache();
 
     @Autowired
     public GitRepositoriesTool(AzureDevOpsClientService svc) {
@@ -71,7 +103,7 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
                 "type", "string",
                 "enum", List.of(
                         "list", "search", "find", "get_by_name", "get", "create", "update", "delete",
-                        "items_get", "items_get_safe", "items_list", "items_list_recursive", "items_batch",
+                        "items_get", "items_get_safe", "items_read_window", "items_list", "items_list_recursive", "items_batch",
                         "search_files", "find_files", "search_content", "explore_repo",
                         "commits_list", "refs_list", "refs_update",
                         "pushes_list", "pushes_get", "pushes_create", "download_zip",
@@ -105,6 +137,9 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
         props.put("download", Map.of("type", "boolean", "description", "items_get/items_list: download"));
         props.put("resolveLfs", Map.of("type", "boolean", "description", "items_get: resolveLfs"));
         props.put("sanitize", Map.of("type", "boolean", "description", "items_get: sanitize"));
+        props.put("offset", Map.of("type", "integer", "description", "items_read_window: línea inicial (1-based)"));
+        props.put("limit", Map.of("type", "integer", "description", "items_read_window: cantidad de líneas a devolver"));
+        props.put("maxWaitMs", Map.of("type", "integer", "description", "items_read_window: espera máxima en ms para preparar cache local"));
         props.put("zipForUnix", Map.of("type", "boolean", "description", "items_list/download_zip: zipForUnix"));
         props.put("filePattern", Map.of("type", "string", "description", "search_files/search_content: patrón glob de ruta/nombre (ej: **/*.conf)"));
         props.put("pathRegex", Map.of("type", "string", "description", "search_files/search_content: regex sobre path"));
@@ -171,6 +206,7 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
                 case "delete" -> opDelete(arguments);
                 case "items_get" -> opItemsGet(arguments);
                 case "items_get_safe" -> opItemsGetSafe(arguments);
+                case "items_read_window" -> opItemsReadWindow(arguments);
                 case "items_list" -> opItemsList(arguments);
                 case "items_list_recursive" -> opItemsListRecursive(arguments);
                 case "items_batch" -> opItemsBatch(arguments);
@@ -430,6 +466,285 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
         result.put("item", item);
         result.put("content", text);
         return doneResult(args, result);
+    }
+
+    private Map<String, Object> opItemsReadWindow(Map<String, Object> args) {
+        String project = requireProject(args, "items_read_window");
+        String repo = resolveRepositoryId(project, args, "items_read_window");
+        String path = normalizePath(str(args, "path"));
+        if (path.isBlank()) throw new IllegalArgumentException("'path' es requerido para items_read_window");
+
+        WindowRequest req = resolveWindowRequest(args);
+
+        Map<String, Object> itemArgs = new LinkedHashMap<>(args);
+        itemArgs.put("repositoryId", repo);
+        itemArgs.put("path", path);
+        itemArgs.put("includeContent", false);
+        itemArgs.put("includeContentMetadata", true);
+        itemArgs.put("latestProcessedChange", false);
+        Map<String, Object> itemResp = opItemsGetRaw(itemArgs, project, repo);
+        String itemErr = tryFormatRemoteError(itemResp);
+        if (itemErr != null) return error(itemErr);
+
+        Map<String, Object> item = firstItem(itemResp);
+        if (item.isEmpty()) {
+            Map<String, Object> failed = buildWindowFailed(project, repo, path, req, "No se pudo obtener metadata del archivo", CODE_DOWNLOAD_FAILED, null);
+            return doneResult(args, failed);
+        }
+
+        TextEligibility eligibility = evaluateTextEligibility(item);
+        if (!eligibility.allowed()) {
+            Map<String, Object> rejected = buildWindowRejected(project, repo, path, req, eligibility.reasonCode(), eligibility.reason(), eligibility.guidance());
+            return doneResult(args, rejected);
+        }
+
+        String cacheKey = buildWindowCacheKey(project, repo, path, args);
+        Map<String, String> downloadQuery = buildItemsReadWindowDownloadQuery(args, path);
+
+        WindowFetchResult fetch = WINDOW_CACHE.fetch(
+                cacheKey,
+                path,
+                req.offset(),
+                req.limit(),
+                req.maxWaitMs(),
+                (targetPath, maxFileBytes) -> mapDownloadResult(
+                        azureService.downloadGitTextToFile(
+                                project,
+                                "repositories/" + repo + "/items",
+                                downloadQuery,
+                                itemsApiVersion(args),
+                                targetPath,
+                                maxFileBytes
+                        )
+                )
+        );
+
+        if (fetch.status().equals(WINDOW_STATUS_READY)) {
+            Map<String, Object> ready = new LinkedHashMap<>();
+            ready.put("operation", "items_read_window");
+            ready.put("status", WINDOW_STATUS_READY);
+            ready.put("project", project);
+            ready.put("repositoryId", repo);
+            ready.put("path", path);
+            ready.put("cacheKey", cacheKey);
+            ready.put("source", "local_temp_cache");
+            ready.put("offset", req.offset());
+            ready.put("limit", req.limit());
+            ready.put("lineEnd", fetch.lineEnd());
+            ready.put("returnedLines", fetch.lines().size());
+            ready.put("hasMore", fetch.hasMore());
+            ready.put("totalLines", fetch.totalLines());
+            ready.put("lines", fetch.lines());
+            ready.put("cacheInfo", Map.of(
+                    "cacheRoot", WINDOW_CACHE.rootDir().toString(),
+                    "cacheBytes", fetch.cacheBytes(),
+                    "fileBytes", fetch.fileBytes(),
+                    "lastPreparedAt", fetch.lastPreparedAt().toString()
+            ));
+            return doneResult(args, ready);
+        }
+
+        if (fetch.status().equals(WINDOW_STATUS_WARMING_UP)) {
+            Map<String, Object> warming = new LinkedHashMap<>();
+            warming.put("operation", "items_read_window");
+            warming.put("status", WINDOW_STATUS_WARMING_UP);
+            warming.put("project", project);
+            warming.put("repositoryId", repo);
+            warming.put("path", path);
+            warming.put("cacheKey", cacheKey);
+            warming.put("offset", req.offset());
+            warming.put("limit", req.limit());
+            warming.put("errorCode", CODE_PREPARING_TIMEOUT);
+            warming.put("message", "El archivo se está preparando en cache temporal porque es una lectura pesada. Espere unos segundos y vuelva a consultar.");
+            warming.put("retryAfterSeconds", DEFAULT_RETRY_AFTER_SECONDS);
+            warming.put("guidance", "Reintente la misma operación items_read_window con el mismo path/offset/limit.");
+            if (fetch.downloadStartedAt() != null) {
+                warming.put("download", Map.of(
+                        "startedAt", fetch.downloadStartedAt().toString(),
+                        "inProgress", true,
+                        "elapsedMs", fetch.elapsedMs()
+                ));
+            }
+            return doneResult(args, warming);
+        }
+
+        Map<String, Object> failed = buildWindowFailed(project, repo, path, req, fetch.message(), fetch.errorCode(), cacheKey);
+        return doneResult(args, failed);
+    }
+
+    private WindowRequest resolveWindowRequest(Map<String, Object> args) {
+        int offset = DEFAULT_WINDOW_OFFSET;
+        if (args.containsKey("offset") && !str(args, "offset").isBlank()) {
+            Integer v = parseInt(args.get("offset"));
+            if (v == null || v < 1) throw new IllegalArgumentException("'offset' debe ser entero >= 1");
+            offset = v;
+        }
+
+        int limit = DEFAULT_WINDOW_LIMIT;
+        if (args.containsKey("limit") && !str(args, "limit").isBlank()) {
+            Integer v = parseInt(args.get("limit"));
+            if (v == null || v < 1) throw new IllegalArgumentException("'limit' debe ser entero >= 1");
+            limit = Math.min(v, HARD_WINDOW_LIMIT);
+        }
+
+        long maxWaitMs = DEFAULT_WINDOW_MAX_WAIT_MS;
+        if (args.containsKey("maxWaitMs") && !str(args, "maxWaitMs").isBlank()) {
+            Integer v = parseInt(args.get("maxWaitMs"));
+            if (v == null || v < 250) throw new IllegalArgumentException("'maxWaitMs' debe ser entero >= 250");
+            maxWaitMs = Math.min(v.longValue(), HARD_WINDOW_MAX_WAIT_MS);
+        }
+
+        return new WindowRequest(offset, limit, maxWaitMs);
+    }
+
+    private Map<String, String> buildItemsReadWindowDownloadQuery(Map<String, Object> args, String path) {
+        Map<String, String> q = new LinkedHashMap<>();
+        q.put("path", path);
+        q.put("$format", "text");
+        putBool(q, "resolveLfs", args.get("resolveLfs"));
+        putVersionDescriptor(q, args);
+        return q;
+    }
+
+    private String buildWindowCacheKey(String project, String repo, String path, Map<String, Object> args) {
+        String version = str(args, "version");
+        String versionType = str(args, "versionType");
+        String versionOptions = str(args, "versionOptions");
+        return project + "|" + repo + "|" + normalizePath(path) + "|" + version + "|" + versionType + "|" + versionOptions;
+    }
+
+    private Map<String, Object> firstItem(Map<String, Object> response) {
+        if (response == null || response.isEmpty()) return Map.of();
+        if (response.containsKey("path")) return response;
+
+        List<Map<String, Object>> list = extractItemsFromItemsResponse(response);
+        if (list.isEmpty()) return Map.of();
+        return list.get(0);
+    }
+
+    private TextEligibility evaluateTextEligibility(Map<String, Object> item) {
+        Map<String, Object> metadata = toObjectMap(item.get("contentMetadata"));
+        Object isBinaryObj = metadata.get("isBinary");
+        if (isBinaryObj != null && parseBool(isBinaryObj)) {
+            return new TextEligibility(false, CODE_BINARY_NOT_SUPPORTED,
+                    "El archivo es binario y no puede leerse por líneas.",
+                    "Use operaciones de descarga binaria si necesita ese contenido.");
+        }
+
+        String contentType = Objects.toString(metadata.get("contentType"), "").toLowerCase(Locale.ROOT);
+        if (!contentType.isBlank() && isClearlyBinaryContentType(contentType)) {
+            return new TextEligibility(false, CODE_BINARY_NOT_SUPPORTED,
+                    "contentMetadata indica contenido binario ('" + contentType + "').",
+                    "Solo se admiten archivos de texto en items_read_window.");
+        }
+
+        return new TextEligibility(true, "", "", "");
+    }
+
+    private boolean isClearlyBinaryContentType(String contentType) {
+        String ct = contentType.toLowerCase(Locale.ROOT);
+        if (ct.isBlank()) return false;
+        if (ct.startsWith("text/")) return false;
+        if (ct.contains("json") || ct.contains("xml") || ct.contains("yaml") || ct.contains("x-sh") || ct.contains("x-python")) {
+            return false;
+        }
+        return ct.startsWith("image/")
+                || ct.startsWith("audio/")
+                || ct.startsWith("video/")
+                || ct.startsWith("font/")
+                || ct.contains("application/pdf")
+                || ct.contains("application/zip")
+                || ct.contains("application/x-zip")
+                || ct.contains("application/gzip")
+                || ct.contains("application/x-gzip")
+                || ct.contains("application/java-archive")
+                || ct.contains("application/x-rar")
+                || ct.contains("application/x-7z")
+                || ct.contains("application/msword")
+                || ct.contains("application/vnd.ms-")
+                || ct.contains("application/vnd.openxmlformats-officedocument")
+                || ct.contains("application/x-executable");
+    }
+
+    private DownloadRunResult mapDownloadResult(Map<String, Object> response) {
+        if (response == null) {
+            return new DownloadRunResult(false, CODE_DOWNLOAD_FAILED, "Respuesta vacía al descargar archivo", 0L);
+        }
+
+        String errorRaw = Objects.toString(response.get("error"), "").trim();
+        if (!errorRaw.isBlank()) {
+            if ("MAX_BYTES_EXCEEDED".equalsIgnoreCase(errorRaw)) {
+                long bytesRead = asLong(response.get("bytesRead"), -1L);
+                long maxBytes = asLong(response.get("maxBytes"), -1L);
+                String msg = "El archivo excede el límite máximo permitido para cache temporal";
+                if (bytesRead > 0 && maxBytes > 0) {
+                    msg += " (bytesRead=" + bytesRead + ", maxBytes=" + maxBytes + ")";
+                }
+                return new DownloadRunResult(false, CODE_FILE_TOO_LARGE, msg, Math.max(bytesRead, 0L));
+            }
+            return new DownloadRunResult(false, CODE_DOWNLOAD_FAILED, errorRaw, 0L);
+        }
+
+        String err = tryFormatRemoteError(response);
+        if (err != null) {
+            return new DownloadRunResult(false, CODE_DOWNLOAD_FAILED, err, 0L);
+        }
+
+        long bytes = asLong(response.get("bytesWritten"), 0L);
+        return new DownloadRunResult(true, "", "", bytes);
+    }
+
+    private long asLong(Object value, long defaultValue) {
+        if (value instanceof Number n) return n.longValue();
+        if (value == null) return defaultValue;
+        try {
+            return Long.parseLong(value.toString());
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
+    private Map<String, Object> buildWindowRejected(String project,
+                                                    String repo,
+                                                    String path,
+                                                    WindowRequest req,
+                                                    String errorCode,
+                                                    String reason,
+                                                    String guidance) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("operation", "items_read_window");
+        out.put("status", WINDOW_STATUS_REJECTED);
+        out.put("project", project);
+        out.put("repositoryId", repo);
+        out.put("path", path);
+        out.put("offset", req.offset());
+        out.put("limit", req.limit());
+        out.put("errorCode", errorCode);
+        out.put("message", reason);
+        out.put("guidance", guidance);
+        return out;
+    }
+
+    private Map<String, Object> buildWindowFailed(String project,
+                                                  String repo,
+                                                  String path,
+                                                  WindowRequest req,
+                                                  String reason,
+                                                  String errorCode,
+                                                  String cacheKey) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("operation", "items_read_window");
+        out.put("status", WINDOW_STATUS_FAILED);
+        out.put("project", project);
+        out.put("repositoryId", repo);
+        out.put("path", path);
+        out.put("offset", req.offset());
+        out.put("limit", req.limit());
+        if (cacheKey != null && !cacheKey.isBlank()) out.put("cacheKey", cacheKey);
+        out.put("errorCode", errorCode == null || errorCode.isBlank() ? CODE_DOWNLOAD_FAILED : errorCode);
+        out.put("message", reason == null || reason.isBlank() ? "No se pudo preparar el archivo para lectura por líneas" : reason);
+        out.put("guidance", "Reduzca el alcance de la consulta o espere unos segundos y reintente.");
+        return out;
     }
 
     private Map<String, Object> opItemsList(Map<String, Object> args) {
@@ -1980,6 +2295,25 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
 
     private record FileFilters(Pattern globPattern, Pattern regexPattern, Set<String> extensions) {}
 
+    private record WindowRequest(int offset, int limit, long maxWaitMs) {}
+
+    private record TextEligibility(boolean allowed, String reasonCode, String reason, String guidance) {}
+
+    private record DownloadRunResult(boolean success, String errorCode, String message, long bytesWritten) {}
+
+    private record WindowFetchResult(String status,
+                                     String message,
+                                     String errorCode,
+                                     List<String> lines,
+                                     int lineEnd,
+                                     boolean hasMore,
+                                     int totalLines,
+                                     long cacheBytes,
+                                     long fileBytes,
+                                     Instant lastPreparedAt,
+                                     Instant downloadStartedAt,
+                                     long elapsedMs) {}
+
     private record LimitSettings(int maxFiles,
                                  int maxBytesPerFile,
                                  boolean customFiles,
@@ -1995,6 +2329,521 @@ public class GitRepositoriesTool extends AbstractAzureDevOpsTool {
                                  int score,
                                  List<String> evidence,
                                  List<Map<String, Object>> candidates) {}
+
+    @FunctionalInterface
+    private interface DownloadTask {
+        DownloadRunResult run(Path outputPath, long maxFileBytes);
+    }
+
+    private static final class WindowFileCache {
+        private final Path rootDir;
+        private final long maxCacheBytes;
+        private final long maxFileBytes;
+        private final long minFreeDiskBytes;
+        private final int maxConcurrentDownloads;
+        private final long ttlMillis;
+        private final long maxInProgressBytes;
+        private final AtomicBoolean startupCleanupDone = new AtomicBoolean(false);
+        private final ExecutorService executor;
+        private final ConcurrentHashMap<String, CacheEntry> entries = new ConcurrentHashMap<>();
+
+        private WindowFileCache() {
+            this.rootDir = Path.of(System.getenv().getOrDefault("MCP_TEXT_CACHE_ROOT", "/tmp/mcp-text-window-cache"))
+                    .toAbsolutePath().normalize();
+            this.maxCacheBytes = envLong("MCP_TEXT_CACHE_MAX_BYTES", 20L * 1024L * 1024L * 1024L);
+            this.maxFileBytes = envLong("MCP_TEXT_CACHE_MAX_FILE_BYTES", 512L * 1024L * 1024L);
+            this.minFreeDiskBytes = envLong("MCP_TEXT_CACHE_MIN_FREE_BYTES", 5L * 1024L * 1024L * 1024L);
+            this.maxConcurrentDownloads = (int) Math.max(1L, envLong("MCP_TEXT_CACHE_MAX_CONCURRENT", 2L));
+            this.ttlMillis = envLong("MCP_TEXT_CACHE_TTL_MS", Duration.ofMinutes(30).toMillis());
+            this.maxInProgressBytes = envLong("MCP_TEXT_CACHE_MAX_IN_PROGRESS_BYTES", 4L * 1024L * 1024L * 1024L);
+            this.executor = Executors.newFixedThreadPool(this.maxConcurrentDownloads, r -> {
+                Thread t = new Thread(r);
+                t.setName("git-text-window-cache");
+                t.setDaemon(true);
+                return t;
+            });
+        }
+
+        private Path rootDir() {
+            ensureInitialized();
+            return rootDir;
+        }
+
+        private WindowFetchResult fetch(String cacheKey,
+                                        String path,
+                                        int offset,
+                                        int limit,
+                                        long maxWaitMs,
+                                        DownloadTask downloadTask) {
+            ensureInitialized();
+            evictExpired();
+
+            CacheEntry entry = entries.computeIfAbsent(cacheKey, key -> new CacheEntry(key, filePathForKey(key)));
+
+            synchronized (entry) {
+                entry.lastAccessAt = Instant.now();
+                if (entry.status == EntryStatus.READY && Files.exists(entry.filePath)) {
+                    return readReady(entry, offset, limit);
+                }
+
+                if (entry.status == EntryStatus.DOWNLOADING && entry.downloadFuture != null && !entry.downloadFuture.isDone()) {
+                    return awaitOrWarmup(entry, offset, limit, maxWaitMs);
+                }
+
+                if (entry.status == EntryStatus.FAILED && entry.lastError != null && !entry.lastError.isBlank()) {
+                    return failed(entry.lastErrorCode, entry.lastError, entry.downloadStartedAt, entry.lastDownloadBytes);
+                }
+
+                if (!hasDownloadSlot()) {
+                    return failed(CODE_TOO_MANY_IN_PROGRESS,
+                            "Hay demasiadas descargas en curso para preparar lecturas por líneas. Intente de nuevo en unos segundos.",
+                            entry.downloadStartedAt,
+                            entry.lastDownloadBytes);
+                }
+
+                String quotaError = validateQuotaBeforeDownload();
+                if (quotaError != null) {
+                    String code = quotaError.startsWith(CODE_DISK_SPACE_LOW + ":") ? CODE_DISK_SPACE_LOW : CODE_CACHE_QUOTA_EXCEEDED;
+                    String message = quotaError;
+                    if (code.equals(CODE_DISK_SPACE_LOW)) {
+                        message = quotaError.substring((CODE_DISK_SPACE_LOW + ":").length()).trim();
+                    }
+                    return failed(code, message, entry.downloadStartedAt, entry.lastDownloadBytes);
+                }
+
+                entry.status = EntryStatus.DOWNLOADING;
+                entry.lastError = "";
+                entry.lastErrorCode = "";
+                entry.downloadStartedAt = Instant.now();
+                entry.lastDownloadBytes = 0L;
+                entry.downloadFuture = executor.submit(() -> runDownload(entry, downloadTask));
+            }
+
+            return awaitOrWarmup(entry, offset, limit, maxWaitMs);
+        }
+
+        private void runDownload(CacheEntry entry, DownloadTask downloadTask) {
+            Path tmp = entry.filePath.resolveSibling(entry.filePath.getFileName().toString() + ".part");
+            try {
+                Files.createDirectories(entry.filePath.getParent());
+                Files.deleteIfExists(tmp);
+
+                DownloadRunResult result = downloadTask.run(tmp, maxFileBytes);
+                synchronized (entry) {
+                    if (!result.success()) {
+                        entry.status = EntryStatus.FAILED;
+                        entry.lastErrorCode = result.errorCode();
+                        entry.lastError = result.message();
+                        entry.lastDownloadBytes = result.bytesWritten();
+                        try {
+                            Files.deleteIfExists(tmp);
+                        } catch (Exception ignored) {
+                            // best-effort
+                        }
+                        return;
+                    }
+
+                    long fileBytes = safeFileSize(tmp);
+                    if (fileBytes <= 0 && result.bytesWritten() > 0) fileBytes = result.bytesWritten();
+                    if (fileBytes > maxFileBytes) {
+                        entry.status = EntryStatus.FAILED;
+                        entry.lastErrorCode = CODE_FILE_TOO_LARGE;
+                        entry.lastError = "El archivo descargado excede el límite permitido para cache temporal.";
+                        entry.lastDownloadBytes = fileBytes;
+                        try {
+                            Files.deleteIfExists(tmp);
+                        } catch (Exception ignored) {
+                            // best-effort
+                        }
+                        return;
+                    }
+                    if (looksBinary(tmp)) {
+                        entry.status = EntryStatus.FAILED;
+                        entry.lastErrorCode = CODE_BINARY_NOT_SUPPORTED;
+                        entry.lastError = "El contenido descargado parece binario; este endpoint solo admite texto.";
+                        entry.lastDownloadBytes = fileBytes;
+                        try {
+                            Files.deleteIfExists(tmp);
+                        } catch (Exception ignored) {
+                            // best-effort
+                        }
+                        return;
+                    }
+
+                    enforceQuotaBeforeCommit(fileBytes, entry.key);
+                    Files.move(tmp, entry.filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                    entry.fileBytes = fileBytes;
+                    entry.status = EntryStatus.READY;
+                    entry.readyAt = Instant.now();
+                    entry.lastPreparedAt = entry.readyAt;
+                    entry.lastDownloadBytes = fileBytes;
+                    entry.lastError = "";
+                    entry.lastErrorCode = "";
+                }
+            } catch (Exception e) {
+                synchronized (entry) {
+                    entry.status = EntryStatus.FAILED;
+                    entry.lastErrorCode = CODE_DOWNLOAD_FAILED;
+                    entry.lastError = e.getMessage();
+                }
+            } finally {
+                try {
+                    Files.deleteIfExists(tmp);
+                } catch (Exception ignored) {
+                    // best-effort
+                }
+            }
+        }
+
+        private WindowFetchResult awaitOrWarmup(CacheEntry entry, int offset, int limit, long maxWaitMs) {
+            Future<?> f;
+            Instant startedAt;
+            synchronized (entry) {
+                f = entry.downloadFuture;
+                startedAt = entry.downloadStartedAt;
+            }
+
+            if (f == null) {
+                return failed(CODE_DOWNLOAD_FAILED, "No se pudo iniciar la descarga en background", startedAt, entry.lastDownloadBytes);
+            }
+
+            long wait = Math.max(250L, Math.min(maxWaitMs, HARD_WINDOW_MAX_WAIT_MS));
+            try {
+                f.get(wait, TimeUnit.MILLISECONDS);
+            } catch (java.util.concurrent.TimeoutException te) {
+                return warmingUp(startedAt);
+            } catch (Exception e) {
+                synchronized (entry) {
+                    entry.status = EntryStatus.FAILED;
+                    entry.lastErrorCode = CODE_DOWNLOAD_FAILED;
+                    entry.lastError = e.getMessage();
+                }
+            }
+
+            synchronized (entry) {
+                if (entry.status == EntryStatus.READY && Files.exists(entry.filePath)) {
+                    return readReady(entry, offset, limit);
+                }
+                return failed(entry.lastErrorCode, entry.lastError, entry.downloadStartedAt, entry.lastDownloadBytes);
+            }
+        }
+
+        private WindowFetchResult readReady(CacheEntry entry, int offset, int limit) {
+            try {
+                WindowSlice slice = readLinesWindow(entry.filePath, offset, limit);
+                long cacheBytes = computeTotalCacheBytes();
+                entry.lastAccessAt = Instant.now();
+                entry.fileBytes = safeFileSize(entry.filePath);
+                return new WindowFetchResult(
+                        WINDOW_STATUS_READY,
+                        "",
+                        "",
+                        slice.lines(),
+                        slice.lineEnd(),
+                        slice.hasMore(),
+                        slice.totalLines(),
+                        cacheBytes,
+                        entry.fileBytes,
+                        entry.lastPreparedAt == null ? Instant.now() : entry.lastPreparedAt,
+                        entry.downloadStartedAt,
+                        elapsedMs(entry.downloadStartedAt)
+                );
+            } catch (Exception e) {
+                entry.status = EntryStatus.FAILED;
+                entry.lastErrorCode = CODE_DOWNLOAD_FAILED;
+                entry.lastError = e.getMessage();
+                return failed(entry.lastErrorCode, entry.lastError, entry.downloadStartedAt, entry.lastDownloadBytes);
+            }
+        }
+
+        private WindowSlice readLinesWindow(Path file, int offset, int limit) throws IOException {
+            int safeOffset = Math.max(1, offset);
+            int safeLimit = Math.max(1, Math.min(limit, HARD_WINDOW_LIMIT));
+
+            List<String> lines = new ArrayList<>(safeLimit);
+            int lineNo = 0;
+            int lineEnd = safeOffset - 1;
+            boolean hasMore = false;
+
+            try (BufferedReader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    lineNo++;
+                    if (lineNo < safeOffset) continue;
+                    if (lines.size() < safeLimit) {
+                        lines.add(line);
+                        lineEnd = lineNo;
+                        continue;
+                    }
+                    hasMore = true;
+                    break;
+                }
+            }
+
+            if (!hasMore) {
+                hasMore = lineNo > lineEnd;
+            }
+            int totalLines = hasMore ? -1 : lineNo;
+            return new WindowSlice(lines, lineEnd, hasMore, totalLines);
+        }
+
+        private long computeTotalCacheBytes() {
+            long total = 0L;
+            for (CacheEntry e : entries.values()) {
+                if (e.status != EntryStatus.READY) continue;
+                if (!Files.exists(e.filePath)) continue;
+                total += safeFileSize(e.filePath);
+            }
+            return total;
+        }
+
+        private void enforceQuotaBeforeCommit(long incomingBytes, String protectedKey) {
+            long current = computeTotalCacheBytes();
+            if (current + incomingBytes <= maxCacheBytes) return;
+
+            List<CacheEntry> candidates = new ArrayList<>();
+            for (CacheEntry e : entries.values()) {
+                if (e.key.equals(protectedKey)) continue;
+                if (e.status != EntryStatus.READY) continue;
+                if (!Files.exists(e.filePath)) continue;
+                candidates.add(e);
+            }
+            candidates.sort(Comparator.comparing(a -> a.lastAccessAt == null ? Instant.EPOCH : a.lastAccessAt));
+
+            for (CacheEntry candidate : candidates) {
+                long bytes = safeFileSize(candidate.filePath);
+                try {
+                    Files.deleteIfExists(candidate.filePath);
+                } catch (Exception ignored) {
+                    // best-effort
+                }
+                candidate.status = EntryStatus.MISSING;
+                candidate.fileBytes = 0L;
+                current = Math.max(0L, current - bytes);
+                if (current + incomingBytes <= maxCacheBytes) break;
+            }
+        }
+
+        private String validateQuotaBeforeDownload() {
+            long cacheBytes = computeTotalCacheBytes();
+            if (cacheBytes >= maxCacheBytes) {
+                return "Cache temporal lleno (cacheBytes=" + cacheBytes + ", maxCacheBytes=" + maxCacheBytes + ")";
+            }
+
+            long inProgressBytes = 0L;
+            int activeDownloads = 0;
+            for (CacheEntry e : entries.values()) {
+                if (e.status != EntryStatus.DOWNLOADING) continue;
+                activeDownloads++;
+                inProgressBytes += Math.max(0L, e.lastDownloadBytes);
+            }
+            if (activeDownloads >= maxConcurrentDownloads) {
+                return "Límite de descargas en curso alcanzado (" + activeDownloads + "/" + maxConcurrentDownloads + ")";
+            }
+            if (inProgressBytes >= maxInProgressBytes) {
+                return "Bytes en preparación exceden el presupuesto actual (inProgressBytes=" + inProgressBytes + ", maxInProgressBytes=" + maxInProgressBytes + ")";
+            }
+
+            long free = safeFreeSpace(rootDir);
+            if (free > 0 && free < minFreeDiskBytes) {
+                return CODE_DISK_SPACE_LOW + ": Espacio libre insuficiente para descargas temporales (freeBytes=" + free + ", minFreeDiskBytes=" + minFreeDiskBytes + ")";
+            }
+            return null;
+        }
+
+        private boolean hasDownloadSlot() {
+            int running = 0;
+            for (CacheEntry e : entries.values()) {
+                if (e.status == EntryStatus.DOWNLOADING) running++;
+            }
+            return running < maxConcurrentDownloads;
+        }
+
+        private void evictExpired() {
+            Instant now = Instant.now();
+            for (CacheEntry e : entries.values()) {
+                if (e.status != EntryStatus.READY) continue;
+                Instant at = e.lastAccessAt == null ? e.lastPreparedAt : e.lastAccessAt;
+                if (at == null) continue;
+                long age = Duration.between(at, now).toMillis();
+                if (age < ttlMillis) continue;
+                try {
+                    Files.deleteIfExists(e.filePath);
+                } catch (Exception ignored) {
+                    // best-effort
+                }
+                e.status = EntryStatus.MISSING;
+                e.fileBytes = 0L;
+            }
+        }
+
+        private Path filePathForKey(String key) {
+            String hash = sha256Hex(key);
+            String folder = hash.substring(0, 2);
+            String file = hash.substring(2) + ".txt";
+            return rootDir.resolve(folder).resolve(file);
+        }
+
+        private String sha256Hex(String value) {
+            try {
+                MessageDigest md = MessageDigest.getInstance("SHA-256");
+                byte[] digest = md.digest(value.getBytes(StandardCharsets.UTF_8));
+                StringBuilder sb = new StringBuilder();
+                for (byte b : digest) {
+                    sb.append(String.format("%02x", b));
+                }
+                return sb.toString();
+            } catch (Exception e) {
+                return Integer.toHexString(value.hashCode());
+            }
+        }
+
+        private void ensureInitialized() {
+            if (!startupCleanupDone.compareAndSet(false, true)) return;
+            try {
+                if (Files.exists(rootDir)) {
+                    deleteRecursively(rootDir);
+                }
+                Files.createDirectories(rootDir);
+            } catch (Exception ignored) {
+                // best-effort
+            }
+        }
+
+        private void deleteRecursively(Path root) throws IOException {
+            if (!Files.exists(root)) return;
+            try (var walk = Files.walk(root)) {
+                walk.sorted(Comparator.reverseOrder()).forEach(p -> {
+                    try {
+                        Files.deleteIfExists(p);
+                    } catch (Exception ignored) {
+                        // best-effort
+                    }
+                });
+            }
+        }
+
+        private long safeFileSize(Path file) {
+            try {
+                return Files.exists(file) ? Files.size(file) : 0L;
+            } catch (Exception e) {
+                return 0L;
+            }
+        }
+
+        private long safeFreeSpace(Path path) {
+            try {
+                Path p = Files.exists(path) ? path : path.getParent();
+                if (p == null) return -1L;
+                FileStore store = Files.getFileStore(p);
+                return store.getUsableSpace();
+            } catch (Exception e) {
+                return -1L;
+            }
+        }
+
+        private boolean looksBinary(Path file) {
+            byte[] sample = new byte[8192];
+            int read = 0;
+            try (var in = Files.newInputStream(file)) {
+                read = in.read(sample);
+            } catch (Exception e) {
+                return false;
+            }
+            if (read <= 0) return false;
+
+            int control = 0;
+            for (int i = 0; i < read; i++) {
+                int b = sample[i] & 0xff;
+                if (b == 0) return true;
+                if (b < 0x09) control++;
+                if (b > 0x0D && b < 0x20) control++;
+            }
+            double ratio = (double) control / (double) read;
+            return ratio > 0.18;
+        }
+
+        private long elapsedMs(Instant since) {
+            if (since == null) return 0L;
+            return Math.max(0L, Duration.between(since, Instant.now()).toMillis());
+        }
+
+        private WindowFetchResult warmingUp(Instant startedAt) {
+            return new WindowFetchResult(
+                    WINDOW_STATUS_WARMING_UP,
+                    "Preparando archivo en cache temporal",
+                    CODE_PREPARING_TIMEOUT,
+                    List.of(),
+                    0,
+                    false,
+                    0,
+                    computeTotalCacheBytes(),
+                    0L,
+                    Instant.now(),
+                    startedAt,
+                    elapsedMs(startedAt)
+            );
+        }
+
+        private WindowFetchResult failed(String errorCode, String message, Instant startedAt, long bytes) {
+            String safeCode = (errorCode == null || errorCode.isBlank()) ? CODE_DOWNLOAD_FAILED : errorCode;
+            String safeMessage = (message == null || message.isBlank()) ? "No se pudo preparar archivo temporal" : message;
+            return new WindowFetchResult(
+                    WINDOW_STATUS_FAILED,
+                    safeMessage,
+                    safeCode,
+                    List.of(),
+                    0,
+                    false,
+                    0,
+                    computeTotalCacheBytes(),
+                    Math.max(0L, bytes),
+                    Instant.now(),
+                    startedAt,
+                    elapsedMs(startedAt)
+            );
+        }
+
+        private static long envLong(String key, long defaultValue) {
+            String raw = System.getenv(key);
+            if (raw == null || raw.isBlank()) return defaultValue;
+            try {
+                long v = Long.parseLong(raw.trim());
+                return v > 0 ? v : defaultValue;
+            } catch (Exception e) {
+                return defaultValue;
+            }
+        }
+
+        private static final class CacheEntry {
+            private final String key;
+            private final Path filePath;
+            private volatile EntryStatus status = EntryStatus.MISSING;
+            private volatile Future<?> downloadFuture;
+            private volatile Instant downloadStartedAt;
+            private volatile Instant readyAt;
+            private volatile Instant lastPreparedAt;
+            private volatile Instant lastAccessAt;
+            private volatile long fileBytes;
+            private volatile long lastDownloadBytes;
+            private volatile String lastError = "";
+            private volatile String lastErrorCode = "";
+
+            private CacheEntry(String key, Path filePath) {
+                this.key = key;
+                this.filePath = filePath;
+            }
+        }
+
+        private enum EntryStatus {
+            MISSING,
+            DOWNLOADING,
+            READY,
+            FAILED
+        }
+
+        private record WindowSlice(List<String> lines, int lineEnd, boolean hasMore, int totalLines) {}
+    }
 
     private Map<String, Object> done(Map<String, Object> args, Map<String, Object> resp) {
         String err = tryFormatRemoteError(resp);
