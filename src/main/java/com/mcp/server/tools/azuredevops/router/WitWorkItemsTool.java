@@ -96,7 +96,8 @@ public class WitWorkItemsTool extends AbstractAzureDevOpsTool {
         props.put("iteration", Map.of("type", "string", "description", "IterationPath (create/update shortcut)"));
         props.put("parentId", Map.of("type", "integer", "description", "Work item padre (create/update)"));
         props.put("parent", Map.of("type", "integer", "description", "Alias de parentId"));
-        props.put("relations", Map.of("type", "string", "description", "Relaciones extra (create/update)"));
+        props.put("repositoryId", Map.of("type", "string", "description", "ID del repositorio (requerido para ArtifactLink:pr en relations)"));
+        props.put("relations", Map.of("type", "string", "description", "Relaciones extra: ArtifactLink:pr:repoId/prId para PRs, tipo:id[:comentario] para WIs"));
         props.put("add", Map.of("type", "string", "description", "Campos extra k=v para create/update (alias de fields en create, op add en update). Soporta Custom.<referenceName>=<valor>."));
         props.put("tags", Map.of("type", "string", "description", "System.Tags para create/update, separadas por punto y coma. Ej: TAG1; TAG2"));
         props.put("replace", Map.of("type", "string", "description", "Patch replace k=v (update)"));

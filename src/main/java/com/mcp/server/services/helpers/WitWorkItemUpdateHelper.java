@@ -55,6 +55,7 @@ public class WitWorkItemUpdateHelper {
         String area = opt(args, "area");
         String iteration = opt(args, "iteration");
         Integer parentId = args.get("parentId") != null ? Integer.valueOf(args.get("parentId").toString()) : null;
+        String repositoryId = opt(args, "repositoryId");
         String relations = opt(args, "relations");
         boolean validateOnly = bool(args, "validateOnly");
         boolean bypassRules = bool(args, "bypassRules");
@@ -106,26 +107,52 @@ public class WitWorkItemUpdateHelper {
             }
         }
 
-        // Additional relations
+        // Additional relations - soporta:
+        //   - ArtifactLink:pr:repoId/prId  → vincula PR
+        //   - relType:wiId[:comment]       → WI-to-WI (existing)
         if (relations != null && !relations.isBlank()) {
             Set<String> seen = new HashSet<>();
             for (String spec : relations.split(",")) {
-                if (spec.isBlank() || !spec.contains(":")) continue;
-                String[] parts = spec.split(":",3);
+                if (spec.isBlank()) continue;
+                String[] parts = spec.split(":", 3);
                 if (parts.length < 2) continue;
                 String relType = parts[0].trim();
-                String relId = parts[1].trim();
-                String comment = parts.length == 3 ? parts[2].trim() : null;
-                if (!relId.matches("^\\d+$")) continue;
-                String key = relType + "|" + relId + "|" + (comment==null?"":comment);
-                if (!seen.add(key)) continue;
-                Map<String,Object> relWi = getHelper.getWorkItem(project, Integer.parseInt(relId), null, apiVersion);
-                if (relWi == null || relWi.get("url") == null) continue;
-                Map<String,Object> relObj = new LinkedHashMap<>();
-                relObj.put("rel", relType);
-                relObj.put("url", relWi.get("url"));
-                if (comment != null && !comment.isEmpty()) relObj.put("attributes", Map.of("comment", comment));
-                patch.add(Map.of("op","add","path","/relations/-","value", relObj));
+                String relRest = parts[1].trim();
+                
+                // ArtifactLink para PRs: ArtifactLink:pr:repoId/prId
+                if ("ArtifactLink".equals(relType) && relRest.startsWith("pr:")) {
+                    String prSpec = relRest.substring(3).trim();
+                    if (!prSpec.contains("/")) continue;
+                    String[] prParts = prSpec.split("/", 2);
+                    String prRepoId = prParts[0].trim();
+                    String prIdStr = prParts[1].trim();
+                    if (!prIdStr.matches("^\\d+$")) continue;
+                    int prId = Integer.parseInt(prIdStr);
+                    String key = "pr|" + prRepoId + "|" + prId;
+                    if (!seen.add(key)) continue;
+                    String encoded = project + "%2F" + prRepoId + "%2F" + prId;
+                    Map<String,Object> relObj = new LinkedHashMap<>();
+                    relObj.put("rel", "ArtifactLink");
+                    relObj.put("url", "vstfs:///Git/PullRequestId/" + encoded);
+                    relObj.put("attributes", Map.of("name", "Pull Request"));
+                    patch.add(Map.of("op","add","path","/relations/-","value", relObj));
+                    continue;
+                }
+                
+                // WI-to-WI relations (existing logic)
+                if (relRest.matches("^\\d+$")) {
+                    String wiIdStr = relRest;
+                    String comment = parts.length == 3 ? parts[2].trim() : null;
+                    String key = relType + "|" + wiIdStr + "|" + (comment==null?"":comment);
+                    if (!seen.add(key)) continue;
+                    Map<String,Object> relWi = getHelper.getWorkItem(project, Integer.parseInt(wiIdStr), null, apiVersion);
+                    if (relWi == null || relWi.get("url") == null) continue;
+                    Map<String,Object> relObj = new LinkedHashMap<>();
+                    relObj.put("rel", relType);
+                    relObj.put("url", relWi.get("url"));
+                    if (comment != null && !comment.isEmpty()) relObj.put("attributes", Map.of("comment", comment));
+                    patch.add(Map.of("op","add","path","/relations/-","value", relObj));
+                }
             }
         }
 

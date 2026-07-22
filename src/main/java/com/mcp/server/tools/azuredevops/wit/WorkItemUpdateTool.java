@@ -47,7 +47,8 @@ public class WorkItemUpdateTool extends AbstractAzureDevOpsTool {
         props.put("iteration", Map.of("type","string","description","Atajo System.IterationPath"));
         props.put("parentId", Map.of("type","integer","description","ID del work item padre para re-parenting"));
     props.put("parent", Map.of("type","integer","description","Alias de parentId (script: --parent)"));
-        props.put("relations", Map.of("type","string","description","Relaciones extra tipo:id[:comentario] separadas por coma"));
+        props.put("repositoryId", Map.of("type","string","description","ID del repositorio (requerido para ArtifactLink:pr en relations)"));
+        props.put("relations", Map.of("type","string","description","Relaciones extra: ArtifactLink:pr:repoId/prId para PRs, tipo:id[:comentario] para WIs"));
         props.put("apiVersion", Map.of("type","string","description","Versión API a usar","default", DEFAULT_API_VERSION));
         props.put("validateOnly", Map.of("type","boolean","description","validateOnly=true (no persiste)"));
     props.put("validate-only", Map.of("type","boolean","description","Alias de validateOnly (script: --validate-only)"));
