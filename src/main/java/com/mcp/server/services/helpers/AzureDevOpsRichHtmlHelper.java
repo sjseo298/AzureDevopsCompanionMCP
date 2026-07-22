@@ -39,13 +39,14 @@ public final class AzureDevOpsRichHtmlHelper {
 
     public static String normalize(String input, String fieldName) {
         if (input == null || input.isBlank()) return input;
-        if (looksLikeMarkdown(input)) {
+        boolean htmlLike = looksLikeHtml(input);
+        if (!htmlLike && looksLikeMarkdown(input)) {
             String msg = fieldName != null
                     ? "El campo '" + fieldName + "' contiene formato markdown. Use HTML enriquecido: <p>, <b>, <i>, <ul>, <li>, <table>, etc."
                     : "El contenido contiene formato markdown. Use HTML enriquecido: <p>, <b>, <i>, <ul>, <li>, <table>, etc.";
             throw new IllegalArgumentException(msg);
         }
-        if (!looksLikeHtml(input)) {
+        if (!htmlLike) {
             String msg = fieldName != null
                     ? "El campo '" + fieldName + "' requiere HTML enriquecido. El texto plano no está permitido. Use etiquetas HTML como <p>, <b>, <ul>, <li>, <table>, etc."
                     : "El contenido requiere HTML enriquecido. El texto plano no está permitido. Use etiquetas HTML como <p>, <b>, <ul>, <li>, <table>, etc.";

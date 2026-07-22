@@ -249,10 +249,11 @@ public class McpProtocolHandler {
 
                 The recommended Docker image tag is `mcp-azure-devops:latest`.
 
-                The expected HTTP upload base URL for local `stdio-http` usage is:
+                The expected HTTP upload base URL must be discovered from Docker published ports.
+                Use this placeholder for examples shown to agents:
 
                 ```text
-                http://127.0.0.1:9091
+                http://IP_descubierta_docker:PUERTO_PUBLICADO
                 ```
                 """;
     }
@@ -303,7 +304,13 @@ public class McpProtocolHandler {
 
                 The script starts the Docker container in `stdio-http` mode.
 
-                It expects `127.0.0.1:9091` for HTTP upload URLs. If that port is free, the script publishes it with `-p 127.0.0.1:9091:8080`. If the port is already in use, the script does not publish a new port and assumes the existing service on `9091` is a compatible instance of this same image.
+                It expects a discovered Docker host/port for HTTP upload URLs. If the configured port is free, the script publishes it with `-p ${HOST}:${PORT}:8080`. If the configured port is already in use, the script does not publish a new port and assumes the existing service on that host/port is a compatible instance of this same image.
+
+                For examples shown to agents, prefer this canonical placeholder:
+
+                ```text
+                http://IP_descubierta_docker:PUERTO_PUBLICADO
+                ```
 
                 Restart opencode after changing `.opencode/opencode.json`.
                 """;
@@ -321,7 +328,7 @@ public class McpProtocolHandler {
 
                 ## Docker stdio-http Configuration
 
-                This configuration starts the server through Docker, uses MCP over STDIO, and publishes HTTP uploads on `127.0.0.1:9091`.
+                This configuration starts the server through Docker, uses MCP over STDIO, and publishes HTTP uploads on the host/port you configure.
 
                 ```json
                 {
@@ -335,6 +342,18 @@ public class McpProtocolHandler {
                       "id": "azure_devops_pat",
                       "type": "promptString",
                       "description": "Azure DevOps Personal Access Token (PAT)"
+                    },
+                    {
+                      "id": "mcp_host",
+                      "type": "promptString",
+                      "description": "Host/IP para uploads HTTP (ej. localhost o IP_descubierta_docker)",
+                      "default": "127.0.0.1"
+                    },
+                    {
+                      "id": "mcp_http_port",
+                      "type": "promptString",
+                      "description": "Puerto publicado de Docker para uploads HTTP",
+                      "default": "9091"
                     }
                   ],
                   "servers": {
@@ -345,9 +364,9 @@ public class McpProtocolHandler {
                         "--rm",
                         "-i",
                         "-p",
-                        "127.0.0.1:9091:8080",
+                        "${input:mcp_host}:${input:mcp_http_port}:8080",
                         "--env",
-                        "MCP_PUBLIC_BASE_URL=http://127.0.0.1:9091",
+                        "MCP_PUBLIC_BASE_URL=http://${input:mcp_host}:${input:mcp_http_port}",
                         "--env",
                         "AZURE_DEVOPS_ORGANIZATION=${input:azure_devops_org}",
                         "--env",
@@ -360,7 +379,7 @@ public class McpProtocolHandler {
                 }
                 ```
 
-                If another local instance already publishes `127.0.0.1:9091`, do not start a second VS Code configuration with the same `-p` mapping. Either reuse the existing compatible service for uploads, choose a different host port, or use the opencode startup script pattern from `azuredevops-mcp://config/docker-script`.
+                If another local instance already publishes the same host/port, do not start a second VS Code configuration with the same `-p` mapping. Either reuse the existing compatible service for uploads, choose a different host port, or use the opencode startup script pattern from `azuredevops-mcp://config/docker-script`.
                 """;
     }
 
@@ -419,7 +438,13 @@ public class McpProtocolHandler {
                 - `AZURE_DEVOPS_MCP_HOST`: host for HTTP publication. Default: `127.0.0.1`.
                 - `AZURE_DEVOPS_MCP_HTTP_PORT`: expected HTTP upload port. Default: `9091`.
 
-                The script always passes `MCP_PUBLIC_BASE_URL=http://127.0.0.1:9091` by default. If `9091` is already in use, it does not publish a new port and assumes the existing service on that port is a compatible instance of this image.
+                The script always passes `MCP_PUBLIC_BASE_URL=http://${HOST}:${PORT}` by default. If the configured port is already in use, it does not publish a new port and assumes the existing service on that host/port is a compatible instance of this image.
+
+                For examples shown to agents, prefer this canonical placeholder:
+
+                ```text
+                http://IP_descubierta_docker:PUERTO_PUBLICADO
+                ```
                 """;
     }
      

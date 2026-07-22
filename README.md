@@ -329,13 +329,13 @@ Con Docker Compose también puede usarse:
 docker compose ps
 ```
 
-En opencode local, `prepare_upload` puede devolver directamente `uploadUrl` cuando la instancia fue arrancada por `scripts/opencode-mcp-azure-devops.sh`. El valor esperado es:
+En opencode local, `prepare_upload` puede devolver directamente `uploadUrl` cuando la instancia fue arrancada por `scripts/opencode-mcp-azure-devops.sh`. Para ejemplos de agente, use un host/puerto descubierto del contenedor (no una loopback fija). El patron recomendado es:
 
 ```text
-http://127.0.0.1:9091/mcp/uploads/wit/workitems/{id}/attachment?project={project}
+http://IP_descubierta_docker:PUERTO_PUBLICADO/mcp/uploads/wit/workitems/{id}/attachment?project={project}
 ```
 
-Si el script detecta que `9091` ya estaba ocupado, no publica un nuevo puerto para evitar que Docker falle. En ese caso las URLs siguen apuntando a `127.0.0.1:9091`, bajo la premisa de que el servicio existente en ese puerto es otra instancia compatible de esta misma imagen.
+Si el script detecta que el puerto configurado ya estaba ocupado, no publica un nuevo puerto para evitar que Docker falle. En ese caso el agente debe usar `uploadUrl` si viene en respuesta; si no viene, debe descubrir host/puerto publicado con `docker ps`/`docker compose ps` y construir `http://<host>:<puerto> + uploadPath`.
 
 ### Persistencia opcional de repos Git locales
 
